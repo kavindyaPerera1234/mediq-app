@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'core/constants/app_colors.dart';
-import 'features/patient_appointment_scheduling_module1/screens/patient_main_screen.dart';
+import 'features/auth_live_queue_module3/screens/auth/welcome_entry_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,7 +42,7 @@ class MediQApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const PatientMainScreen(),
+      home: const WelcomeEntryScreen(),
     );
   }
 }
