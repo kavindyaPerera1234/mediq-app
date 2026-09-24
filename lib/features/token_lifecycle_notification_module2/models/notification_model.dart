@@ -1,50 +1,45 @@
 class NotificationModel {
-  final String notificationId;
-  final String userId;
+
+  final String id;
+  final String type;
   final String title;
   final String message;
-  final String type;
-  final String dateTime;
+  final String status;
   final bool isRead;
 
 
   NotificationModel({
-    required this.notificationId,
-    required this.userId,
+
+    required this.id,
+    required this.type,
     required this.title,
     required this.message,
-    required this.type,
-    required this.dateTime,
+    required this.status,
     required this.isRead,
+
   });
 
 
-  // Firestore → Model
-  factory NotificationModel.fromFirestore(
-    Map<String, dynamic> data,
-    String id,
-  ) {
+
+  factory NotificationModel.sample(){
+
     return NotificationModel(
-      notificationId: id,
-      userId: data['userId'] ?? '',
-      title: data['title'] ?? '',
-      message: data['message'] ?? '',
-      type: data['type'] ?? 'general',
-      dateTime: data['dateTime'] ?? '',
-      isRead: data['isRead'] ?? false,
+
+      id: "NOT001",
+
+      type: "appointment_confirmed",
+
+      title: "Appointment Confirmed",
+
+      message:
+          "Your OPD appointment has been successfully confirmed.",
+
+      status: "NEW",
+
+      isRead: false,
+
     );
+
   }
 
-
-  // Model → Firestore
-  Map<String, dynamic> toFirestore() {
-    return {
-      'userId': userId,
-      'title': title,
-      'message': message,
-      'type': type,
-      'dateTime': dateTime,
-      'isRead': isRead,
-    };
-  }
 }

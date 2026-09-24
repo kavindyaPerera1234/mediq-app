@@ -1,50 +1,41 @@
-class TokenModel {
-  final String tokenId;
-  final String appointmentId;
+class DigitalToken {
+
   final String tokenNumber;
+  final String tokenCode;
+  final String hospitalName;
+  final String clinicName;
+  final String appointmentDate;
+  final String appointmentTime;
   final String status;
-  final int queuePosition;
-  final int estimatedWaitMinutes;
-  final String qrCode;
 
 
-  TokenModel({
-    required this.tokenId,
-    required this.appointmentId,
+  DigitalToken({
+
     required this.tokenNumber,
+    required this.tokenCode,
+    required this.hospitalName,
+    required this.clinicName,
+    required this.appointmentDate,
+    required this.appointmentTime,
     required this.status,
-    required this.queuePosition,
-    required this.estimatedWaitMinutes,
-    required this.qrCode,
+
   });
 
 
-  // Convert Firestore document to TokenModel
-  factory TokenModel.fromFirestore(
-    Map<String, dynamic> data,
-    String id,
-  ) {
-    return TokenModel(
-      tokenId: id,
-      appointmentId: data['appointmentId'] ?? '',
-      tokenNumber: data['tokenNumber'] ?? '',
-      status: data['status'] ?? 'waiting',
-      queuePosition: data['queuePosition'] ?? 0,
-      estimatedWaitMinutes: data['estimatedWaitMinutes'] ?? 0,
-      qrCode: data['qrCode'] ?? '',
+  factory DigitalToken.sample(){
+
+    return DigitalToken(
+
+      tokenNumber: "24",
+      tokenCode: "A-024",
+      hospitalName: "National Hospital of Sri Lanka",
+      clinicName: "General Medicine",
+      appointmentDate: "20 October 2026",
+      appointmentTime: "9:00 AM",
+      status: "CONFIRMED",
+
     );
+
   }
 
-
-  // Convert TokenModel to Firestore document
-  Map<String, dynamic> toFirestore() {
-    return {
-      'appointmentId': appointmentId,
-      'tokenNumber': tokenNumber,
-      'status': status,
-      'queuePosition': queuePosition,
-      'estimatedWaitMinutes': estimatedWaitMinutes,
-      'qrCode': qrCode,
-    };
-  }
 }
