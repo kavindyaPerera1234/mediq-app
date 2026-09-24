@@ -1,10 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'core/constants/app_colors.dart';
-import 'features/patient_appointment_scheduling_module1/screens/caregiver_setup_screen.dart';
+import 'features/patient_appointment_scheduling_module1/screens/patient_main_screen.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Safe Firebase Initialization
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    debugPrint("Firebase initialized successfully!");
+  } catch (e) {
+    debugPrint("Firebase initialization notice: $e");
+  }
+
   runApp(const MediQApp());
 }
 
@@ -29,7 +42,7 @@ class MediQApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const CaregiverSetupScreen(),
+      home: const PatientMainScreen(),
     );
   }
 }
