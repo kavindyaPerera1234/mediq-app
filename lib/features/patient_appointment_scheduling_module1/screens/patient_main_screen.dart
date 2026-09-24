@@ -3,6 +3,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/patient_bottom_nav_bar.dart';
 import 'caregiver_setup_screen.dart';
 import 'senior_mode_settings_screen.dart';
+import '../../auth_live_queue_module3/screens/queue/live_queue_main_screen.dart';
 
 class PatientMainScreen extends StatefulWidget {
   final int initialIndex;
@@ -31,11 +32,7 @@ class _PatientMainScreenState extends State<PatientMainScreen> {
         icon: Icons.local_hospital_outlined,
       ), // Tab 0: Home
       const CaregiverSetupScreen(), // Tab 1: Appointments (Member 1 - Booking)
-      _buildPlaceholder(
-        title: 'Live OPD Queue',
-        module: 'Module 3: Patient Live Queue Tracker',
-        icon: Icons.format_list_bulleted_outlined,
-      ), // Tab 2: Queue
+      const LiveQueueMainScreen(), // Tab 2: Queue (Member 3)
       _buildPlaceholder(
         title: 'SMS & Reminders',
         module: 'Module 2: Notifications & Alerts',
