@@ -3,6 +3,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/patient_bottom_nav_bar.dart';
 import '../models/token_model.dart';
 import '../../patient_appointment_scheduling_module1/screens/patient_main_screen.dart';
+import 'appointment_details_screen.dart';
 
 
 class DigitalTokenDetailsScreen extends StatelessWidget {
@@ -181,6 +182,13 @@ class DigitalTokenDetailsScreen extends StatelessWidget {
                 ),
                 onPressed: () {
                   // Appointment details screen will connect here
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) =>
+                            const AppointmentDetailsScreen(),
+                    ),
+                  );
                 },
                 child: const Text(
                   "View Appointment Details",
