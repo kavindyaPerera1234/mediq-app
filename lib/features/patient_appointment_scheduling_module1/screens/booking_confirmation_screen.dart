@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../models/hospital_model.dart';
+import '../../token_lifecycle_notification_module2/screens/digital_token_details_screen.dart';
 
 class BookingConfirmationScreen extends StatelessWidget {
   final GovernmentHospital hospital;
@@ -210,26 +211,10 @@ class BookingConfirmationScreen extends StatelessWidget {
                   ),
                   onPressed: () {
                     // Show handover alert to Member 2
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: Text(
-                          'Token Pass Handover',
-                          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                        ),
-                        content: Text(
-                          'Token $tokenNumber successfully passed to Member 2 (Digital Token Pass & Lifecycle Module).',
-                          style: GoogleFonts.inter(fontSize: 14),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () {
-                              Navigator.pop(context); // Close dialog
-                              Navigator.popUntil(context, (route) => route.isFirst); // Back to Home
-                            },
-                            child: const Text('Back to Home'),
-                          ),
-                        ],
+                     Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                       builder: (context) => DigitalTokenDetailsScreen(),
                       ),
                     );
                   },

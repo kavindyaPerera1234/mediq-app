@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'core/constants/app_colors.dart';
 import 'features/patient_appointment_scheduling_module1/screens/patient_main_screen.dart';
+import 'features/token_lifecycle_notification_module2/screens/digital_token_details_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
