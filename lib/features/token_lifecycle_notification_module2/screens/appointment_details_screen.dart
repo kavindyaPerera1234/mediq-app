@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
+import 'cancel_appointment_screen.dart';
 
 
 class AppointmentDetailsScreen extends StatelessWidget {
@@ -222,7 +223,14 @@ class AppointmentDetailsScreen extends StatelessWidget {
                   ),
                 ),
 
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const CancelAppointmentScreen(),
+                    ),
+                  );
+                },
                 label: const Text(
                   "Cancel Appointment",
                   style: TextStyle(
