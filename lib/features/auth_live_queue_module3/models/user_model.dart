@@ -4,6 +4,8 @@ enum UserRole {
   doctor,
   nurse,
   staff,
+  admin,
+  receptionist,
 }
 
 class UserModel {
