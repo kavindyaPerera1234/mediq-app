@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../services/auth_service.dart';
+import '../../../patient_appointment_scheduling_module1/screens/patient_main_screen.dart';
 import 'registration_screen.dart';
 import 'forgot_password_screen.dart';
 import 'verification_code_screen.dart';
+import 'splash_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final bool isStaffMode;
@@ -17,28 +20,26 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _phoneOrIdController = TextEditingController();
+  final _phoneOrEmailController = TextEditingController();
   final _passwordController = TextEditingController();
 
   late bool _isStaff;
   bool _isLoading = false;
   bool _obscurePassword = true;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
     _isStaff = widget.isStaffMode;
     if (!_isStaff) {
-      _phoneOrIdController.text = "0771234567"; // Helpful demo preset
-    } else {
-      _phoneOrIdController.text = "DOC-8942";
-      _passwordController.text = "staff123";
+      _phoneOrEmailController.text = "0771234567"; // Helpful demo preset
     }
   }
 
   @override
   void dispose() {
-    _phoneOrIdController.dispose();
+    _phoneOrEmailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -46,45 +47,98 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
     final authService = AuthService();
-    bool success = false;
 
     if (_isStaff) {
-      success = await authService.loginStaff(
-        _phoneOrIdController.text.trim(),
-        _passwordController.text.trim(),
-      );
+      // ── Staff / Admin login: Firebase Auth email + password ──────────
+      try {
+        final role = await authService.loginWithEmailPassword(
+          _phoneOrEmailController.text.trim(),
+          _passwordController.text.trim(),
+        );
+
+        if (!mounted) return;
+
+        if (role == 'admin') {
+          // Route to Admin Dashboard — clear all previous routes
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const SplashScreen(), // Re-enter splash to route properly
+            ),
+            (route) => false,
+          );
+        } else if (role == 'patient' || role == 'caregiver') {
+          // Rare case: patient account used on staff form
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const PatientMainScreen(),
+            ),
+            (route) => false,
+          );
+        } else {
+          // doctor / nurse / receptionist / staff
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const SplashScreen(), // Re-enter splash to route properly
+            ),
+            (route) => false,
+          );
+        }
+      } on FirebaseAuthException catch (e) {
+        setState(() {
+          _isLoading = false;
+          switch (e.code) {
+            case 'user-not-found':
+              _errorMessage = 'No account found with this email.';
+              break;
+            case 'wrong-password':
+            case 'invalid-credential':
+              _errorMessage = 'Incorrect email or password.';
+              break;
+            case 'invalid-email':
+              _errorMessage = 'Please enter a valid email address.';
+              break;
+            case 'user-disabled':
+              _errorMessage = 'This account has been disabled.';
+              break;
+            case 'too-many-requests':
+              _errorMessage = 'Too many attempts. Please try again later.';
+              break;
+            default:
+              _errorMessage = 'Login failed: ${e.message}';
+          }
+        });
+      } catch (e) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Login failed. Please check your credentials.';
+        });
+      }
     } else {
-      // Patient authentication via phone/OTP
-      success = await authService.loginPatient(_phoneOrIdController.text.trim());
-    }
+      // ── Patient login: phone OTP flow ─────────────────────────────────
+      bool success = await authService.loginPatient(
+        _phoneOrEmailController.text.trim(),
+      );
 
-    setState(() => _isLoading = false);
+      setState(() => _isLoading = false);
 
-    if (success && mounted) {
-      if (!_isStaff) {
-        // Navigate to OTP verification for phone auth
+      if (success && mounted) {
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => VerificationCodeScreen(
-              phoneNumber: _phoneOrIdController.text.trim(),
+              phoneNumber: _phoneOrEmailController.text.trim(),
             ),
           ),
         );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: AppColors.success,
-            content: Text(
-              'Welcome, ${authService.currentUser?.fullName ?? "Staff Member"}!',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-            ),
-          ),
-        );
-        Navigator.popUntil(context, (route) => route.isFirst);
       }
     }
   }
@@ -111,7 +165,7 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 // Header
                 Text(
-                  _isStaff ? 'Staff Portal Login' : 'Patient Sign In',
+                  _isStaff ? 'Staff / Admin Login' : 'Patient Sign In',
                   style: GoogleFonts.inter(
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
@@ -121,7 +175,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 8),
                 Text(
                   _isStaff
-                      ? 'Enter your Hospital Staff ID and password to access the OPD queue management system.'
+                      ? 'Enter your email and password. Admin and staff accounts are verified through Firebase Authentication.'
                       : 'Enter your mobile number to receive a secure one-time verification code.',
                   style: GoogleFonts.inter(
                     fontSize: 15,
@@ -148,10 +202,13 @@ class _LoginScreenState extends State<LoginScreen> {
                           onTap: () {
                             setState(() {
                               _isStaff = false;
-                              _phoneOrIdController.text = "0771234567";
+                              _errorMessage = null;
+                              _phoneOrEmailController.text = "0771234567";
+                              _passwordController.clear();
                             });
                           },
-                          child: Container(
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
                             padding: const EdgeInsets.symmetric(vertical: 10),
                             decoration: BoxDecoration(
                               color: !_isStaff ? AppColors.primary : Colors.transparent,
@@ -174,18 +231,20 @@ class _LoginScreenState extends State<LoginScreen> {
                           onTap: () {
                             setState(() {
                               _isStaff = true;
-                              _phoneOrIdController.text = "DOC-8942";
-                              _passwordController.text = "staff123";
+                              _errorMessage = null;
+                              _phoneOrEmailController.clear();
+                              _passwordController.clear();
                             });
                           },
-                          child: Container(
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
                             padding: const EdgeInsets.symmetric(vertical: 10),
                             decoration: BoxDecoration(
                               color: _isStaff ? AppColors.primary : Colors.transparent,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              'Hospital Staff',
+                              'Staff / Admin',
                               textAlign: TextAlign.center,
                               style: GoogleFonts.inter(
                                 fontSize: 14,
@@ -202,9 +261,39 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 28),
 
-                // Input Field 1: Phone / Staff ID
+                // Error message banner
+                if (_errorMessage != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.errorLight,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.error.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline_rounded,
+                            color: AppColors.error, size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _errorMessage!,
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.error,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // Input Field 1: Phone / Email
                 Text(
-                  _isStaff ? 'Staff ID Number' : 'Mobile Phone Number',
+                  _isStaff ? 'Email Address' : 'Mobile Phone Number',
                   style: GoogleFonts.inter(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -213,15 +302,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
-                  controller: _phoneOrIdController,
-                  keyboardType: _isStaff ? TextInputType.text : TextInputType.phone,
+                  controller: _phoneOrEmailController,
+                  keyboardType: _isStaff ? TextInputType.emailAddress : TextInputType.phone,
                   style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
                   decoration: InputDecoration(
                     prefixIcon: Icon(
-                      _isStaff ? Icons.badge_outlined : Icons.phone_android_rounded,
+                      _isStaff ? Icons.email_outlined : Icons.phone_android_rounded,
                       color: AppColors.primary,
                     ),
-                    hintText: _isStaff ? 'e.g. DOC-8942' : '07X XXX XXXX',
+                    hintText: _isStaff ? 'admin@hospital.lk' : '07X XXX XXXX',
                     filled: true,
                     fillColor: AppColors.surface,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -240,13 +329,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return _isStaff ? 'Please enter your Staff ID' : 'Please enter your mobile number';
+                      return _isStaff ? 'Please enter your email' : 'Please enter your mobile number';
+                    }
+                    if (_isStaff && !value.contains('@')) {
+                      return 'Please enter a valid email address';
                     }
                     return null;
                   },
                 ),
 
-                // Staff Password field
+                // Password field (always visible for staff, hidden for patient)
                 if (_isStaff) ...[
                   const SizedBox(height: 18),
                   Text(
@@ -341,7 +433,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                         )
                       : Text(
-                          _isStaff ? 'Log In to Staff Portal' : 'Send Verification Code',
+                          _isStaff ? 'Sign In' : 'Send Verification Code',
                           style: GoogleFonts.inter(
                             fontSize: 17,
                             fontWeight: FontWeight.w700,
@@ -351,7 +443,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 32),
 
-                // Registration footer
+                // Registration footer (patient only)
                 if (!_isStaff)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
