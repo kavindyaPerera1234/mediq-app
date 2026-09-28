@@ -7,6 +7,20 @@ class NotificationModel {
   final String status;
   final bool isRead;
 
+  final String? tokenNumber;
+  final String? hospitalName;
+  final String? clinicName;
+  final String? dateTime;
+
+  // Near turn details
+  final String? nowServing;
+  final String? peopleAhead;
+  final String? estimatedWait;
+
+  // Delay details
+  final String? affectedOPD;
+  final String? delayTime;
+
 
   NotificationModel({
 
@@ -17,29 +31,64 @@ class NotificationModel {
     required this.status,
     required this.isRead,
 
+    this.tokenNumber,
+    this.hospitalName,
+    this.clinicName,
+    this.dateTime,
+
+    this.nowServing,
+    this.peopleAhead,
+    this.estimatedWait,
+
+    this.affectedOPD,
+    this.delayTime,
+
   });
 
 
 
-  factory NotificationModel.sample(){
+  factory NotificationModel.fromJson(
+      Map<String, dynamic> json
+      ){
 
     return NotificationModel(
 
-      id: "NOT001",
+      id: json['id'] ?? '',
 
-      type: "appointment_confirmed",
+      type: json['type'] ?? '',
 
-      title: "Appointment Confirmed",
+      title: json['title'] ?? '',
 
-      message:
-          "Your OPD appointment has been successfully confirmed.",
+      message: json['message'] ?? '',
 
-      status: "NEW",
+      status: json['status'] ?? '',
 
-      isRead: false,
+      isRead: json['isRead'] ?? false,
+
+
+      tokenNumber: json['tokenNumber'],
+
+      hospitalName: json['hospitalName'],
+
+      clinicName: json['clinicName'],
+
+      dateTime: json['dateTime'],
+
+
+      nowServing: json['nowServing'],
+
+      peopleAhead: json['peopleAhead'],
+
+      estimatedWait: json['estimatedWait'],
+
+
+      affectedOPD: json['affectedOPD'],
+
+      delayTime: json['delayTime'],
 
     );
 
   }
+
 
 }

@@ -3,6 +3,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/patient_bottom_nav_bar.dart';
 import 'caregiver_setup_screen.dart';
 import 'senior_mode_settings_screen.dart';
+import '../../token_lifecycle_notification_module2/screens/notification_centre_screen.dart';
 
 class PatientMainScreen extends StatefulWidget {
   final int initialIndex;
@@ -36,11 +37,7 @@ class _PatientMainScreenState extends State<PatientMainScreen> {
         module: 'Module 3: Patient Live Queue Tracker',
         icon: Icons.format_list_bulleted_outlined,
       ), // Tab 2: Queue
-      _buildPlaceholder(
-        title: 'SMS & Reminders',
-        module: 'Module 2: Notifications & Alerts',
-        icon: Icons.notifications_none_outlined,
-      ), // Tab 3: Alerts
+      const NotificationCentreScreen(), // Tab 3: Alerts
       const SeniorModeSettingsScreen(), // Tab 4: Profile & Senior Mode Settings
     ];
 
