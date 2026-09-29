@@ -193,7 +193,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
 
                                             onPressed: (){
                                                 Navigator.push(
-                                                    ontext,
+                                                    context,
                                                     MaterialPageRoute(
                                                         builder:(context)=> const CaregiverSetupScreen(),
                                                     ),
@@ -283,7 +283,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                                 const EdgeInsets.symmetric(
                                     horizontal:8,
                                     vertical:4,
-                                )
+                                ),
                                 decoration:
                                 BoxDecoration(
                                     color:
@@ -302,9 +302,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                                     ),
                                 ),
                             ),
-
                         ],
-
                     ),
                     const SizedBox(height:5),
 
@@ -324,24 +322,25 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                             Column(
                                 crossAxisAlignment:
                                 CrossAxisAlignment.start,
-                                children: 
-                                Text(
-                                    date,
-                                    style:
-                                    const TextStyle(
-                                        fontWeight:
-                                        FontWeight.w600,
+                                children: [
+                                    Text(
+                                        date,
+                                        style:
+                                        const TextStyle(
+                                            fontWeight:
+                                            FontWeight.w600,
+                                        ),
                                     ),
-                                ),
-                                Text(
-                                    time,
-                                    style:
-                                    const TextStyle(
-                                        fontSize:12,
+                                    Text(
+                                        time,
+                                        style:
+                                        const TextStyle(
+                                            fontSize:12,
+                                        ),
                                     ),
-                                ),
-                             ),
-                         ],
+                                ],    
+                            ),
+                        ],
                     ),
 
                     Text.rich(
