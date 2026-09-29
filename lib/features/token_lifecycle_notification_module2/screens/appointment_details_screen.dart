@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import 'cancel_appointment_screen.dart';
-
+import 'reschedule_appointment_screen.dart';
 
 class AppointmentDetailsScreen extends StatelessWidget {
   const AppointmentDetailsScreen({
@@ -191,7 +191,14 @@ class AppointmentDetailsScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const RescheduleAppointmentScreen(),
+                    ),
+                  );
+                },
                 label: Text(
                   "Reschedule Appointment",
                   style: TextStyle(
