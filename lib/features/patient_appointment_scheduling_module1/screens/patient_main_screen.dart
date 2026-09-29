@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/patient_bottom_nav_bar.dart';
 import 'caregiver_setup_screen.dart';
-import 'senior_mode_settings_screen.dart';
+import 'patient_profile_screen.dart';
 
 class PatientMainScreen extends StatefulWidget {
   final int initialIndex;
@@ -41,7 +41,7 @@ class _PatientMainScreenState extends State<PatientMainScreen> {
         module: 'Module 2: Notifications & Alerts',
         icon: Icons.notifications_none_outlined,
       ), // Tab 3: Alerts
-      const SeniorModeSettingsScreen(), // Tab 4: Profile & Senior Mode Settings
+      const PatientProfileScreen(), // Tab 4: Patient Profile, Dependents & Accessibility
     ];
 
     return Scaffold(
@@ -81,7 +81,7 @@ class _PatientMainScreenState extends State<PatientMainScreen> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.08),
+                  color: AppColors.primary.withValues(alpha: 0.08),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, size: 64, color: AppColors.primary),
