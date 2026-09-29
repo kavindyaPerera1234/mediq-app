@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-
 import '../../../core/constants/app_colors.dart';
+import '../../token_lifecycle_notification_module2/screens/digital_token_details_screen.dart';
 
 class RescheduleAppointmentScreen extends StatefulWidget {
   const RescheduleAppointmentScreen({
@@ -171,6 +171,12 @@ class _RescheduleAppointmentScreenState
                     ),
                     onPressed:(){
                         // rescheduleAppointment()
+                        Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => DigitalTokenDetailsScreen(),
+                            ),
+                        );
                         ScaffoldMessenger.of(context)
                         .showSnackBar(
                             const SnackBar(
