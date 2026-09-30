@@ -12,6 +12,7 @@ class AppointmentModel {
   final String appointmentDate;
   final String startTime;
   final String endTime;
+  final String patientName;
 
   final String status;
 
@@ -41,6 +42,7 @@ class AppointmentModel {
     required this.departmentName,
     required this.tokenCode,
     required this.timeSlot,
+    required this.patientName,
     this.createdAt,
     this.updatedAt,
     this.cancelledAt,
@@ -65,6 +67,8 @@ class AppointmentModel {
           departmentId: data['departmentId'] ?? '',
 
           slotId: data['slotId'] ?? '',
+
+          patientName: data['patientName'] ?? '',
 
           appointmentDate:
           data['appointmentDate'] ?? '',

@@ -186,6 +186,8 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
 
                                                         status: appointment.status,
 
+                                                        patientName: appointment.patientName,
+
                                                         color: appointment.status == "confirmed"
                                                         ? Colors.green
                                                         : Colors.orange,
@@ -265,6 +267,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
         required String time,
         required String token,
         required String status,
+        required String patientName,
         required Color color,
     })
         {
@@ -275,7 +278,15 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                     Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder:(context)=> const AppointmentDetailsScreen(),
+                            builder:(context)=> AppointmentDetailsScreen(
+                                token: token,
+                                patientName: patientName,
+                                hospitalName: hospital,
+                                clinic: clinic,
+                                date: date,
+                                time: time,
+                                status: status,
+                            ),
                         ),
                     );
                 },

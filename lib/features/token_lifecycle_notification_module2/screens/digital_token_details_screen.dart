@@ -185,8 +185,16 @@ class DigitalTokenDetailsScreen extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) =>
-                            const AppointmentDetailsScreen(),
+                      builder: (context) =>
+                      AppointmentDetailsScreen(
+                        token: "",
+                        patientName: "",
+                        hospitalName: "",
+                        clinic: "",
+                        date: "",
+                        time: "",
+                        status: "",
+                      ),
                     ),
                   );
                 },

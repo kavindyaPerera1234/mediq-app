@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../models/hospital_model.dart';
 import '../../token_lifecycle_notification_module2/screens/digital_token_details_screen.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class BookingConfirmationScreen extends StatelessWidget {
   final GovernmentHospital hospital;

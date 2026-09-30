@@ -4,8 +4,22 @@ import 'cancel_appointment_screen.dart';
 import 'reschedule_appointment_screen.dart';
 
 class AppointmentDetailsScreen extends StatelessWidget {
+  final String token;
+  final String patientName;
+  final String hospitalName;
+  final String clinic;
+  final String date;
+  final String time;
+  final String status;
+
   const AppointmentDetailsScreen({
-    super.key,
+    required this.token,
+    required this.patientName,
+    required this.hospitalName,
+    required this.clinic,
+    required this.date,
+    required this.time,
+    required this.status,
   });
 
   @override
@@ -83,7 +97,7 @@ class AppointmentDetailsScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 5),
                           Text(
-                            "A-024",
+                            token,
                             style: TextStyle(
                               fontSize: 34,
                               fontWeight: FontWeight.bold,
@@ -116,28 +130,28 @@ class AppointmentDetailsScreen extends StatelessWidget {
                   detailItem(
                     Icons.person_outline,
                     "PATIENT",
-                    "Kumara Perera",
+                    patientName,
                   ),
                   detailItem(
                     Icons.local_hospital_outlined,
                     "GOVERNMENT HOSPITAL",
-                    "National Hospital of Sri Lanka",
+                    hospitalName,
                   ),
                   detailItem(
                     Icons.medical_services_outlined,
                     "CLINIC / OPD",
-                    "General Medicine OPD",
+                    clinic,
                   ),
                   detailItem(
                     Icons.calendar_month_outlined,
                     "DATE",
-                    "Monday, 15 September 2026",
+                    date,
                   ),
 
                   detailItem(
                     Icons.access_time,
                     "TIME SLOT",
-                    "8:30 AM - 9:00 AM (Morning)",
+                    time,
                   ),
                 ],
               ),
