@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import 'appointment_details_screen.dart';
 import '../../patient_appointment_scheduling_module1/screens/caregiver_setup_screen.dart';
+import '../services/appointment_service.dart';
+import '../models/appointment_model.dart';
 
 class MyAppointmentsScreen extends StatefulWidget {
     const MyAppointmentsScreen({
@@ -19,6 +21,27 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
         "Completed",
         "Cancelled",
     ];
+
+    final AppointmentService _appointmentService = AppointmentService();
+    List<AppointmentModel> appointments = [];
+    bool isLoading = true;
+
+    @override
+    void initState() {
+        super.initState();  
+        loadAppointments();
+    }
+    Future<void> loadAppointments() async {
+        final data =
+        await _appointmentService.getUpcomingAppointments(
+            "200164801234",
+        );
+        print("UI received appointments: ${data.length}");
+        setState(() {
+            appointments = data;
+            isLoading = false;
+        });
+    }
 
     @override
     Widget build(BuildContext context) {
@@ -123,40 +146,52 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                                     Expanded(
                                         child: ListView(
                                             children: [
-                                                if(selectedTab == 0)...[
-                                                    appointmentCard(
-                                                        hospital:
-                                                        "National Hospital of Sri Lanka",
-                                                        clinic:
-                                                        "General Medicine OPD",
-                                                        date:
-                                                        "Today, 15 Sep 2026",
-                                                        time:
-                                                        "8:30 AM - 9:00 AM",
-                                                        token:
-                                                        "A-024",
-                                                        status:
-                                                        "CONFIRMED",
-                                                        color:
-                                                        Colors.green,
+                                                if (isLoading)
+                                                const Center(
+                                                    child: CircularProgressIndicator(),
+                                                )
+                                                else if (appointments.isEmpty)
+                                                const Center(
+                                                    child: Text(
+                                                        "No appointments found",
                                                     ),
-                                                    appointmentCard(
-                                                        hospital:
-                                                        "Colombo South Teaching Hospital",
-                                                        clinic:
-                                                        "Cardiology Clinic",
-                                                        date:
-                                                        "Wed, 18 Sep 2026",
-                                                        time:
-                                                        "10:00 AM - 10:30 AM",
-                                                        token:
-                                                        "C-108",
-                                                        status:
-                                                        "WAITING",
-                                                        color:
-                                                        Colors.orange,
-                                                    ),
-                                                ],
+                                                )
+                                                else
+                                                ...appointments
+                                                .where((appointment) {
+                                                    if(selectedTab == 0){
+                                                        return appointment.status == "confirmed" ||
+                                                        appointment.status == "rescheduled";
+                                                    }
+                                                    if(selectedTab == 1){
+                                                        return appointment.status == "completed";
+                                                    }
+                                                    if(selectedTab == 2){
+                                                        return appointment.status == "cancelled";
+                                                    }
+                                                   return false; 
+                                                })
+
+                                                .map((appointment){
+                                                    return appointmentCard(
+                                                        hospital: appointment.hospitalName,
+
+                                                        clinic: appointment.departmentName,
+
+                                                        time: appointment.timeSlot,
+
+                                                        date: appointment.appointmentDate,
+
+                                                        token: appointment.tokenCode,
+
+                                                        status: appointment.status,
+
+                                                        color: appointment.status == "confirmed"
+                                                        ? Colors.green
+                                                        : Colors.orange,
+                                                    );
+                                                }).toList(),
+
                                                 if(selectedTab != 0)
                                                 Padding(
                                                     padding:
@@ -231,137 +266,133 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
         required String token,
         required String status,
         required Color color,
-    }){
+    })
+        {
 
-    return GestureDetector(
-        onTap: (){
-            Navigator.push(
-                context,
-                 MaterialPageRoute(
-                    builder:(context)=> const AppointmentDetailsScreen(),
+            return GestureDetector(
+                onTap: ()
+                {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder:(context)=> const AppointmentDetailsScreen(),
+                        ),
+                    );
+                },
+
+                child: Container(
+                    margin: const EdgeInsets.only(bottom:12),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: Colors.grey.shade200,
+                        ),
+                    ),
+
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children:[
+                            Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children:[
+                                    Expanded(
+                                        child: Text(
+                                            hospital,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize:13,
+                                            ),
+                                        ),
+                                    ),
+
+                                    Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal:8,
+                                            vertical:4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                            color: color.withOpacity(0.15),
+                                            borderRadius:
+                                            BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                            status.toUpperCase(),
+                                            style: TextStyle(
+                                                color:color,
+                                                fontSize:10,
+                                                fontWeight:FontWeight.bold,
+                                            ),
+                                        ),
+                                    )
+                                ],
+                            ),
+
+                            const SizedBox(height:5),
+                            Text(
+                                clinic,
+                                style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize:12,
+                                ),
+                            ),
+                            const Divider(),
+                            Row(
+                                mainAxisAlignment:
+                                MainAxisAlignment.spaceBetween,
+                                children:[
+                                    Column(
+                                        crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                        children:[
+                                            Text(
+                                                date,
+                                                style: const TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize:13,
+                                                ),
+                                            ),
+                                            Text(
+                                                time,
+                                                style: const TextStyle(
+                                                    fontSize:12,
+                                                ),
+                                            ),
+                                        ],
+                                    ),
+                                    Text.rich(
+                                        TextSpan(
+                                            text:"Token: ",
+                                            children:[
+                                                TextSpan(
+                                                    text:
+                                                    token.isEmpty ? "N/A" : token,
+                                                    style: TextStyle(
+                                                        color: AppColors.primary,
+                                                        fontWeight: FontWeight.bold,
+                                                    ),
+
+                                                )
+
+                                            ],
+
+                                        ),
+
+                                    )
+
+                                ],
+
+                            )
+
+                        ],
+
+                    ),
+
                 ),
+
             );
-        },
 
-        child: Container(
-            margin:
-            const EdgeInsets.only(bottom:12),
-            padding:
-            const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius:
-                BorderRadius.circular(12),
-                border: Border.all(
-                    color:
-                    Colors.grey.shade200,
-                ),
-            ),
-
-            child: Column(
-                crossAxisAlignment:
-                CrossAxisAlignment.start,
-                children: [
-                    Row(
-                        mainAxisAlignment:
-                        MainAxisAlignment.spaceBetween,
-                        children: [
-                            Expanded(
-                                child: Text(
-                                    hospital,
-                                    style:
-                                    const TextStyle(
-                                        fontWeight:
-                                        FontWeight.bold,
-                                        fontSize:13,
-                                    ),
-                                ),
-                            ),
-
-                            Container(
-                                padding:
-                                const EdgeInsets.symmetric(
-                                    horizontal:8,
-                                    vertical:4,
-                                ),
-                                decoration:
-                                BoxDecoration(
-                                    color:
-                                    color.withOpacity(0.15),
-                                    borderRadius:
-                                    BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                    status,
-                                    style:
-                                    TextStyle(
-                                        color:color,
-                                        fontSize:10,
-                                        fontWeight:
-                                        FontWeight.bold,
-                                    ),
-                                ),
-                            ),
-                        ],
-                    ),
-                    const SizedBox(height:5),
-
-                    Text(
-                        clinic,
-                        style: TextStyle(
-                            color:
-                            AppColors.textSecondary,
-                            fontSize:12,
-                        ),
-                    ),
-                    const Divider(),
-                    Row(
-                        mainAxisAlignment:
-                        MainAxisAlignment.spaceBetween,
-                        children: [
-                            Column(
-                                crossAxisAlignment:
-                                CrossAxisAlignment.start,
-                                children: [
-                                    Text(
-                                        date,
-                                        style:
-                                        const TextStyle(
-                                            fontWeight:
-                                            FontWeight.w600,
-                                        ),
-                                    ),
-                                    Text(
-                                        time,
-                                        style:
-                                        const TextStyle(
-                                            fontSize:12,
-                                        ),
-                                    ),
-                                ],    
-                            ),
-                        ],
-                    ),
-
-                    Text.rich(
-                        TextSpan(
-                            text:"Token: ",
-                            children:[
-                                TextSpan(
-                                    text:token,
-                                    style:TextStyle(
-                                        color:
-                                        AppColors.primary,
-                                        fontWeight:
-                                        FontWeight.bold,
-                                    ),
-                                ),
-                            ],
-                        ),
-                    ),
-                ],
-            ),
-        ),
-    );
-  }
-}
+        }
+    }
