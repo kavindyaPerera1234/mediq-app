@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../models/hospital_model.dart';
+import 'patient_main_screen.dart';
 
 class BookingConfirmationScreen extends StatelessWidget {
   final GovernmentHospital hospital;
@@ -267,12 +268,72 @@ class BookingConfirmationScreen extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SizedBox(
+                              height: 48,
+                              child: OutlinedButton.icon(
+                                icon: const Icon(Icons.download_rounded, size: 18),
+                                label: const Text('Save Pass', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppColors.primary,
+                                  side: const BorderSide(color: AppColors.primary),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                onPressed: () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Token $tokenNumber saved. Confirmation SMS queued to registered mobile.'),
+                                      backgroundColor: AppColors.statusGreen,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: SizedBox(
+                              height: 48,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  Navigator.pushAndRemoveUntil(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const PatientMainScreen(initialIndex: 4),
+                                    ),
+                                    (route) => false,
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primaryLight,
+                                  foregroundColor: AppColors.primaryDark,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                child: const Text(
+                                  'My Profile',
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
                       SizedBox(
                         width: double.infinity,
-                        height: 50,
+                        height: 48,
                         child: ElevatedButton(
                           onPressed: () {
-                            Navigator.popUntil(context, (route) => route.isFirst);
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const PatientMainScreen(initialIndex: 0),
+                              ),
+                              (route) => false,
+                            );
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
@@ -283,8 +344,8 @@ class BookingConfirmationScreen extends StatelessWidget {
                             elevation: 0,
                           ),
                           child: const Text(
-                            'Back to Home',
-                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                            'Back to Hospital Home',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                           ),
                         ),
                       ),

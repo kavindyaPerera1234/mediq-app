@@ -714,61 +714,114 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
               }
 
               return Column(
-                children: list.take(3).map((app) {
+                children: list.take(5).map((app) {
+                  final isConfirmed = app.status == 'confirmed';
                   return Container(
                     margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: AppColors.background,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: AppColors.border),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () => _showTokenPassModal(app),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: AppColors.primaryLight.withValues(alpha: 0.5),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                app.tokenCode,
-                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.primary),
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: app.status == 'confirmed'
-                                    ? AppColors.statusGreen.withValues(alpha: 0.12)
-                                    : AppColors.error.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                app.status.toUpperCase(),
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: app.status == 'confirmed' ? AppColors.statusGreen : AppColors.error,
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primaryLight.withValues(alpha: 0.6),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        app.tokenCode,
+                                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.primary),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.border.withValues(alpha: 0.5),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        app.roomNumber,
+                                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: isConfirmed
+                                            ? AppColors.statusGreen.withValues(alpha: 0.12)
+                                            : AppColors.error.withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        app.status.toUpperCase(),
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: isConfirmed ? AppColors.statusGreen : AppColors.error,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    const Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.textMuted),
+                                  ],
+                                ),
+                              ],
                             ),
+                            const SizedBox(height: 8),
+                            Text(
+                              app.departmentName,
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${app.hospitalName} • ${app.appointmentDate} • ${app.timeSlot}',
+                              style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                            ),
+                            if (isConfirmed) ...[
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  GestureDetector(
+                                    onTap: () => _confirmCancelAppointment(app),
+                                    child: const Text(
+                                      'Cancel Slot',
+                                      style: TextStyle(fontSize: 11, color: AppColors.error, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  GestureDetector(
+                                    onTap: () => _showTokenPassModal(app),
+                                    child: const Text(
+                                      'View Pass →',
+                                      style: TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ],
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '${app.departmentName} (${app.roomNumber})',
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                        ),
-                        Text(
-                          '${app.hospitalName} • ${app.appointmentDate} • ${app.timeSlot}',
-                          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                        ),
-                      ],
+                      ),
                     ),
                   );
                 }).toList(),
@@ -876,6 +929,209 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  void _showTokenPassModal(AppointmentModel app) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final isConfirmed = app.status == 'confirmed';
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Top drag bar
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+
+              // Digital Pass Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'OPD Digital Token Pass',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isConfirmed
+                          ? AppColors.statusGreen.withValues(alpha: 0.12)
+                          : AppColors.error.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      isConfirmed ? '● ACTIVE TOKEN' : '● CANCELLED',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: isConfirmed ? AppColors.statusGreen : AppColors.error,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Token Box
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                ),
+                child: Column(
+                  children: [
+                    const Text(
+                      'ESTIMATED TOKEN NUMBER',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary, letterSpacing: 0.8),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      app.tokenCode,
+                      style: const TextStyle(fontSize: 38, fontWeight: FontWeight.w900, color: AppColors.primaryDark, letterSpacing: 1.5),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Room: ${app.roomNumber}',
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Details
+              _buildModalDetailRow('Hospital', app.hospitalName),
+              const Divider(height: 16, color: AppColors.border),
+              _buildModalDetailRow('Specialty Clinic', app.departmentName),
+              const Divider(height: 16, color: AppColors.border),
+              _buildModalDetailRow('Date', app.appointmentDate),
+              const Divider(height: 16, color: AppColors.border),
+              _buildModalDetailRow('Time Slot', app.timeSlot),
+              const Divider(height: 16, color: AppColors.border),
+              _buildModalDetailRow('Patient Name', app.patientName),
+              const Divider(height: 16, color: AppColors.border),
+              _buildModalDetailRow('NIC', app.patientNic),
+              const Divider(height: 16, color: AppColors.border),
+              _buildModalDetailRow('Priority', app.priority.toUpperCase()),
+              const SizedBox(height: 20),
+
+              if (isConfirmed) ...[
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.cancel_outlined, color: AppColors.error, size: 18),
+                    label: const Text('Cancel Appointment', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.error),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _confirmCancelAppointment(app);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
+
+              SizedBox(
+                width: double.infinity,
+                height: 46,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Close Pass', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildModalDetailRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+        Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+      ],
+    );
+  }
+
+  void _confirmCancelAppointment(AppointmentModel app) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: AppColors.error),
+              SizedBox(width: 8),
+              Text('Cancel Appointment?', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: Text(
+            'Are you sure you want to cancel token ${app.tokenCode} for ${app.departmentName} on ${app.appointmentDate}?\n\nThis will release your reserved slot to other awaiting patients.',
+            style: const TextStyle(fontSize: 13, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('Keep Appointment'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.error,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () async {
+                Navigator.pop(dialogCtx);
+                final success = await _appointmentService.cancelAppointment(app.id);
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      success
+                          ? 'Token ${app.tokenCode} was cancelled successfully.'
+                          : 'Failed to cancel appointment. Please check connection.',
+                    ),
+                    backgroundColor: success ? AppColors.textDark : AppColors.error,
+                  ),
+                );
+              },
+              child: const Text('Yes, Cancel', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
     );
   }
 }

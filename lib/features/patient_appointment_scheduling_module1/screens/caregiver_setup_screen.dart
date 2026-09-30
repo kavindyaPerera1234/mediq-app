@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import 'hospital_selection_screen.dart';
 import '../admin/screens/hospital_admin_dashboard.dart';
+import '../models/caregiver_model.dart';
+import '../services/caregiver_service.dart';
 
 class CaregiverSetupScreen extends StatefulWidget {
   const CaregiverSetupScreen({super.key});
@@ -22,6 +24,8 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
   String _selectedPriority = 'normal';
 
   final List<String> _relationships = ['Father', 'Mother', 'Child', 'Spouse', 'Other'];
+  final CaregiverService _caregiverService = CaregiverService();
+  final String _currentUserId = 'user_200164801234';
 
   @override
   void dispose() {
@@ -498,6 +502,62 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
               ],
             ),
             const Divider(height: 22, color: AppColors.border),
+
+            // Quick Select from Registered Dependents
+            StreamBuilder<List<CaregiverPatientModel>>(
+              stream: _caregiverService.streamCaregiverPatients(_currentUserId),
+              builder: (context, snapshot) {
+                final dependents = snapshot.data ?? [];
+                if (dependents.isEmpty) return const SizedBox.shrink();
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Saved Family Members (Tap to auto-fill)',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: dependents.map((dep) {
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8.0, bottom: 8.0),
+                            child: ActionChip(
+                              avatar: const Icon(Icons.person, size: 14, color: AppColors.primary),
+                              label: Text(
+                                '${dep.patientName} (${dep.relationship})',
+                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                              ),
+                              backgroundColor: AppColors.primaryLight.withValues(alpha: 0.4),
+                              side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
+                              onPressed: () {
+                                setState(() {
+                                  _nameController.text = dep.patientName;
+                                  _nicController.text = dep.patientNic;
+                                  if (_relationships.contains(dep.relationship)) {
+                                    _selectedRelationship = dep.relationship;
+                                  } else {
+                                    _selectedRelationship = 'Other';
+                                  }
+                                  _selectedPriority = dep.priority;
+                                });
+                              },
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                );
+              },
+            ),
 
             const Text('Patient Full Name *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
             const SizedBox(height: 6),
