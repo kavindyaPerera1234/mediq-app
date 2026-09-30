@@ -3,8 +3,18 @@ import '../../../core/constants/app_colors.dart';
 import '../../token_lifecycle_notification_module2/screens/digital_token_details_screen.dart';
 
 class RescheduleAppointmentScreen extends StatefulWidget {
+    final String hospital;
+    final String clinic;
+    final String doctor;
+    final String date;
+    final String time;
   const RescheduleAppointmentScreen({
     super.key,
+    required this.hospital,
+    required this.clinic,
+    required this.doctor,
+    required this.date,
+    required this.time,
   });
   @override
   State<RescheduleAppointmentScreen> createState() =>
@@ -13,8 +23,8 @@ class RescheduleAppointmentScreen extends StatefulWidget {
 
 class _RescheduleAppointmentScreenState
     extends State<RescheduleAppointmentScreen> {
-    String selectedDate = "28 Sep 2026";
-    String selectedTime = "10:30 AM";
+    late String selectedDate;
+    late String selectedTime;
     final List<String> timeSlots = [
         "09:00 AM",
         "10:30 AM",
@@ -22,6 +32,15 @@ class _RescheduleAppointmentScreenState
         "02:00 PM",
         "03:30 PM",
     ];
+
+    @override
+    void initState() {
+        super.initState();
+
+        selectedDate = widget.date;
+        selectedTime = widget.time;
+    }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -174,7 +193,9 @@ class _RescheduleAppointmentScreenState
                         Navigator.pushReplacement(
                             context,
                             MaterialPageRoute(
-                                builder: (context) => DigitalTokenDetailsScreen(),
+                                builder: (context) => DigitalTokenDetailsScreen(
+                                    appointmentId: "",
+                                ),
                             ),
                         );
                         ScaffoldMessenger.of(context)
@@ -222,23 +243,23 @@ class _RescheduleAppointmentScreenState
                 const SizedBox(height:12),
                 _detail(
                     "Hospital",
-                    "National Hospital Colombo",
+                    widget.hospital,
                 ),
                  _detail(
                     "Clinic",
-                    "OPD Clinic",
+                    widget.clinic,
                 ),
                 _detail(
                     "Doctor",
-                    "Dr. Silva",
+                    widget.doctor,
                 ),
                 _detail(
                     "Date",
-                    "25 Sep 2026",
+                    widget.date,
                 ),
                  _detail(
-                     "Time",
-                    "09:30 AM",
+                    "Time",
+                    widget.time,
                 ),
             ],
         ),

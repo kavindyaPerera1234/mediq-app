@@ -4,6 +4,7 @@ import 'cancel_appointment_screen.dart';
 import 'reschedule_appointment_screen.dart';
 
 class AppointmentDetailsScreen extends StatelessWidget {
+  final String appointmentId;
   final String token;
   final String patientName;
   final String hospitalName;
@@ -13,6 +14,7 @@ class AppointmentDetailsScreen extends StatelessWidget {
   final String status;
 
   const AppointmentDetailsScreen({
+    required this.appointmentId,
     required this.token,
     required this.patientName,
     required this.hospitalName,
@@ -209,7 +211,13 @@ class AppointmentDetailsScreen extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const RescheduleAppointmentScreen(),
+                      builder: (context) => RescheduleAppointmentScreen(
+                        hospital: hospitalName,
+                        clinic: clinic,
+                        doctor: "Not Assigned",
+                        date: date,
+                        time: time,
+                      ),
                     ),
                   );
                 },

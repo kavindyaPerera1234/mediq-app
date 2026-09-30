@@ -7,8 +7,10 @@ import 'appointment_details_screen.dart';
 
 
 class DigitalTokenDetailsScreen extends StatelessWidget {
+  final String appointmentId;
   DigitalTokenDetailsScreen({
     super.key,
+    required this.appointmentId,
   });
   @override
   Widget build(BuildContext context) {
@@ -187,13 +189,14 @@ class DigitalTokenDetailsScreen extends StatelessWidget {
                     MaterialPageRoute(
                       builder: (context) =>
                       AppointmentDetailsScreen(
-                        token: "",
-                        patientName: "",
-                        hospitalName: "",
-                        clinic: "",
-                        date: "",
-                        time: "",
-                        status: "",
+                        appointmentId: appointmentId,
+                        token: token.tokenCode,
+                        patientName: "Patient",
+                        hospitalName: token.hospitalName,
+                        clinic: token.clinicName,
+                        date: token.appointmentDate,
+                        time: token.appointmentTime,
+                        status: token.status,
                       ),
                     ),
                   );
