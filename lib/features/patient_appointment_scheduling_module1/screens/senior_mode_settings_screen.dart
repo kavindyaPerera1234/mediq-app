@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants/app_colors.dart';
+import '../admin/screens/hospital_admin_dashboard.dart';
 
 class SeniorModeSettingsScreen extends StatefulWidget {
   const SeniorModeSettingsScreen({super.key});
@@ -126,7 +127,7 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                   border: Border.all(color: AppColors.border),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.02),
+                      color: Colors.black.withValues(alpha: 0.02),
                       blurRadius: 8,
                       offset: const Offset(0, 3),
                     ),
@@ -188,7 +189,7 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               color: _largeTextMode
-                                  ? AppColors.primaryLight.withOpacity(0.5)
+                                  ? AppColors.primaryLight.withValues(alpha: 0.5)
                                   : const Color(0xFFF8FAFC),
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
@@ -226,6 +227,56 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                           ),
                         ),
                       ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Hospital Administration Console Access
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E293B),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: const [
+                        Icon(Icons.admin_panel_settings, color: Colors.white, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'Hospital Administration',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Configure government hospitals, OPD departments, and 25-patient slot capping limits.',
+                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 42,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const HospitalAdminDashboard()),
+                          );
+                        },
+                        child: const Text('Open Hospital Admin Console →', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
                     ),
                   ],
                 ),

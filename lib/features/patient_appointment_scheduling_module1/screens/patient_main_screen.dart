@@ -4,6 +4,8 @@ import '../../../core/widgets/patient_bottom_nav_bar.dart';
 import 'senior_mode_settings_screen.dart';
 import '../../token_lifecycle_notification_module2/screens/notification_centre_screen.dart';
 import 'package:mediq_app/features/token_lifecycle_notification_module2/screens/my_appointments_screen.dart';
+import 'caregiver_setup_screen.dart';
+import 'patient_profile_screen.dart';
 
 class PatientMainScreen extends StatefulWidget {
   final int initialIndex;
@@ -39,6 +41,12 @@ class _PatientMainScreenState extends State<PatientMainScreen> {
       ), // Tab 2: Queue
       const NotificationCentreScreen(), // Tab 3: Alerts
       const SeniorModeSettingsScreen(), // Tab 4: Profile & Senior Mode Settings
+      _buildPlaceholder(
+        title: 'SMS & Reminders',
+        module: 'Module 2: Notifications & Alerts',
+        icon: Icons.notifications_none_outlined,
+      ), // Tab 3: Alerts
+      const PatientProfileScreen(), // Tab 4: Patient Profile, Dependents & Accessibility
     ];
 
     return Scaffold(
@@ -78,7 +86,7 @@ class _PatientMainScreenState extends State<PatientMainScreen> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.08),
+                  color: AppColors.primary.withValues(alpha: 0.08),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, size: 64, color: AppColors.primary),
