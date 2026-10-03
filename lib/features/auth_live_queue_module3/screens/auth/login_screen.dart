@@ -6,7 +6,6 @@ import '../../services/auth_service.dart';
 import 'registration_screen.dart';
 import 'forgot_password_screen.dart';
 import 'verification_code_screen.dart';
-import 'splash_screen.dart';
 import 'package:mediq_app/features/admin_dashboard/screens/admin_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -64,33 +63,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
         if (!mounted) return;
 
-        if (role == 'admin') {
-          // Route to Admin Dashboard — clear all previous routes
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const AdminDashboardScreen(), // Re-enter splash to route properly
-            ),
-            (route) => false,
-          );
-        } else if (role == 'patient' || role == 'caregiver') {
-          // Rare case: patient account used on staff form
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const PatientMainScreen(),
-            ),
-            (route) => false,
-          );
-        } else {
-          // doctor / nurse / receptionist / staff
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const SplashScreen(), // Re-enter splash to route properly
-            ),
-            (route) => false,
-          );
+        if (!authService.isUserActive()) {
+          setState(() {
+            _isLoading = false;
+            _errorMessage = 'This account has been deactivated. Please contact hospital admin.';
+          });
+          return;
         }
 
         authService.routeUserByRole(context);
@@ -450,7 +428,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 // Submit Button
                 ElevatedButton(
-                  onPressed: _isLoading ? null : _handleLogin,
+                  onPressed: _isLoading ? null :
+                  () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AdminDashboardScreen(),
+                      ),
+                    );
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
