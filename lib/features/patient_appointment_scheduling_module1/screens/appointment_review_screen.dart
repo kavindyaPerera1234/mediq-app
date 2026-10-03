@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/services/voice_guidance_service.dart';
 import '../backend/backend.dart';
 import 'booking_confirmation_screen.dart';
 
@@ -83,6 +84,11 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
     setState(() {
       _isSubmitting = false;
     });
+
+    VoiceGuidanceService.speak(
+      "Appointment confirmed for ${widget.patientName}. Your OPD token number is $token for room ${widget.clinic.roomNumber}.",
+      context: context,
+    );
 
     Navigator.pushReplacement(
       context,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/services/voice_guidance_service.dart';
 import '../backend/backend.dart';
 import 'senior_mode_settings_screen.dart';
 import '../admin/screens/hospital_admin_dashboard.dart';
@@ -410,6 +411,16 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
         elevation: 0,
         actions: [
           IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Settings & Accessibility',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SeniorModeSettingsScreen()),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.edit_outlined),
             tooltip: 'Edit Profile',
             onPressed: _showEditProfileDialog,
@@ -436,12 +447,8 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                 _buildAppointmentsSection(),
                 const SizedBox(height: 16),
 
-                // 4. Accessibility Settings Card
-                _buildAccessibilityTile(),
-                const SizedBox(height: 12),
-
-                // 5. Hospital Admin Console Card
-                _buildAdminConsoleTile(),
+                // 4. Unified Settings & Administration
+                _buildSettingsSection(),
                 const SizedBox(height: 20),
               ],
             ),
@@ -1025,106 +1032,89 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
     );
   }
 
-  Widget _buildAccessibilityTile() {
-    return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const SeniorModeSettingsScreen()),
-        );
-      },
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.accessibility_new_rounded, color: AppColors.primary, size: 22),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    'Senior Accessibility Settings',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    'Enlarged fonts, high contrast & voice audio assistance',
-                    style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
-          ],
-        ),
+  Widget _buildSettingsSection() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
       ),
-    );
-  }
-
-  Widget _buildAdminConsoleTile() {
-    return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const HospitalAdminDashboard()),
-        );
-      },
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1E293B),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 14, 16, 8),
+            child: Text(
+              'Settings & Administration',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
+            ),
+          ),
+          const Divider(height: 1, color: AppColors.border),
+          // Option 1: Accessibility & Senior Mode
+          ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
+                color: AppColors.primaryLight,
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.admin_panel_settings_rounded, color: Colors.white, size: 22),
+              child: const Icon(Icons.accessibility_new_rounded, color: AppColors.primary, size: 20),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    'Hospital Admin Console',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    'Configure hospitals, OPD clinics, and 25-patient slot capping',
-                    style: TextStyle(fontSize: 11, color: Colors.white70),
-                  ),
-                ],
+            title: const Text(
+              'Senior & Accessibility Mode',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark),
+            ),
+            subtitle: const Text(
+              'Large fonts (1.35x), high contrast, 3-tab nav & voice assistance',
+              style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+            ),
+            trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SeniorModeSettingsScreen()),
+              );
+            },
+          ),
+          const Divider(height: 1, indent: 56, endIndent: 16, color: AppColors.border),
+          // Option 2: Hospital Admin Console
+          ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(8),
               ),
+              child: const Icon(Icons.admin_panel_settings_outlined, color: AppColors.textDark, size: 20),
             ),
-            const Icon(Icons.chevron_right_rounded, color: Colors.white70),
-          ],
-        ),
+            title: const Text(
+              'Hospital Admin Console',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark),
+            ),
+            subtitle: const Text(
+              'OPD clinics, doctor quotas & 25-patient capping limits',
+              style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+            ),
+            trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const HospitalAdminDashboard()),
+              );
+            },
+          ),
+          const SizedBox(height: 4),
+        ],
       ),
     );
   }
 
   void _showTokenPassModal(AppointmentModel app) {
+    VoiceGuidanceService.speak(
+      "Viewing token ${app.tokenCode} for ${app.patientName}. Room ${app.roomNumber}, ${app.departmentName}.",
+      context: context,
+    );
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,

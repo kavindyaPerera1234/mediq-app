@@ -27,35 +27,61 @@ class MediQApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: AppAccessibility.isLargeTextMode,
-      builder: (context, isLargeText, _) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([
+        AppAccessibility.isLargeTextMode,
+        AppAccessibility.isHighContrastMode,
+        AppAccessibility.isSimplifiedNav,
+        AppAccessibility.isVoiceGuidance,
+      ]),
+      builder: (context, _) {
+        final isLargeText = AppAccessibility.isLargeTextMode.value;
+        final isHighContrast = AppAccessibility.isHighContrastMode.value;
+
         return MaterialApp(
           title: 'MediQ - OPD Queue Management',
           debugShowCheckedModeBanner: false,
           theme: ThemeData(
-            scaffoldBackgroundColor: AppColors.background,
-            primaryColor: AppColors.primary,
+            scaffoldBackgroundColor: isHighContrast ? const Color(0xFF0F172A) : AppColors.background,
+            primaryColor: isHighContrast ? const Color(0xFFF59E0B) : AppColors.primary,
+            cardColor: isHighContrast ? const Color(0xFF1E293B) : AppColors.surface,
             textTheme: GoogleFonts.interTextTheme(
-              Theme.of(context).textTheme,
+              isHighContrast ? ThemeData.dark().textTheme : Theme.of(context).textTheme,
             ),
             colorScheme: ColorScheme.fromSeed(
-              seedColor: AppColors.primary,
-              primary: AppColors.primary,
-              surface: AppColors.surface,
+              seedColor: isHighContrast ? const Color(0xFFF59E0B) : AppColors.primary,
+              primary: isHighContrast ? const Color(0xFFF59E0B) : AppColors.primary,
+              surface: isHighContrast ? const Color(0xFF1E293B) : AppColors.surface,
+              brightness: isHighContrast ? Brightness.dark : Brightness.light,
             ),
             useMaterial3: true,
           ),
           builder: (context, child) {
             final mediaQuery = MediaQuery.of(context);
-            return MediaQuery(
+            Widget content = MediaQuery(
               data: mediaQuery.copyWith(
+                // 1.35x provides clear, unmistakable accessibility font scaling for seniors (WCAG 2.1 AA)
                 textScaler: isLargeText
-                    ? const TextScaler.linear(1.18)
+                    ? const TextScaler.linear(1.35)
                     : const TextScaler.linear(1.0),
               ),
               child: child!,
             );
+
+            if (isHighContrast) {
+              // High-contrast color inverter (turns white backgrounds black, dark text white, blue into gold/amber)
+              content = ColorFiltered(
+                colorFilter: const ColorFilter.matrix(<double>[
+                  -1.0,  0.0,  0.0, 0.0, 255.0,
+                   0.0, -1.0,  0.0, 0.0, 255.0,
+                   0.0,  0.0, -1.0, 0.0, 255.0,
+                   0.0,  0.0,  0.0, 1.0,   0.0,
+                ]),
+                child: content,
+              );
+            }
+
+            return content;
           },
           home: const PatientMainScreen(),
         );
