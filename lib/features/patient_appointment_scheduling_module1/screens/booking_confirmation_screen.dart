@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
-import '../models/hospital_model.dart';
-import '../../token_lifecycle_notification_module2/screens/digital_token_details_screen.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../backend/backend.dart';
+import 'patient_main_screen.dart';
 
 class BookingConfirmationScreen extends StatelessWidget {
   final GovernmentHospital hospital;
@@ -251,50 +250,106 @@ class BookingConfirmationScreen extends StatelessWidget {
                 ),
               ),
 
-              // 5. View Digital Token Pass Button (Handover to Member 2!)
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+              // Pinned Bottom Actions
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  border: const Border(top: BorderSide(color: AppColors.border, width: 1)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.textDark.withValues(alpha: 0.04),
+                      blurRadius: 8,
+                      offset: const Offset(0, -3),
                     ),
-                  ),
-                  onPressed: () {
-                    // Show handover alert to Member 2
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: Text(
-                          'Token Pass Handover',
-                          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                        ),
-                        content: Text(
-                          'Token $tokenNumber successfully passed to Member 2 (Digital Token Pass & Lifecycle Module).',
-                          style: GoogleFonts.inter(fontSize: 14),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () {
-                              Navigator.pop(context); // Close dialog
-                              Navigator.popUntil(context, (route) => route.isFirst); // Back to Home
-                            },
-                            child: const Text('Back to Home'),
+                  ],
+                ),
+                child: SafeArea(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SizedBox(
+                              height: 48,
+                              child: OutlinedButton.icon(
+                                icon: const Icon(Icons.download_rounded, size: 18),
+                                label: const Text('Save Pass', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppColors.primary,
+                                  side: const BorderSide(color: AppColors.primary),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                onPressed: () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Token $tokenNumber saved. Confirmation SMS queued to registered mobile.'),
+                                      backgroundColor: AppColors.statusGreen,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: SizedBox(
+                              height: 48,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  Navigator.pushAndRemoveUntil(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const PatientMainScreen(initialIndex: 4),
+                                    ),
+                                    (route) => false,
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primaryLight,
+                                  foregroundColor: AppColors.primaryDark,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                child: const Text(
+                                  'My Profile',
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ),
                           ),
                         ],
                       ),
-                    );
-                  },
-                  child: Text(
-                    'View Digital Token Pass →',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const PatientMainScreen(initialIndex: 0),
+                              ),
+                              (route) => false,
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: AppColors.surface,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: const Text(
+                            'Back to Hospital Home',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),

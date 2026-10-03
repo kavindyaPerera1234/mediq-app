@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../services/hospital_admin_service.dart';
+import '../../backend/backend.dart';
 
 class HospitalItem {
   final String id;

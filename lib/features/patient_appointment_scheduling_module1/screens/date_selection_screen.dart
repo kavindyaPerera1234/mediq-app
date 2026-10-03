@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../../../core/constants/app_colors.dart';
-import '../models/hospital_model.dart';
+import '../backend/backend.dart';
 import 'time_slot_selection_screen.dart';
 
 class DateSelectionScreen extends StatefulWidget {

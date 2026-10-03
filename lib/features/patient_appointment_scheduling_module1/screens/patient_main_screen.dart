@@ -6,11 +6,12 @@ import '../../auth_live_queue_module3/screens/queue/live_queue_main_screen.dart'
 import '../../token_lifecycle_notification_module2/screens/notification_centre_screen.dart';
 import 'package:mediq_app/features/token_lifecycle_notification_module2/screens/my_appointments_screen.dart';
 import 'caregiver_setup_screen.dart';
+import 'patient_home_screen.dart';
 import 'patient_profile_screen.dart';
 
 class PatientMainScreen extends StatefulWidget {
   final int initialIndex;
-  const PatientMainScreen({super.key, this.initialIndex = 1}); // Default to Tab 1 (Appointments)
+  const PatientMainScreen({super.key, this.initialIndex = 0}); // Default to Tab 0 (Home)
 
   @override
   State<PatientMainScreen> createState() => _PatientMainScreenState();
@@ -29,10 +30,12 @@ class _PatientMainScreenState extends State<PatientMainScreen> {
   Widget build(BuildContext context) {
     // 5 Tabs aligned with PatientBottomNavBar
     final List<Widget> pages = [
-      _buildPlaceholder(
-        title: 'MediQ Hospital Portal',
-        module: 'Shared Home & Government OPD Announcements',
-        icon: Icons.local_hospital_outlined,
+      PatientHomeScreen(
+        onNavigateTab: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
       ), // Tab 0: Home
       const MyAppointmentsScreen(), // Tab 1: Appointments (Member 1 - Booking)
       _buildPlaceholder(
