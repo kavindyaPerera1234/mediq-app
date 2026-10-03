@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'theme/app_theme.dart';
 import 'services/auth_service.dart';
+import 'services/seed_data_service.dart';
 import 'screens/staff_dashboard_screen.dart';
 
 void main() async {
@@ -12,6 +13,12 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+
+    // Auto-seed initial demo data into Firestore project (mediq-opd)
+    SeedDataService().seedDemoData().catchError((e) {
+      debugPrint('Firestore Seeding Note: $e');
+      return false;
+    });
   } catch (e) {
     debugPrint('Firebase Initialization Warning: $e');
   }
