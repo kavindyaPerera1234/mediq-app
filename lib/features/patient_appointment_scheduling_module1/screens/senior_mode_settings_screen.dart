@@ -4,7 +4,6 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_accessibility.dart';
 import '../../../core/services/voice_guidance_service.dart';
 import '../backend/backend.dart';
-import '../admin/screens/hospital_admin_dashboard.dart';
 
 class SeniorModeSettingsScreen extends StatefulWidget {
   const SeniorModeSettingsScreen({super.key});
@@ -102,264 +101,204 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
           'Accessibility & Senior Mode',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
-        backgroundColor: Colors.white,
-        foregroundColor: AppColors.textPrimary,
-        elevation: 0.5,
-        leading: Container(
-          margin: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.border),
-          ),
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary, size: 18),
-            onPressed: () => Navigator.pop(context),
-          ),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        centerTitle: true,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 1. Header Title & Subtitle
-              Text(
-                'Accessibility Settings',
-                style: GoogleFonts.inter(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 1. Header Title & Subtitle
+                Text(
+                  'Accessibility Settings',
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Senior & Accessibility options apply instantly across the whole application',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  color: AppColors.textSecondary,
+                const SizedBox(height: 4),
+                Text(
+                  'Senior & Accessibility options apply instantly across the whole application',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
-              // 2. Toggle 1: Large Text Mode
-              _buildToggleCard(
-                title: 'Large Text Mode',
-                subtitle: 'Enlarges all labels, tokens & hospital text (1.35x)',
-                icon: Icons.text_fields_outlined,
-                isActive: _largeTextMode,
-                onChanged: (val) => _updateSetting(largeText: val),
-              ),
-              const SizedBox(height: 14),
-
-              // 3. Toggle 2: High Contrast Mode
-              _buildToggleCard(
-                title: 'High Contrast Mode',
-                subtitle: 'Crisp dark theme with high-contrast amber accents',
-                icon: Icons.contrast_outlined,
-                isActive: _highContrastMode,
-                onChanged: (val) => _updateSetting(highContrast: val),
-              ),
-              const SizedBox(height: 14),
-
-              // 4. Toggle 3: Simplified Navigation
-              _buildToggleCard(
-                title: 'Simplified Navigation',
-                subtitle: 'Converts bottom navigation into 3 large senior buttons',
-                icon: Icons.grid_view_outlined,
-                isActive: _simplifiedNav,
-                onChanged: (val) => _updateSetting(simplified: val),
-              ),
-              const SizedBox(height: 14),
-
-              // 5. Toggle 4: Voice Guidance
-              _buildToggleCard(
-                title: 'Voice Guidance',
-                subtitle: 'Announces booked tokens & directions aloud with speech',
-                icon: Icons.volume_up_outlined,
-                isActive: _voiceGuidance,
-                onChanged: (val) => _updateSetting(voice: val),
-              ),
-              const SizedBox(height: 24),
-
-              // 6. Live Preview Comparison Box
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 6,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
+                // 2. Toggle 1: Large Text Mode
+                _buildToggleCard(
+                  title: 'Large Text Mode',
+                  subtitle: 'Enlarges all labels, tokens & hospital text',
+                  icon: Icons.text_fields_outlined,
+                  isActive: _largeTextMode,
+                  onChanged: (val) => _updateSetting(largeText: val),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'LIVE PREVIEW (SENIOR MODE ADAPTATION)',
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textSecondary,
-                        letterSpacing: 0.5,
+                const SizedBox(height: 12),
+
+                // 3. Toggle 2: High Contrast Mode
+                _buildToggleCard(
+                  title: 'High Contrast Mode',
+                  subtitle: 'High contrast theme with soft dark slate & clear labels',
+                  icon: Icons.contrast_outlined,
+                  isActive: _highContrastMode,
+                  onChanged: (val) => _updateSetting(highContrast: val),
+                ),
+                const SizedBox(height: 12),
+
+                // 4. Toggle 3: Simplified Navigation
+                _buildToggleCard(
+                  title: 'Simplified Navigation',
+                  subtitle: 'Converts bottom navigation into 3 large senior buttons',
+                  icon: Icons.grid_view_outlined,
+                  isActive: _simplifiedNav,
+                  onChanged: (val) => _updateSetting(simplified: val),
+                ),
+                const SizedBox(height: 12),
+
+                // 5. Toggle 4: Voice Guidance
+                _buildToggleCard(
+                  title: 'Voice Guidance',
+                  subtitle: 'Announces booked tokens & directions aloud with speech',
+                  icon: Icons.volume_up_outlined,
+                  isActive: _voiceGuidance,
+                  onChanged: (val) => _updateSetting(voice: val),
+                ),
+                const SizedBox(height: 20),
+
+                // 6. Live Preview Comparison Box
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.border),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 6,
+                        offset: Offset(0, 2),
                       ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    Row(
-                      children: [
-                        // Standard Size Box
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: AppColors.border),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Standard',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    color: AppColors.textSecondary,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  'A-024',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.textPrimary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'LIVE PREVIEW (SENIOR MODE ADAPTATION)',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textSecondary,
+                          letterSpacing: 0.5,
                         ),
-                        const SizedBox(width: 10),
+                      ),
+                      const SizedBox(height: 12),
 
-                        // Enlarged Size Box (Active Highlight)
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: _largeTextMode
-                                  ? AppColors.primaryLight.withValues(alpha: 0.5)
-                                  : const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: _largeTextMode
-                                    ? AppColors.primary
-                                    : AppColors.border,
-                                width: _largeTextMode ? 1.5 : 1,
+                      Row(
+                        children: [
+                          // Standard Size Box
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: AppColors.border),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Standard',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'A-024',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Senior Mode',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: _largeTextMode
-                                        ? AppColors.primary
-                                        : AppColors.textSecondary,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'A-024',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w800,
-                                    color: _largeTextMode
-                                        ? AppColors.primary
-                                        : AppColors.textPrimary,
-                                  ),
-                                ),
-                              ],
-                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
+                          const SizedBox(width: 10),
 
-              // Clean Link to Hospital Admin Console
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryLight,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.admin_panel_settings_outlined, color: AppColors.primary, size: 22),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Hospital Admin Dashboard',
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Configure OPD clinics & slot limits',
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              color: AppColors.textSecondary,
+                          // Enlarged Size Box (Active Highlight)
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: _largeTextMode
+                                    ? AppColors.primaryLight.withValues(alpha: 0.5)
+                                    : const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: _largeTextMode
+                                      ? AppColors.primary
+                                      : AppColors.border,
+                                  width: _largeTextMode ? 1.5 : 1,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Senior Mode',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: _largeTextMode
+                                          ? AppColors.primary
+                                          : AppColors.textSecondary,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'A-024',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w800,
+                                      color: _largeTextMode
+                                          ? AppColors.primary
+                                          : AppColors.textPrimary,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppColors.textSecondary),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const HospitalAdminDashboard()),
-                        );
-                      },
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 24),
-            ],
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
         ),
       ),
