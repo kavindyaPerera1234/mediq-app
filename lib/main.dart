@@ -41,51 +41,72 @@ class MediQApp extends StatelessWidget {
         return MaterialApp(
           title: 'MediQ - OPD Queue Management',
           debugShowCheckedModeBanner: false,
-          theme: ThemeData(
-            scaffoldBackgroundColor: isHighContrast ? const Color(0xFF0F172A) : AppColors.background,
-            primaryColor: isHighContrast ? const Color(0xFFF59E0B) : AppColors.primary,
-            cardColor: isHighContrast ? const Color(0xFF1E293B) : AppColors.surface,
-            textTheme: GoogleFonts.interTextTheme(
-              isHighContrast ? ThemeData.dark().textTheme : Theme.of(context).textTheme,
-            ),
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: isHighContrast ? const Color(0xFFF59E0B) : AppColors.primary,
-              primary: isHighContrast ? const Color(0xFFF59E0B) : AppColors.primary,
-              surface: isHighContrast ? const Color(0xFF1E293B) : AppColors.surface,
-              brightness: isHighContrast ? Brightness.dark : Brightness.light,
-            ),
-            useMaterial3: true,
-          ),
+          // Eliminates theme transition lerp crashes completely
+          themeAnimationDuration: Duration.zero,
+          theme: isHighContrast ? _buildHighContrastTheme() : _buildStandardTheme(),
           builder: (context, child) {
             final mediaQuery = MediaQuery.of(context);
-            Widget content = MediaQuery(
+            return MediaQuery(
               data: mediaQuery.copyWith(
-                // 1.35x provides clear, unmistakable accessibility font scaling for seniors (WCAG 2.1 AA)
+                // 1.22x provides genuine senior readability without layout overflow
                 textScaler: isLargeText
-                    ? const TextScaler.linear(1.35)
+                    ? const TextScaler.linear(1.22)
                     : const TextScaler.linear(1.0),
               ),
               child: child!,
             );
-
-            if (isHighContrast) {
-              // High-contrast color inverter (turns white backgrounds black, dark text white, blue into gold/amber)
-              content = ColorFiltered(
-                colorFilter: const ColorFilter.matrix(<double>[
-                  -1.0,  0.0,  0.0, 0.0, 255.0,
-                   0.0, -1.0,  0.0, 0.0, 255.0,
-                   0.0,  0.0, -1.0, 0.0, 255.0,
-                   0.0,  0.0,  0.0, 1.0,   0.0,
-                ]),
-                child: content,
-              );
-            }
-
-            return content;
           },
           home: const PatientMainScreen(),
         );
       },
+    );
+  }
+
+  static ThemeData _buildStandardTheme() {
+    return ThemeData(
+      brightness: Brightness.light,
+      scaffoldBackgroundColor: AppColors.background,
+      primaryColor: AppColors.primary,
+      cardColor: AppColors.surface,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      textTheme: GoogleFonts.interTextTheme(),
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: AppColors.primary,
+        primary: AppColors.primary,
+        surface: AppColors.surface,
+        brightness: Brightness.light,
+      ),
+      useMaterial3: true,
+    );
+  }
+
+  static ThemeData _buildHighContrastTheme() {
+    // Soothing, eye-friendly high contrast dark slate theme (NO harsh neon orange)
+    return ThemeData(
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: const Color(0xFF0F172A),
+      primaryColor: const Color(0xFF38BDF8),
+      cardColor: const Color(0xFF1E293B),
+      dividerColor: const Color(0xFF334155),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF1E293B),
+        foregroundColor: Colors.white,
+        elevation: 1,
+      ),
+      textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
+      colorScheme: const ColorScheme.dark(
+        primary: Color(0xFF38BDF8),
+        secondary: Color(0xFF818CF8),
+        surface: Color(0xFF1E293B),
+        onPrimary: Colors.black,
+        onSurface: Colors.white,
+        brightness: Brightness.dark,
+      ),
+      useMaterial3: true,
     );
   }
 }

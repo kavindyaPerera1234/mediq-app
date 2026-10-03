@@ -4,7 +4,6 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/services/voice_guidance_service.dart';
 import '../backend/backend.dart';
 import 'senior_mode_settings_screen.dart';
-import '../admin/screens/hospital_admin_dashboard.dart';
 
 class PatientProfileScreen extends StatefulWidget {
   const PatientProfileScreen({super.key});
@@ -666,11 +665,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
 
                 // 3. My Booked Appointments History (Live Stream)
                 _buildAppointmentsSection(),
-                const SizedBox(height: 16),
-
-                // 4. Unified Settings & Administration
-                _buildSettingsSection(),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
               ],
             ),
           ),
@@ -966,21 +961,26 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.person_rounded, size: 18, color: AppColors.primary),
-                            const SizedBox(width: 8),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '${dep.patientName} (${dep.relationship})',
-                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                        Expanded(
+                          child: Row(
+                            children: [
+                              const Icon(Icons.person_rounded, size: 18, color: AppColors.primary),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '${dep.patientName} (${dep.relationship})',
+                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text('NIC: ${dep.patientNic}', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                  ],
                                 ),
-                                Text('NIC: ${dep.patientNic}', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-                              ],
-                            ),
-                          ],
+                              ),
+                            ],
+                          ),
                         ),
                         IconButton(
                           icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppColors.error),
@@ -1336,82 +1336,6 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
     );
   }
 
-  Widget _buildSettingsSection() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 14, 16, 8),
-            child: Text(
-              'Settings & Administration',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
-            ),
-          ),
-          const Divider(height: 1, color: AppColors.border),
-          // Option 1: Accessibility & Senior Mode
-          ListTile(
-            leading: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.accessibility_new_rounded, color: AppColors.primary, size: 20),
-            ),
-            title: const Text(
-              'Senior & Accessibility Mode',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark),
-            ),
-            subtitle: const Text(
-              'Large fonts (1.35x), high contrast, 3-tab nav & voice assistance',
-              style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
-            ),
-            trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SeniorModeSettingsScreen()),
-              );
-            },
-          ),
-          const Divider(height: 1, indent: 56, endIndent: 16, color: AppColors.border),
-          // Option 2: Hospital Admin Console
-          ListTile(
-            leading: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.admin_panel_settings_outlined, color: AppColors.textDark, size: 20),
-            ),
-            title: const Text(
-              'Hospital Admin Console',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark),
-            ),
-            subtitle: const Text(
-              'OPD clinics, doctor quotas & 25-patient capping limits',
-              style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
-            ),
-            trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const HospitalAdminDashboard()),
-              );
-            },
-          ),
-          const SizedBox(height: 4),
-        ],
-      ),
-    );
-  }
 
   void _showTokenPassModal(AppointmentModel app) {
     VoiceGuidanceService.speak(

@@ -227,11 +227,13 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Standard (1.0x)',
+                                  'Standard',
                                   style: GoogleFonts.inter(
                                     fontSize: 11,
                                     color: AppColors.textSecondary,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
@@ -246,7 +248,7 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 10),
 
                         // Enlarged Size Box (Active Highlight)
                         Expanded(
@@ -268,7 +270,7 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Senior Large (1.35x)',
+                                  'Senior Mode',
                                   style: GoogleFonts.inter(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
@@ -276,12 +278,14 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                                         ? AppColors.primary
                                         : AppColors.textSecondary,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
                                   'A-024',
                                   style: GoogleFonts.inter(
-                                    fontSize: 26,
+                                    fontSize: 22,
                                     fontWeight: FontWeight.w800,
                                     color: _largeTextMode
                                         ? AppColors.primary
@@ -419,6 +423,8 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                     fontSize: 12,
                     color: AppColors.textSecondary,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
