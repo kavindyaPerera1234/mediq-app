@@ -22,9 +22,10 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
   String _selectedRelationship = 'Father';
   String _selectedPriority = 'normal';
 
+  String? _selectedDependentNic;
   final List<String> _relationships = ['Father', 'Mother', 'Child', 'Spouse', 'Other'];
   final CaregiverService _caregiverService = CaregiverService();
-  final String _currentUserId = 'user_200164801234';
+  final String _currentUserId = 'user_sandeepani_001';
 
   @override
   void dispose() {
@@ -509,51 +510,103 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
                 final dependents = snapshot.data ?? [];
                 if (dependents.isEmpty) return const SizedBox.shrink();
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Saved Family Members (Tap to auto-fill)',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: dependents.map((dep) {
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8.0, bottom: 8.0),
-                            child: ActionChip(
-                              avatar: const Icon(Icons.person, size: 14, color: AppColors.primary),
-                              label: Text(
-                                '${dep.patientName} (${dep.relationship})',
-                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-                              ),
-                              backgroundColor: AppColors.primaryLight.withValues(alpha: 0.4),
-                              side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
-                              onPressed: () {
-                                setState(() {
-                                  _nameController.text = dep.patientName;
-                                  _nicController.text = dep.patientNic;
-                                  if (_relationships.contains(dep.relationship)) {
-                                    _selectedRelationship = dep.relationship;
-                                  } else {
-                                    _selectedRelationship = 'Other';
-                                  }
-                                  _selectedPriority = dep.priority;
-                                });
-                              },
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight.withValues(alpha: 0.35),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: const [
+                          Icon(Icons.family_restroom_rounded, size: 16, color: AppColors.primary),
+                          SizedBox(width: 6),
+                          Text(
+                            'Saved Family Dependents (Tap to auto-fill)',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primaryDark,
                             ),
-                          );
-                        }).toList(),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                  ],
+                      const SizedBox(height: 8),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            ...dependents.map((dep) {
+                              final isSelected = _selectedDependentNic == dep.patientNic ||
+                                  _nicController.text.trim() == dep.patientNic;
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 8.0),
+                                child: ChoiceChip(
+                                  avatar: Icon(
+                                    isSelected ? Icons.check_circle_rounded : Icons.person_rounded,
+                                    size: 15,
+                                    color: isSelected ? Colors.white : AppColors.primary,
+                                  ),
+                                  label: Text(
+                                    '${dep.patientName} (${dep.relationship})',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: isSelected ? Colors.white : AppColors.textDark,
+                                    ),
+                                  ),
+                                  selected: isSelected,
+                                  selectedColor: AppColors.primary,
+                                  backgroundColor: AppColors.surface,
+                                  side: BorderSide(
+                                    color: isSelected ? AppColors.primary : AppColors.border,
+                                  ),
+                                  onSelected: (selected) {
+                                    setState(() {
+                                      _selectedDependentNic = dep.patientNic;
+                                      _nameController.text = dep.patientName;
+                                      _nicController.text = dep.patientNic;
+                                      if (_relationships.contains(dep.relationship)) {
+                                        _selectedRelationship = dep.relationship;
+                                      } else {
+                                        _selectedRelationship = 'Other';
+                                      }
+                                      _selectedPriority = dep.priority;
+                                    });
+                                  },
+                                ),
+                              );
+                            }),
+                            Padding(
+                              padding: const EdgeInsets.only(right: 8.0),
+                              child: ActionChip(
+                                avatar: const Icon(Icons.person_add_alt_1_rounded, size: 15, color: AppColors.textSecondary),
+                                label: const Text(
+                                  '+ New Patient',
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                                ),
+                                backgroundColor: AppColors.surface,
+                                side: const BorderSide(color: AppColors.border),
+                                onPressed: () {
+                                  setState(() {
+                                    _selectedDependentNic = null;
+                                    _nameController.clear();
+                                    _nicController.clear();
+                                    _selectedRelationship = 'Mother';
+                                    _selectedPriority = 'normal';
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 );
               },
             ),

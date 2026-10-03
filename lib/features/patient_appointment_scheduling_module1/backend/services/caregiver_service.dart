@@ -38,11 +38,15 @@ class CaregiverService {
   /// Real-time stream of all dependents registered by this caregiver/patient
   Stream<List<CaregiverPatientModel>> streamCaregiverPatients(String caregiverUserId) {
     try {
+      final userIds = {caregiverUserId, 'user_sandeepani_001', 'user_200164801234', '200164801234'}.toList();
       return _caregiversRef
-          .where('caregiverUserId', isEqualTo: caregiverUserId)
+          .where('caregiverUserId', whereIn: userIds)
           .snapshots()
           .map((snapshot) {
-        return snapshot.docs.map((doc) => CaregiverPatientModel.fromFirestore(doc)).toList();
+        final list = snapshot.docs.map((doc) => CaregiverPatientModel.fromFirestore(doc)).toList();
+        // Deduplicate by patientNic in case of multiple legacy entries
+        final seen = <String>{};
+        return list.where((item) => seen.add(item.patientNic)).toList();
       });
     } catch (e) {
       debugPrint('CaregiverService: stream error $e');
