@@ -210,31 +210,39 @@ class PatientHomeScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    appointment.tokenCode,
-                    style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: Colors.white),
-                  ),
-                  Text(
-                    appointment.departmentName,
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${appointment.hospitalName} • ${appointment.roomNumber}',
-                    style: const TextStyle(fontSize: 12, color: Colors.white70),
-                  ),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      appointment.tokenCode,
+                      style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w900, color: Colors.white),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      appointment.departmentName,
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${appointment.hospitalName} • ${appointment.roomNumber}',
+                      style: const TextStyle(fontSize: 11, color: Colors.white70),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               ElevatedButton(
                 onPressed: () => onNavigateTab(4), // Go to Profile
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: AppColors.primaryDark,
                   elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
                 child: const Text('View Pass', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
@@ -302,9 +310,9 @@ class PatientHomeScreen extends StatelessWidget {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisCount: 2,
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: 1.5,
+      mainAxisSpacing: 10,
+      crossAxisSpacing: 10,
+      childAspectRatio: 1.28,
       children: [
         _buildActionCard(
           title: 'Book OPD Slot',
@@ -349,7 +357,7 @@ class PatientHomeScreen extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(14),
@@ -366,11 +374,13 @@ class PatientHomeScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 8),
+            Icon(icon, color: color, size: 22),
+            const SizedBox(height: 6),
             Text(
               title,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
+              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppColors.textDark),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 2),
             Text(
