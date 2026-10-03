@@ -25,4 +25,9 @@ class AppColors {
   static const Color error = Color(0xFFDC2626);         // Red for Full slots & Cancel
   static const Color errorLight = Color(0xFFFEE2E2);    // Light red badge background
   static const Color warning = Color(0xFFD97706);       // Amber for alerts
+  static const Color warningLight = Color(0xFFFEF3C7);  // Light amber badge background
+  static const Color info = Color(0xFF2563EB);          // Blue for active/info
+  static const Color infoLight = Color(0xFFDBEAFE);     // Light blue badge background
+  static const Color neutral = Color(0xFF64748B);       // Slate gray for neutral
+  static const Color neutralLight = Color(0xFFF1F5F9);  // Light gray badge background
 }

@@ -1,35 +1,45 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'core/constants/app_colors.dart';
-import 'features/patient_appointment_scheduling_module1/screens/caregiver_setup_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'theme/app_theme.dart';
+import 'services/auth_service.dart';
+import 'screens/staff_dashboard_screen.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MediQApp());
+
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint('Firebase Initialization Warning: $e');
+  }
+
+  // Pre-load Doctor Silva auth session to bypass login screen by default
+  final authService = AuthService();
+  await authService.signInDemoRole('doctor');
+
+  runApp(MediQApp(authService: authService));
 }
 
 class MediQApp extends StatelessWidget {
-  const MediQApp({super.key});
+  final AuthService? authService;
+
+  const MediQApp({
+    super.key,
+    this.authService,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final activeAuth = authService ?? AuthService();
+
     return MaterialApp(
-      title: 'MediQ - OPD Queue Management',
+      title: 'MediQ — OPD Staff Portal',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        scaffoldBackgroundColor: AppColors.background,
-        primaryColor: AppColors.primary,
-        textTheme: GoogleFonts.interTextTheme(
-          Theme.of(context).textTheme,
-        ),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: AppColors.primary,
-          primary: AppColors.primary,
-          surface: AppColors.surface,
-        ),
-        useMaterial3: true,
-      ),
-      home: const CaregiverSetupScreen(),
+      theme: AppTheme.lightTheme,
+      home: StaffDashboardScreen(authService: activeAuth),
     );
   }
 }
