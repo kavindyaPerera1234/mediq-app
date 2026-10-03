@@ -46,6 +46,44 @@ class AppointmentService {
 
       await docRef.set(toSave.toMap()).timeout(const Duration(seconds: 4));
 
+      // Cross-module sync: write to Module 3's queue_entries and queue_sessions
+      try {
+        final sessionId = '${appointment.hospitalId}_${appointment.departmentId}_${appointment.appointmentDate}';
+        await _firestore.collection('queue_entries').doc(docRef.id).set({
+          'appointmentId': docRef.id,
+          'patientId': appointment.patientId.isNotEmpty ? appointment.patientId : appointment.patientNic,
+          'patientNic': appointment.patientNic,
+          'patientName': appointment.patientName,
+          'hospitalId': appointment.hospitalId,
+          'departmentId': appointment.departmentId,
+          'tokenCode': appointment.tokenCode,
+          'queueSessionId': sessionId,
+          'status': 'waiting',
+          'priority': appointment.priority,
+          'isCaregiverBooking': appointment.isCaregiverBooking,
+          'relationship': appointment.relationship,
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
+        await _firestore.collection('queue_sessions').doc(sessionId).set({
+          'sessionId': sessionId,
+          'hospitalId': appointment.hospitalId,
+          'hospitalName': appointment.hospitalName,
+          'departmentId': appointment.departmentId,
+          'departmentName': appointment.departmentName,
+          'date': appointment.appointmentDate,
+          'status': 'active',
+          'roomNumber': appointment.roomNumber.isNotEmpty ? appointment.roomNumber : 'OPD Room 01',
+          'doctorName': 'Duty Medical Officer',
+          'estimatedMinutesPerPatient': 4,
+          'delayMinutes': 0,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      } catch (syncErr) {
+        debugPrint('AppointmentService: cross-module queue sync notice: $syncErr');
+      }
+
       // Increment bookedCount in slot if available
       try {
         final slotDocId = '${appointment.departmentId}_${appointment.appointmentDate}';

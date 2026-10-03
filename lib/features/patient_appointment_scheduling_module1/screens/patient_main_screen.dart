@@ -5,6 +5,8 @@ import 'caregiver_setup_screen.dart';
 import 'patient_home_screen.dart';
 import 'patient_profile_screen.dart';
 import '../../auth_live_queue_module3/screens/queue/live_queue_main_screen.dart';
+import '../../token_lifecycle_notification_module2/screens/notification_centre_screen.dart';
+import '../../token_lifecycle_notification_module2/screens/my_appointments_screen.dart';
 
 class PatientMainScreen extends StatefulWidget {
   final int initialIndex;
@@ -33,15 +35,11 @@ class _PatientMainScreenState extends State<PatientMainScreen> {
             _currentIndex = index;
           });
         },
-      ), // Tab 0: Home
-      const CaregiverSetupScreen(), // Tab 1: Appointments (Member 1 - Booking)
-      const LiveQueueMainScreen(), // Tab 2: Queue (Member 3)
-      _buildPlaceholder(
-        title: 'SMS & Reminders',
-        module: 'Module 2: Notifications & Alerts',
-        icon: Icons.notifications_none_outlined,
-      ), // Tab 3: Alerts
-      const PatientProfileScreen(), // Tab 4: Patient Profile, Dependents & Accessibility
+      ), // Tab 0: Home (Member 1)
+      const CaregiverSetupScreen(), // Tab 1: Book OPD Appointments (Member 1)
+      const LiveQueueMainScreen(), // Tab 2: Live Queue (Member 3)
+      const NotificationCentreScreen(), // Tab 3: Alerts & Digital Tokens (Member 2)
+      const PatientProfileScreen(), // Tab 4: Profile & Senior Accessibility (Member 1)
     ];
 
     return Scaffold(
