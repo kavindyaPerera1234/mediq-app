@@ -672,8 +672,9 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                           ],
                         ),
                         IconButton(
-                          icon: const Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.error),
-                          onPressed: () => _caregiverService.deleteCaregiverPatient(dep.id),
+                          icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppColors.error),
+                          tooltip: 'Remove from Family',
+                          onPressed: () => _confirmDeleteCaregiver(dep),
                         ),
                       ],
                     ),
@@ -681,6 +682,52 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                 }).toList(),
               );
             },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteCaregiver(CaregiverPatientModel dep) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: const [
+            Icon(Icons.delete_forever_rounded, color: AppColors.error),
+            SizedBox(width: 8),
+            Text('Remove Family Member', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to remove "${dep.patientName} (${dep.relationship})" from your saved family dependents?',
+          style: const TextStyle(fontSize: 13, color: AppColors.textDark),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await _caregiverService.deleteCaregiverPatient(dep.id);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${dep.patientName} removed from saved family members.'),
+                    backgroundColor: AppColors.textDark,
+                  ),
+                );
+              }
+            },
+            child: const Text('Remove'),
           ),
         ],
       ),
