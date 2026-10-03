@@ -5,6 +5,9 @@ import '../models/user_model.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../patient_appointment_scheduling_module1/screens/patient_main_screen.dart';
 import '../screens/auth/splash_screen.dart';
+import 'package:mediq_app/screens/staff_dashboard_screen.dart';
+import 'package:mediq_app/services/auth_service.dart' as m4_auth;
+import 'package:mediq_app/features/admin_dashboard/screens/admin_dashboard_screen.dart';
 
 class AuthService extends ChangeNotifier {
   static final AuthService _instance = AuthService._internal();
@@ -370,14 +373,15 @@ class AuthService extends ChangeNotifier {
     if (r == UserRole.admin) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const SplashScreen()),
+        MaterialPageRoute(builder: (_) => AdminDashboardScreen()),
         (route) => false,
       );
     } else if (isStaff) {
-      // Route staff (or re-enter splash until Module 4 Staff console is added)
+      final m4Auth = m4_auth.AuthService();
+      m4Auth.loadCurrentStaffProfile();
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const SplashScreen()),
+        MaterialPageRoute(builder: (_) => StaffDashboardScreen(authService: m4Auth)),
         (route) => false,
       );
     } else {

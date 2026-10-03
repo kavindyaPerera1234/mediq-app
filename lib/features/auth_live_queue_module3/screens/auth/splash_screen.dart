@@ -4,6 +4,9 @@ import '../../../../core/constants/app_colors.dart';
 import '../../services/auth_service.dart';
 import '../../../patient_appointment_scheduling_module1/screens/patient_main_screen.dart';
 import 'welcome_entry_screen.dart';
+import '../../../../screens/staff_dashboard_screen.dart';
+import '../../../../services/auth_service.dart' as m4_auth;
+import '../../../admin_dashboard/screens/admin_dashboard_screen.dart';
 
 /// Splash screen that checks Firebase Auth session on launch.
 ///
@@ -68,13 +71,15 @@ class _SplashScreenState extends State<SplashScreen>
         _navigateTo(const WelcomeEntryScreen());
       } else if (role == 'admin') {
         // Admin session → Admin Dashboard
-        _navigateTo(const _AdminDashboardPlaceholder());
+        _navigateTo(AdminDashboardScreen());
       } else if (role == 'patient' || role == 'caregiver') {
         // Patient session → Patient main (booking tab)
         _navigateTo(const PatientMainScreen());
       } else {
         // Staff session (doctor, nurse, receptionist, staff)
-        _navigateTo(const _StaffDashboardPlaceholder());
+        final m4Auth = m4_auth.AuthService();
+        m4Auth.loadCurrentStaffProfile();
+        _navigateTo(StaffDashboardScreen(authService: m4Auth));
       }
     } catch (e) {
       debugPrint("Splash session check error: $e");
