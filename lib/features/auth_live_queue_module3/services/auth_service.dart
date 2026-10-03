@@ -3,8 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../patient_appointment_scheduling_module1/screens/patient_main_screen.dart';
-import '../../../patient_appointment_scheduling_module1/admin/screens/hospital_admin_dashboard.dart';
+import '../../patient_appointment_scheduling_module1/screens/patient_main_screen.dart';
+import '../../patient_appointment_scheduling_module1/admin/screens/hospital_admin_dashboard.dart';
 import '../screens/auth/splash_screen.dart';
 
 class AuthService extends ChangeNotifier {

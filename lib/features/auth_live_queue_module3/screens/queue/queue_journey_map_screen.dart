@@ -198,7 +198,7 @@ class QueueJourneyMapScreen extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: isCurrent ? AppColors.primaryLight.withOpacity(0.5) : AppColors.surface,
+                  color: isCurrent ? AppColors.primaryLight.withValues(alpha: 0.5) : AppColors.surface,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                     color: isCurrent ? AppColors.primary : AppColors.border,

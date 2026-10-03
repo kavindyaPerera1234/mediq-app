@@ -75,7 +75,7 @@ class QueueDelayedScreen extends StatelessWidget {
                   border: Border.all(color: const Color(0xFFFDE68A)),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFFD97706).withOpacity(0.08),
+                      color: const Color(0xFFD97706).withValues(alpha: 0.08),
                       blurRadius: 16,
                       offset: const Offset(0, 4),
                     ),

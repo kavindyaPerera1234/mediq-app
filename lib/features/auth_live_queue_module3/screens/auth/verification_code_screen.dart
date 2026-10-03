@@ -221,7 +221,7 @@ class _VerificationCodeScreenState extends State<VerificationCodeScreen> {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryLight.withOpacity(0.5),
+                  color: AppColors.primaryLight.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
