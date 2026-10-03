@@ -29,46 +29,46 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyMediQWebDummyApiKey1234567890',
-    appId: '1:123456789012:web:abcdef123456',
-    messagingSenderId: '123456789012',
-    projectId: 'mediq-opd-app',
-    authDomain: 'mediq-opd-app.firebaseapp.com',
-    storageBucket: 'mediq-opd-app.appspot.com',
+    apiKey: 'AIzaSyCYqOjRDQAV0vZ4BxOPFRbz69EhpMyMgMQ',
+    appId: '1:350459297702:web:f7185105ebfa0bad9e1967',
+    messagingSenderId: '350459297702',
+    projectId: 'mediq-opd',
+    authDomain: 'mediq-opd.firebaseapp.com',
+    storageBucket: 'mediq-opd.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyMediQAndroidDummyApiKey123456',
-    appId: '1:123456789012:android:abcdef123456',
-    messagingSenderId: '123456789012',
-    projectId: 'mediq-opd-app',
-    storageBucket: 'mediq-opd-app.appspot.com',
+    apiKey: 'AIzaSyCYqOjRDQAV0vZ4BxOPFRbz69EhpMyMgMQ',
+    appId: '1:350459297702:android:694f509e530ce994',
+    messagingSenderId: '350459297702',
+    projectId: 'mediq-opd',
+    storageBucket: 'mediq-opd.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyMediQiOSDummyApiKey123456789',
-    appId: '1:123456789012:ios:abcdef123456',
-    messagingSenderId: '123456789012',
-    projectId: 'mediq-opd-app',
-    storageBucket: 'mediq-opd-app.appspot.com',
+    apiKey: 'AIzaSyCYqOjRDQAV0vZ4BxOPFRbz69EhpMyMgMQ',
+    appId: '1:350459297702:web:f7185105ebfa0bad9e1967',
+    messagingSenderId: '350459297702',
+    projectId: 'mediq-opd',
+    storageBucket: 'mediq-opd.firebasestorage.app',
     iosBundleId: 'com.mediq.opd',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyMediQMacosDummyApiKey123456',
-    appId: '1:123456789012:ios:abcdef123456',
-    messagingSenderId: '123456789012',
-    projectId: 'mediq-opd-app',
-    storageBucket: 'mediq-opd-app.appspot.com',
+    apiKey: 'AIzaSyCYqOjRDQAV0vZ4BxOPFRbz69EhpMyMgMQ',
+    appId: '1:350459297702:web:f7185105ebfa0bad9e1967',
+    messagingSenderId: '350459297702',
+    projectId: 'mediq-opd',
+    storageBucket: 'mediq-opd.firebasestorage.app',
     iosBundleId: 'com.mediq.opd',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyMediQWinDummyApiKey1234567890',
-    appId: '1:123456789012:web:abcdef123456',
-    messagingSenderId: '123456789012',
-    projectId: 'mediq-opd-app',
-    authDomain: 'mediq-opd-app.firebaseapp.com',
-    storageBucket: 'mediq-opd-app.appspot.com',
+    apiKey: 'AIzaSyCYqOjRDQAV0vZ4BxOPFRbz69EhpMyMgMQ',
+    appId: '1:350459297702:web:f7185105ebfa0bad9e1967',
+    messagingSenderId: '350459297702',
+    projectId: 'mediq-opd',
+    authDomain: 'mediq-opd.firebaseapp.com',
+    storageBucket: 'mediq-opd.firebasestorage.app',
   );
 }
