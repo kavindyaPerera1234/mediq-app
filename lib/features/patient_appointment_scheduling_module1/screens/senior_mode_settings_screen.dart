@@ -94,19 +94,21 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = _highContrastMode;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: isDark ? const Color(0xFF0B132B) : AppColors.background,
       appBar: AppBar(
         title: const Text(
           'Accessibility & Senior Mode',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
-        backgroundColor: AppColors.primary,
+        backgroundColor: isDark ? const Color(0xFF1C2541) : AppColors.primary,
         foregroundColor: Colors.white,
         centerTitle: true,
-        elevation: 0,
+        elevation: isDark ? 1 : 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -124,7 +126,7 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                   style: GoogleFonts.inter(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
+                    color: isDark ? Colors.white : AppColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -132,7 +134,7 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                   'Senior & Accessibility options apply instantly across the whole application',
                   style: GoogleFonts.inter(
                     fontSize: 13,
-                    color: AppColors.textSecondary,
+                    color: isDark ? const Color(0xFF94A3B8) : AppColors.textSecondary,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -144,16 +146,18 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                   icon: Icons.text_fields_outlined,
                   isActive: _largeTextMode,
                   onChanged: (val) => _updateSetting(largeText: val),
+                  isDark: isDark,
                 ),
                 const SizedBox(height: 12),
 
                 // 3. Toggle 2: High Contrast Mode
                 _buildToggleCard(
                   title: 'High Contrast Mode',
-                  subtitle: 'High contrast theme with soft dark slate & clear labels',
+                  subtitle: 'Enhanced contrast with soft dark slate theme',
                   icon: Icons.contrast_outlined,
                   isActive: _highContrastMode,
                   onChanged: (val) => _updateSetting(highContrast: val),
+                  isDark: isDark,
                 ),
                 const SizedBox(height: 12),
 
@@ -164,6 +168,7 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                   icon: Icons.grid_view_outlined,
                   isActive: _simplifiedNav,
                   onChanged: (val) => _updateSetting(simplified: val),
+                  isDark: isDark,
                 ),
                 const SizedBox(height: 12),
 
@@ -174,6 +179,7 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                   icon: Icons.volume_up_outlined,
                   isActive: _voiceGuidance,
                   onChanged: (val) => _updateSetting(voice: val),
+                  isDark: isDark,
                 ),
                 const SizedBox(height: 20),
 
@@ -182,9 +188,9 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: isDark ? const Color(0xFF1C2541) : Colors.white,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.border),
+                    border: Border.all(color: isDark ? const Color(0xFF3A506B) : AppColors.border),
                     boxShadow: const [
                       BoxShadow(
                         color: Colors.black12,
@@ -201,7 +207,7 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.textSecondary,
+                          color: isDark ? const Color(0xFF94A3B8) : AppColors.textSecondary,
                           letterSpacing: 0.5,
                         ),
                       ),
@@ -214,9 +220,9 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                             child: Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF8FAFC),
+                                color: isDark ? const Color(0xFF0B132B) : const Color(0xFFF8FAFC),
                                 borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: AppColors.border),
+                                border: Border.all(color: isDark ? const Color(0xFF3A506B) : AppColors.border),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -225,7 +231,7 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                                     'Standard',
                                     style: GoogleFonts.inter(
                                       fontSize: 11,
-                                      color: AppColors.textSecondary,
+                                      color: isDark ? const Color(0xFF94A3B8) : AppColors.textSecondary,
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -236,7 +242,7 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                                     style: GoogleFonts.inter(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
-                                      color: AppColors.textPrimary,
+                                      color: isDark ? Colors.white : AppColors.textPrimary,
                                     ),
                                   ),
                                 ],
@@ -251,13 +257,13 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
                                 color: _largeTextMode
-                                    ? AppColors.primaryLight.withValues(alpha: 0.5)
-                                    : const Color(0xFFF8FAFC),
+                                    ? (isDark ? const Color(0xFF243356) : AppColors.primaryLight.withValues(alpha: 0.5))
+                                    : (isDark ? const Color(0xFF0B132B) : const Color(0xFFF8FAFC)),
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
                                   color: _largeTextMode
-                                      ? AppColors.primary
-                                      : AppColors.border,
+                                      ? (isDark ? const Color(0xFF38BDF8) : AppColors.primary)
+                                      : (isDark ? const Color(0xFF3A506B) : AppColors.border),
                                   width: _largeTextMode ? 1.5 : 1,
                                 ),
                               ),
@@ -270,8 +276,8 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                                       fontSize: 11,
                                       fontWeight: FontWeight.w600,
                                       color: _largeTextMode
-                                          ? AppColors.primary
-                                          : AppColors.textSecondary,
+                                          ? (isDark ? const Color(0xFF38BDF8) : AppColors.primary)
+                                          : (isDark ? const Color(0xFF94A3B8) : AppColors.textSecondary),
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -283,8 +289,8 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                                       fontSize: 22,
                                       fontWeight: FontWeight.w800,
                                       color: _largeTextMode
-                                          ? AppColors.primary
-                                          : AppColors.textPrimary,
+                                          ? (isDark ? const Color(0xFF38BDF8) : AppColors.primary)
+                                          : (isDark ? Colors.white : AppColors.textPrimary),
                                     ),
                                   ),
                                 ],
@@ -311,14 +317,17 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
     required IconData icon,
     required bool isActive,
     required ValueChanged<bool> onChanged,
+    required bool isDark,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1C2541) : Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isActive ? AppColors.borderActive : AppColors.border,
+          color: isActive
+              ? (isDark ? const Color(0xFF38BDF8) : AppColors.borderActive)
+              : (isDark ? const Color(0xFF3A506B) : AppColors.border),
           width: isActive ? 1.5 : 1,
         ),
       ),
@@ -330,13 +339,15 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
             height: 42,
             decoration: BoxDecoration(
               color: isActive
-                  ? AppColors.primaryLight
-                  : const Color(0xFFF1F5F9),
+                  ? (isDark ? const Color(0xFF243356) : AppColors.primaryLight)
+                  : (isDark ? const Color(0xFF0B132B) : const Color(0xFFF1F5F9)),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               icon,
-              color: isActive ? AppColors.primary : AppColors.textSecondary,
+              color: isActive
+                  ? (isDark ? const Color(0xFF38BDF8) : AppColors.primary)
+                  : (isDark ? const Color(0xFF94A3B8) : AppColors.textSecondary),
               size: 22,
             ),
           ),
@@ -352,7 +363,7 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                   style: GoogleFonts.inter(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                    color: isDark ? Colors.white : AppColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -360,7 +371,7 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                   subtitle,
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: AppColors.textSecondary,
+                    color: isDark ? const Color(0xFF94A3B8) : AppColors.textSecondary,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -374,9 +385,9 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
             value: isActive,
             onChanged: onChanged,
             activeColor: Colors.white,
-            activeTrackColor: AppColors.primary,
+            activeTrackColor: isDark ? const Color(0xFF38BDF8) : AppColors.primary,
             inactiveThumbColor: Colors.white,
-            inactiveTrackColor: const Color(0xFFCBD5E1),
+            inactiveTrackColor: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
           ),
         ],
       ),

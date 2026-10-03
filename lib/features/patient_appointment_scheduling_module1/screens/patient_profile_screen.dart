@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_accessibility.dart';
 import '../../../core/services/voice_guidance_service.dart';
 import '../backend/backend.dart';
 import 'senior_mode_settings_screen.dart';
@@ -62,9 +63,9 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                 top: 20,
                 bottom: MediaQuery.of(context).viewInsets.bottom + 20,
               ),
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              decoration: BoxDecoration(
+                color: AppColors.cardSurface,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
               ),
               child: SingleChildScrollView(
                 child: Column(
@@ -74,17 +75,17 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
+                        Text(
                           'Edit Patient Profile',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.headingText),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.close_rounded),
+                          icon: Icon(Icons.close_rounded, color: AppColors.headingText),
                           onPressed: () => Navigator.pop(context),
                         ),
                       ],
                     ),
-                    const Divider(color: AppColors.border),
+                    Divider(color: AppColors.cardBorder),
                     const SizedBox(height: 12),
 
                     Center(
@@ -92,12 +93,12 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                         children: [
                           CircleAvatar(
                             radius: 36,
-                            backgroundColor: AppColors.primaryLight,
+                            backgroundColor: AppColors.chipBg,
                             backgroundImage: _profile.photoUrl.isNotEmpty ? NetworkImage(_profile.photoUrl) : null,
                             child: _profile.photoUrl.isEmpty
                                 ? Text(
                                     _profile.fullName.isNotEmpty ? _profile.fullName[0] : 'P',
-                                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.primary),
+                                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.accentColor),
                                   )
                                 : null,
                           ),
@@ -274,9 +275,9 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
             top: 20,
             bottom: MediaQuery.of(modalCtx).viewInsets.bottom + 24,
           ),
-          decoration: const BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          decoration: BoxDecoration(
+            color: AppColors.cardSurface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: SingleChildScrollView(
             child: Column(
@@ -286,21 +287,21 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'Choose Profile Photo',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.headingText),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close_rounded),
+                      icon: Icon(Icons.close_rounded, color: AppColors.headingText),
                       onPressed: () => Navigator.pop(modalCtx),
                     ),
                   ],
                 ),
-                const Divider(color: AppColors.border),
+                Divider(color: AppColors.cardBorder),
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   'Select a Profile Avatar:',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.headingText),
                 ),
                 const SizedBox(height: 12),
 
@@ -451,9 +452,9 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                 top: 20,
                 bottom: MediaQuery.of(context).viewInsets.bottom + 20,
               ),
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              decoration: BoxDecoration(
+                color: AppColors.cardSurface,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
               ),
               child: SingleChildScrollView(
                 child: Column(
@@ -463,22 +464,23 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
+                        Text(
                           'Add Family Member / Dependent',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.headingText),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.close_rounded),
+                          icon: Icon(Icons.close_rounded, color: AppColors.headingText),
                           onPressed: () => Navigator.pop(context),
                         ),
                       ],
                     ),
-                    const Divider(color: AppColors.border),
+                    Divider(color: AppColors.cardBorder),
                     const SizedBox(height: 12),
 
                     _buildFieldLabel('Full Name'),
                     TextField(
                       controller: nameCtrl,
+                      style: TextStyle(color: AppColors.headingText),
                       decoration: _inputDecoration('e.g. Sunil Perera'),
                     ),
                     const SizedBox(height: 12),
@@ -486,6 +488,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     _buildFieldLabel('National ID (NIC) / Birth Reg'),
                     TextField(
                       controller: nicCtrl,
+                      style: TextStyle(color: AppColors.headingText),
                       decoration: _inputDecoration('e.g. 195812345678'),
                     ),
                     const SizedBox(height: 12),
@@ -494,13 +497,15 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       decoration: BoxDecoration(
-                        color: AppColors.background,
+                        color: AppColors.innerCardBg,
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppColors.border),
+                        border: Border.all(color: AppColors.cardBorder),
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
                           value: rel,
+                          dropdownColor: AppColors.cardSurface,
+                          style: TextStyle(color: AppColors.headingText, fontSize: 13),
                           isExpanded: true,
                           items: ['Father', 'Mother', 'Child', 'Spouse', 'Other'].map((r) {
                             return DropdownMenuItem(value: r, child: Text(r));
@@ -517,13 +522,15 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       decoration: BoxDecoration(
-                        color: AppColors.background,
+                        color: AppColors.innerCardBg,
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppColors.border),
+                        border: Border.all(color: AppColors.cardBorder),
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
                           value: prio,
+                          dropdownColor: AppColors.cardSurface,
+                          style: TextStyle(color: AppColors.headingText, fontSize: 13),
                           isExpanded: true,
                           items: const [
                             DropdownMenuItem(value: 'elderly', child: Text('Elderly (60+ Years)')),
@@ -589,12 +596,17 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
   InputDecoration _inputDecoration(String hint) {
     return InputDecoration(
       hintText: hint,
+      hintStyle: TextStyle(color: AppColors.bodyText),
       filled: true,
-      fillColor: AppColors.background,
+      fillColor: AppColors.innerCardBg,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: AppColors.border),
+        borderSide: BorderSide(color: AppColors.cardBorder),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: AppColors.cardBorder),
       ),
     );
   }
@@ -604,73 +616,78 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
       padding: const EdgeInsets.only(bottom: 6.0),
       child: Text(
         label,
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.headingText),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(
-        backgroundColor: AppColors.background,
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
+    return ValueListenableBuilder<bool>(
+      valueListenable: AppAccessibility.isHighContrastMode,
+      builder: (context, isDark, _) {
+        if (_isLoading) {
+          return Scaffold(
+            backgroundColor: AppColors.pageBg,
+            body: const Center(child: CircularProgressIndicator()),
+          );
+        }
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text(
-          'Patient Profile',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.surface,
-        centerTitle: true,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Settings & Accessibility',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SeniorModeSettingsScreen()),
-              );
-            },
+        return Scaffold(
+          backgroundColor: AppColors.pageBg,
+          appBar: AppBar(
+            title: const Text(
+              'Patient Profile',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+            backgroundColor: AppColors.appBarBg,
+            foregroundColor: Colors.white,
+            centerTitle: true,
+            elevation: isDark ? 1 : 0,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.settings_outlined),
+                tooltip: 'Settings & Accessibility',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const SeniorModeSettingsScreen()),
+                  );
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.edit_outlined),
+                tooltip: 'Edit Profile',
+                onPressed: _showEditProfileDialog,
+              ),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.edit_outlined),
-            tooltip: 'Edit Profile',
-            onPressed: _showEditProfileDialog,
-          ),
-        ],
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 1. Patient Profile Card
-                _buildProfileHeaderCard(),
-                const SizedBox(height: 16),
+          body: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 1. Patient Profile Card
+                    _buildProfileHeaderCard(),
+                    const SizedBox(height: 16),
 
-                // 2. Dependents / Caregiver Patients (Live Stream)
-                _buildCaregiversSection(),
-                const SizedBox(height: 16),
+                    // 2. Dependents / Caregiver Patients (Live Stream)
+                    _buildCaregiversSection(),
+                    const SizedBox(height: 16),
 
-                // 3. My Booked Appointments History (Live Stream)
-                _buildAppointmentsSection(),
-                const SizedBox(height: 24),
-              ],
+                    // 3. My Booked Appointments History (Live Stream)
+                    _buildAppointmentsSection(),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -678,12 +695,12 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.cardSurface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.cardBorder),
         boxShadow: [
           BoxShadow(
-            color: AppColors.textDark.withValues(alpha: 0.03),
+            color: AppColors.isDark ? Colors.black26 : AppColors.textDark.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -698,17 +715,17 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryLight,
+                  color: AppColors.chipBg,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.verified_user_rounded, size: 14, color: AppColors.primary),
-                    SizedBox(width: 4),
+                    Icon(Icons.verified_user_rounded, size: 14, color: AppColors.accentColor),
+                    const SizedBox(width: 4),
                     Text(
                       'Verified Patient',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.accentColor),
                     ),
                   ],
                 ),
@@ -725,18 +742,18 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.08),
+                    color: AppColors.chipBg,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+                    border: Border.all(color: AppColors.accentColor.withValues(alpha: 0.3)),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.settings_outlined, size: 16, color: AppColors.primary),
-                      SizedBox(width: 5),
+                      Icon(Icons.settings_outlined, size: 16, color: AppColors.accentColor),
+                      const SizedBox(width: 5),
                       Text(
                         'Settings',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.accentColor),
                       ),
                     ],
                   ),
@@ -755,14 +772,14 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     onTap: _showProfilePhotoModal,
                     child: CircleAvatar(
                       radius: 34,
-                      backgroundColor: AppColors.primaryLight,
+                      backgroundColor: AppColors.chipBg,
                       backgroundImage: _profile.photoUrl.isNotEmpty
                           ? NetworkImage(_profile.photoUrl)
                           : null,
                       child: _profile.photoUrl.isEmpty
                           ? Text(
                               _profile.fullName.isNotEmpty ? _profile.fullName[0] : 'P',
-                              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.primary),
+                              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.accentColor),
                             )
                           : null,
                     ),
@@ -775,9 +792,9 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: AppColors.primary,
+                          color: AppColors.accentColor,
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
+                          border: Border.all(color: AppColors.cardSurface, width: 2),
                         ),
                         child: const Icon(Icons.camera_alt_rounded, size: 13, color: Colors.white),
                       ),
@@ -795,19 +812,19 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                         Expanded(
                           child: Text(
                             _profile.fullName,
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.headingText),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: AppColors.errorLight,
+                            color: AppColors.errorLight.withValues(alpha: AppColors.isDark ? 0.2 : 1.0),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             _profile.bloodGroup,
-                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.error),
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.isDark ? const Color(0xFFFCA5A5) : AppColors.error),
                           ),
                         ),
                       ],
@@ -815,26 +832,26 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     const SizedBox(height: 4),
                     Text(
                       'NIC: ${_profile.nic}',
-                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      style: TextStyle(fontSize: 12, color: AppColors.bodyText),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       _profile.phone,
-                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      style: TextStyle(fontSize: 12, color: AppColors.bodyText),
                     ),
                   ],
                 ),
               ),
             ],
           ),
-          const Divider(height: 24, color: AppColors.border),
+          Divider(height: 24, color: AppColors.cardBorder),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               Expanded(child: _buildInfoColumn('GENDER', _profile.gender)),
-              Container(width: 1, height: 24, color: AppColors.border),
+              Container(width: 1, height: 24, color: AppColors.cardBorder),
               Expanded(child: _buildInfoColumn('DOB', _profile.dateOfBirth)),
-              Container(width: 1, height: 24, color: AppColors.border),
+              Container(width: 1, height: 24, color: AppColors.cardBorder),
               Expanded(
                 child: Tooltip(
                   message: 'Emergency Contact: ${_profile.emergencyContactName} (${_profile.emergencyContactPhone})',
@@ -860,13 +877,13 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 10, color: AppColors.textMuted),
+              Icon(icon, size: 10, color: AppColors.bodyText),
               const SizedBox(width: 3),
             ],
             Flexible(
               child: Text(
                 label,
-                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted),
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.bodyText),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -876,7 +893,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
         const SizedBox(height: 2),
         Text(
           value,
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark),
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.headingText),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -889,9 +906,9 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.cardSurface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.cardBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -900,26 +917,26 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
-                children: const [
-                  Icon(Icons.family_restroom_rounded, color: AppColors.primary, size: 20),
-                  SizedBox(width: 8),
+                children: [
+                  Icon(Icons.family_restroom_rounded, color: AppColors.accentColor, size: 20),
+                  const SizedBox(width: 8),
                   Text(
                     'Family Dependents',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.headingText),
                   ),
                 ],
               ),
               TextButton.icon(
-                icon: const Icon(Icons.add_rounded, size: 16),
-                label: const Text('Add Member', style: TextStyle(fontSize: 12)),
+                icon: Icon(Icons.add_rounded, size: 16, color: AppColors.accentColor),
+                label: Text('Add Member', style: TextStyle(fontSize: 12, color: AppColors.accentColor)),
                 onPressed: _showAddCaregiverDialog,
               ),
             ],
           ),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'Family members registered under your care for easy 1-tap booking.',
-            style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+            style: TextStyle(fontSize: 11, color: AppColors.bodyText),
           ),
           const SizedBox(height: 12),
 
@@ -936,13 +953,13 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: AppColors.background,
+                    color: AppColors.innerCardBg,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Center(
+                  child: Center(
                     child: Text(
                       'No dependents added yet. Tap "+ Add Member" above.',
-                      style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                      style: TextStyle(fontSize: 12, color: AppColors.bodyText),
                     ),
                   ),
                 );
@@ -954,9 +971,9 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     margin: const EdgeInsets.only(bottom: 8),
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     decoration: BoxDecoration(
-                      color: AppColors.background,
+                      color: AppColors.innerCardBg,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(color: AppColors.cardBorder),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -964,7 +981,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                         Expanded(
                           child: Row(
                             children: [
-                              const Icon(Icons.person_rounded, size: 18, color: AppColors.primary),
+                              Icon(Icons.person_rounded, size: 18, color: AppColors.accentColor),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Column(
@@ -972,10 +989,10 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                                   children: [
                                     Text(
                                       '${dep.patientName} (${dep.relationship})',
-                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.headingText),
                                       overflow: TextOverflow.ellipsis,
                                     ),
-                                    Text('NIC: ${dep.patientNic}', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                    Text('NIC: ${dep.patientNic}', style: TextStyle(fontSize: 11, color: AppColors.bodyText)),
                                   ],
                                 ),
                               ),
@@ -1050,27 +1067,27 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.cardSurface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.cardBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: const [
-              Icon(Icons.confirmation_number_outlined, color: AppColors.statusOrange, size: 20),
-              SizedBox(width: 8),
+            children: [
+              const Icon(Icons.confirmation_number_outlined, color: AppColors.statusOrange, size: 20),
+              const SizedBox(width: 8),
               Text(
                 'My Active OPD Tokens & Appointments',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.headingText),
               ),
             ],
           ),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'Live appointments synced with Ministry of Health Cloud.',
-            style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+            style: TextStyle(fontSize: 11, color: AppColors.bodyText),
           ),
           const SizedBox(height: 12),
 
@@ -1103,9 +1120,9 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     margin: const EdgeInsets.only(bottom: 12),
                     padding: const EdgeInsets.all(3),
                     decoration: BoxDecoration(
-                      color: AppColors.background,
+                      color: AppColors.innerCardBg,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(color: AppColors.cardBorder),
                     ),
                     child: Row(
                       children: [
@@ -1116,10 +1133,10 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 8),
                               decoration: BoxDecoration(
-                                color: _appointmentFilter == 'upcoming' ? AppColors.surface : Colors.transparent,
+                                color: _appointmentFilter == 'upcoming' ? AppColors.cardSurface : Colors.transparent,
                                 borderRadius: BorderRadius.circular(8),
                                 boxShadow: _appointmentFilter == 'upcoming'
-                                    ? [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 4, offset: const Offset(0, 1))]
+                                    ? [BoxShadow(color: Colors.black.withValues(alpha: AppColors.isDark ? 0.2 : 0.04), blurRadius: 4, offset: const Offset(0, 1))]
                                     : null,
                               ),
                               child: Center(
@@ -1128,7 +1145,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
-                                    color: _appointmentFilter == 'upcoming' ? AppColors.primary : AppColors.textSecondary,
+                                    color: _appointmentFilter == 'upcoming' ? AppColors.accentColor : AppColors.bodyText,
                                   ),
                                 ),
                               ),
@@ -1142,10 +1159,10 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 8),
                               decoration: BoxDecoration(
-                                color: _appointmentFilter == 'past' ? AppColors.surface : Colors.transparent,
+                                color: _appointmentFilter == 'past' ? AppColors.cardSurface : Colors.transparent,
                                 borderRadius: BorderRadius.circular(8),
                                 boxShadow: _appointmentFilter == 'past'
-                                    ? [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 4, offset: const Offset(0, 1))]
+                                    ? [BoxShadow(color: Colors.black.withValues(alpha: AppColors.isDark ? 0.2 : 0.04), blurRadius: 4, offset: const Offset(0, 1))]
                                     : null,
                               ),
                               child: Center(
@@ -1154,7 +1171,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
-                                    color: _appointmentFilter == 'past' ? AppColors.primary : AppColors.textSecondary,
+                                    color: _appointmentFilter == 'past' ? AppColors.accentColor : AppColors.bodyText,
                                   ),
                                 ),
                               ),
@@ -1170,7 +1187,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: AppColors.background,
+                        color: AppColors.innerCardBg,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Center(
@@ -1178,7 +1195,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                           _appointmentFilter == 'upcoming'
                               ? 'No upcoming appointments. Book your next visit in Tab 1!'
                               : 'No past appointments found.',
-                          style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                          style: TextStyle(fontSize: 12, color: AppColors.bodyText),
                         ),
                       ),
                     )
@@ -1190,9 +1207,9 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                       return Container(
                         margin: const EdgeInsets.only(bottom: 10),
                         decoration: BoxDecoration(
-                          color: AppColors.background,
+                          color: AppColors.innerCardBg,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.border),
+                          border: Border.all(color: AppColors.cardBorder),
                         ),
                         child: InkWell(
                           borderRadius: BorderRadius.circular(12),
@@ -1210,24 +1227,24 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                           decoration: BoxDecoration(
-                                            color: AppColors.primaryLight.withValues(alpha: 0.6),
+                                            color: AppColors.chipBg,
                                             borderRadius: BorderRadius.circular(6),
                                           ),
                                           child: Text(
                                             app.tokenCode,
-                                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.primary),
+                                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.accentColor),
                                           ),
                                         ),
                                         const SizedBox(width: 8),
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                                           decoration: BoxDecoration(
-                                            color: AppColors.border.withValues(alpha: 0.5),
+                                            color: AppColors.chipBg,
                                             borderRadius: BorderRadius.circular(6),
                                           ),
                                           child: Text(
                                             app.roomNumber,
-                                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.headingText),
                                           ),
                                         ),
                                       ],
@@ -1258,7 +1275,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                                           ),
                                         ),
                                         const SizedBox(width: 4),
-                                        const Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.textMuted),
+                                        Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.bodyText),
                                       ],
                                     ),
                                   ],
@@ -1266,12 +1283,12 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                                 const SizedBox(height: 8),
                                 Text(
                                   app.departmentName,
-                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.headingText),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   '${app.hospitalName} • ${app.appointmentDate} • ${app.timeSlot}',
-                                  style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                  style: TextStyle(fontSize: 11, color: AppColors.bodyText),
                                 ),
                                 const SizedBox(height: 4),
                                 Row(
@@ -1279,7 +1296,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                                     Icon(
                                       app.isCaregiverBooking ? Icons.family_restroom_rounded : Icons.person_outline_rounded,
                                       size: 13,
-                                      color: app.isCaregiverBooking ? AppColors.statusOrange : AppColors.primary,
+                                      color: app.isCaregiverBooking ? AppColors.statusOrange : AppColors.accentColor,
                                     ),
                                     const SizedBox(width: 4),
                                     Expanded(
@@ -1290,7 +1307,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                                         style: TextStyle(
                                           fontSize: 11.5,
                                           fontWeight: FontWeight.w600,
-                                          color: app.isCaregiverBooking ? AppColors.statusOrange : AppColors.primary,
+                                          color: app.isCaregiverBooking ? AppColors.statusOrange : AppColors.accentColor,
                                         ),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
@@ -1314,9 +1331,9 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                                     ],
                                     GestureDetector(
                                       onTap: () => _showTokenPassModal(app),
-                                      child: const Text(
+                                      child: Text(
                                         'View Pass →',
-                                        style: TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.bold),
+                                        style: TextStyle(fontSize: 11, color: AppColors.accentColor, fontWeight: FontWeight.bold),
                                       ),
                                     ),
                                   ],
@@ -1350,9 +1367,9 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
       builder: (context) {
         final isConfirmed = app.status == 'confirmed';
         return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          decoration: BoxDecoration(
+            color: AppColors.cardSurface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
           child: Column(
@@ -1364,7 +1381,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: AppColors.cardBorder,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -1373,9 +1390,9 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'OPD Digital Token Pass',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.headingText),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -1403,25 +1420,25 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryLight.withValues(alpha: 0.4),
+                  color: AppColors.chipBg,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                  border: Border.all(color: AppColors.accentColor.withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   children: [
-                    const Text(
+                    Text(
                       'ESTIMATED TOKEN NUMBER',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary, letterSpacing: 0.8),
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.accentColor, letterSpacing: 0.8),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       app.tokenCode,
-                      style: const TextStyle(fontSize: 38, fontWeight: FontWeight.w900, color: AppColors.primaryDark, letterSpacing: 1.5),
+                      style: TextStyle(fontSize: 38, fontWeight: FontWeight.w900, color: AppColors.accentColor, letterSpacing: 1.5),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Room: ${app.roomNumber}',
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.headingText),
                     ),
                   ],
                 ),
@@ -1430,17 +1447,17 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
 
               // Details
               _buildModalDetailRow('Hospital', app.hospitalName),
-              const Divider(height: 16, color: AppColors.border),
+              Divider(height: 16, color: AppColors.cardBorder),
               _buildModalDetailRow('Specialty Clinic', app.departmentName),
-              const Divider(height: 16, color: AppColors.border),
+              Divider(height: 16, color: AppColors.cardBorder),
               _buildModalDetailRow('Date', app.appointmentDate),
-              const Divider(height: 16, color: AppColors.border),
+              Divider(height: 16, color: AppColors.cardBorder),
               _buildModalDetailRow('Time Slot', app.timeSlot),
-              const Divider(height: 16, color: AppColors.border),
+              Divider(height: 16, color: AppColors.cardBorder),
               _buildModalDetailRow('Patient Name', app.patientName),
-              const Divider(height: 16, color: AppColors.border),
+              Divider(height: 16, color: AppColors.cardBorder),
               _buildModalDetailRow('NIC', app.patientNic),
-              const Divider(height: 16, color: AppColors.border),
+              Divider(height: 16, color: AppColors.cardBorder),
               _buildModalDetailRow('Priority', app.priority.toUpperCase()),
               const SizedBox(height: 20),
 
@@ -1488,8 +1505,8 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-        Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+        Text(label, style: TextStyle(fontSize: 12, color: AppColors.bodyText)),
+        Text(value, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.headingText)),
       ],
     );
   }
