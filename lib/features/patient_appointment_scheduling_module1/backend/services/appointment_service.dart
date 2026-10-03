@@ -66,10 +66,12 @@ class AppointmentService {
   Stream<List<AppointmentModel>> streamPatientAppointments(String patientNic) {
     try {
       return _appointmentsRef
-          .where('patientNic', isEqualTo: patientNic)
           .snapshots()
           .map((snapshot) {
-        final list = snapshot.docs.map((doc) => AppointmentModel.fromFirestore(doc)).toList();
+        final list = snapshot.docs
+            .map((doc) => AppointmentModel.fromFirestore(doc))
+            .where((app) => app.patientNic == patientNic || app.isCaregiverBooking)
+            .toList();
         // Sort newest first
         list.sort((a, b) => (b.createdAt ?? DateTime.now()).compareTo(a.createdAt ?? DateTime.now()));
         return list;
