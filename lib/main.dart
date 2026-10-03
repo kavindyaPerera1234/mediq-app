@@ -5,6 +5,7 @@ import 'firebase_options.dart';
 import 'core/constants/app_colors.dart';
 import 'core/constants/app_accessibility.dart';
 import 'features/auth_live_queue_module3/screens/auth/splash_screen.dart';
+import 'services/seed_data_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,6 +16,11 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     debugPrint("Firebase initialized successfully!");
+
+    // Auto-seed initial demo data into Firestore project (mediq-opd)
+    SeedDataService().seedDemoData().catchError((e) {
+      debugPrint('Firestore Seeding Note: $e');
+      return false;
   } catch (e) {
     debugPrint("Firebase initialization notice: $e");
   }

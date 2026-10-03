@@ -27,13 +27,14 @@ class DelayUpdate {
 
   factory DelayUpdate.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
+    final mins = data['delayMinutes'] ?? data['additionalMinutes'] ?? 0;
     return DelayUpdate(
       delayId: doc.id,
       queueSessionId: data['queueSessionId'] ?? '',
       hospitalId: data['hospitalId'] ?? '',
       departmentId: data['departmentId'] ?? '',
       reason: data['reason'] ?? '',
-      additionalMinutes: data['additionalMinutes'] ?? 0,
+      additionalMinutes: mins,
       createdBy: data['createdBy'] ?? '',
       isActive: data['isActive'] ?? true,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
@@ -47,6 +48,7 @@ class DelayUpdate {
       'hospitalId': hospitalId,
       'departmentId': departmentId,
       'reason': reason,
+      'delayMinutes': additionalMinutes,
       'additionalMinutes': additionalMinutes,
       'createdBy': createdBy,
       'isActive': isActive,

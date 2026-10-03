@@ -25,13 +25,14 @@ class QueueEvent {
 
   factory QueueEvent.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
+    final actType = data['actionType'] ?? data['eventType'] ?? '';
     return QueueEvent(
       eventId: doc.id,
       queueSessionId: data['queueSessionId'] ?? '',
       queueEntryId: data['queueEntryId'] ?? '',
       appointmentId: data['appointmentId'] ?? '',
       performedBy: data['performedBy'] ?? '',
-      eventType: data['eventType'] ?? '',
+      eventType: actType,
       previousStatus: data['previousStatus'] ?? '',
       newStatus: data['newStatus'] ?? '',
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
@@ -44,6 +45,7 @@ class QueueEvent {
       'queueEntryId': queueEntryId,
       'appointmentId': appointmentId,
       'performedBy': performedBy,
+      'actionType': eventType,
       'eventType': eventType,
       'previousStatus': previousStatus,
       'newStatus': newStatus,

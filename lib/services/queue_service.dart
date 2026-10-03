@@ -15,6 +15,7 @@ class QueueService {
     String appointmentId = '',
     String previousStatus = '',
     String newStatus = '',
+    String reason = '',
   }) async {
     final now = FieldValue.serverTimestamp();
     await _db.collection(AppConstants.queueEventsCollection).add({
@@ -22,9 +23,11 @@ class QueueService {
       'queueEntryId': queueEntryId,
       'appointmentId': appointmentId,
       'performedBy': performedBy,
+      'actionType': eventType,
       'eventType': eventType,
       'previousStatus': previousStatus,
       'newStatus': newStatus,
+      'reason': reason,
       'createdAt': now,
     });
   }
@@ -248,7 +251,9 @@ class QueueService {
       final now = FieldValue.serverTimestamp();
 
       await docRef.update({
-        'status': AppConstants.statusRejoined,
+        'status': AppConstants.statusWaiting,
+        'resumedAt': now,
+        'rejoinedAt': now,
         'updatedAt': now,
       });
 
@@ -260,11 +265,11 @@ class QueueService {
         performedBy: staffUserId,
         eventType: 'resumed',
         previousStatus: prevStatus,
-        newStatus: AppConstants.statusRejoined,
+        newStatus: AppConstants.statusWaiting,
       );
 
       return QueueActionResult.success(
-        entry.copyWith(status: AppConstants.statusRejoined),
+        entry.copyWith(status: AppConstants.statusWaiting),
         'Patient ${entry.tokenNumber} resumed and rejoined the waiting queue.',
       );
     } catch (e) {
