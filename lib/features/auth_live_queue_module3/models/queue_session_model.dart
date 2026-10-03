@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 enum QueueSessionStatus {
   active,
   paused,
@@ -14,6 +16,8 @@ class QueueSessionModel {
   final String roomNumber;
   final String doctorName;
   final String currentTokenServing;
+  final String lastIssuedToken;
+  final String date;
   final int totalTokens;
   final int estimatedMinutesPerPatient;
   final QueueSessionStatus status;
@@ -30,6 +34,8 @@ class QueueSessionModel {
     required this.roomNumber,
     required this.doctorName,
     required this.currentTokenServing,
+    this.lastIssuedToken = 'A-015',
+    this.date = '',
     this.totalTokens = 40,
     this.estimatedMinutesPerPatient = 4,
     this.status = QueueSessionStatus.active,
@@ -38,11 +44,17 @@ class QueueSessionModel {
     required this.lastUpdated,
   });
 
+  /// Aliases matching shared specification
+  String get queueSessionId => sessionId;
+  String get currentToken => currentTokenServing;
+  DateTime get updatedAt => lastUpdated;
+
   bool get isDelayed => status == QueueSessionStatus.delayed || delayMinutes > 0;
   bool get isPaused => status == QueueSessionStatus.paused;
 
   Map<String, dynamic> toMap() {
     return {
+      'queueSessionId': sessionId,
       'sessionId': sessionId,
       'hospitalId': hospitalId,
       'hospitalName': hospitalName,
@@ -50,26 +62,38 @@ class QueueSessionModel {
       'departmentName': departmentName,
       'roomNumber': roomNumber,
       'doctorName': doctorName,
+      'currentToken': currentTokenServing,
       'currentTokenServing': currentTokenServing,
+      'lastIssuedToken': lastIssuedToken,
+      'date': date,
       'totalTokens': totalTokens,
       'estimatedMinutesPerPatient': estimatedMinutesPerPatient,
       'status': status.name,
       'delayMinutes': delayMinutes,
       'delayReason': delayReason,
+      'updatedAt': lastUpdated.toIso8601String(),
       'lastUpdated': lastUpdated.toIso8601String(),
     };
   }
 
   factory QueueSessionModel.fromMap(Map<String, dynamic> map, {String? id}) {
+    DateTime parseDate(dynamic val) {
+      if (val is Timestamp) return val.toDate();
+      if (val is String) return DateTime.tryParse(val) ?? DateTime.now();
+      return DateTime.now();
+    }
+
     return QueueSessionModel(
-      sessionId: id ?? map['sessionId'] ?? '',
+      sessionId: id ?? map['queueSessionId'] ?? map['sessionId'] ?? '',
       hospitalId: map['hospitalId'] ?? '',
       hospitalName: map['hospitalName'] ?? 'General Hospital Colombo',
       departmentId: map['departmentId'] ?? '',
       departmentName: map['departmentName'] ?? 'General OPD',
       roomNumber: map['roomNumber'] ?? 'Room 04',
       doctorName: map['doctorName'] ?? 'Dr. H. M. Perera',
-      currentTokenServing: map['currentTokenServing'] ?? 'A-001',
+      currentTokenServing: map['currentToken'] ?? map['currentTokenServing'] ?? 'A-001',
+      lastIssuedToken: map['lastIssuedToken'] ?? 'A-015',
+      date: map['date'] ?? map['appointmentDate'] ?? '',
       totalTokens: (map['totalTokens'] as num?)?.toInt() ?? 40,
       estimatedMinutesPerPatient: (map['estimatedMinutesPerPatient'] as num?)?.toInt() ?? 4,
       status: QueueSessionStatus.values.firstWhere(
@@ -78,9 +102,9 @@ class QueueSessionModel {
       ),
       delayMinutes: (map['delayMinutes'] as num?)?.toInt() ?? 0,
       delayReason: map['delayReason'],
-      lastUpdated: map['lastUpdated'] != null
-          ? DateTime.tryParse(map['lastUpdated']) ?? DateTime.now()
-          : DateTime.now(),
+      lastUpdated: map['updatedAt'] != null
+          ? parseDate(map['updatedAt'])
+          : (map['lastUpdated'] != null ? parseDate(map['lastUpdated']) : DateTime.now()),
     );
   }
 }
