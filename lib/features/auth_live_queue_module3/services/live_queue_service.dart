@@ -80,6 +80,96 @@ class LiveQueueService extends ChangeNotifier {
     return (nic != null && nic.trim().isNotEmpty) ? nic.trim() : demoPatientNic;
   }
 
+  // ── Spec Stream & Query Methods ──────────────────────────────────────────
+
+  /// Stream a specific queue entry by ID (from queue_entries or appointments)
+  Stream<QueueEntryModel?> watchQueueEntry(String queueEntryId) {
+    return _firestore
+        .collection('queue_entries')
+        .doc(queueEntryId)
+        .snapshots()
+        .asyncMap((doc) async {
+      if (doc.exists && doc.data() != null) {
+        return QueueEntryModel.fromMap(doc.data()!, id: doc.id);
+      }
+      final apptDoc = await _firestore.collection('appointments').doc(queueEntryId).get();
+      if (apptDoc.exists && apptDoc.data() != null) {
+        final d = apptDoc.data()!;
+        return QueueEntryModel(
+          queueEntryId: apptDoc.id,
+          appointmentId: apptDoc.id,
+          patientId: (d['patientId'] ?? d['patientNic'] ?? '').toString(),
+          patientName: (d['patientName'] ?? 'Patient').toString(),
+          tokenCode: (d['tokenCode'] ?? '—').toString(),
+          queuePosition: 1,
+          peopleAhead: 0,
+          status: _mapStatus(_statusOf(d)),
+          estimatedWaitMinutes: 0,
+          joinedAt: _toDate(d['createdAt']) ?? DateTime.now(),
+        );
+      }
+      return null;
+    });
+  }
+
+  /// Stream a specific queue session by ID
+  Stream<QueueSessionModel?> watchQueueSession(String queueSessionId) {
+    return _firestore
+        .collection('queue_sessions')
+        .doc(queueSessionId)
+        .snapshots()
+        .map((doc) {
+      if (!doc.exists || doc.data() == null) return null;
+      return QueueSessionModel.fromMap(doc.data()!, id: doc.id);
+    });
+  }
+
+  /// Stream all queue entries for a given session ID
+  Stream<List<QueueEntryModel>> watchQueueEntriesForSession(String queueSessionId) {
+    return _firestore
+        .collection('queue_entries')
+        .where('queueSessionId', isEqualTo: queueSessionId)
+        .snapshots()
+        .map((snap) {
+      final list = snap.docs
+          .map((doc) => QueueEntryModel.fromMap(doc.data(), id: doc.id))
+          .toList();
+      list.sort((a, b) => a.queuePosition.compareTo(b.queuePosition));
+      return list;
+    });
+  }
+
+  /// Get the queue entry for an appointment
+  Future<QueueEntryModel?> getQueueEntryForAppointment(String appointmentId) async {
+    final snap = await _firestore
+        .collection('queue_entries')
+        .where('appointmentId', isEqualTo: appointmentId)
+        .limit(1)
+        .get();
+
+    if (snap.docs.isNotEmpty) {
+      return QueueEntryModel.fromMap(snap.docs.first.data(), id: snap.docs.first.id);
+    }
+
+    final apptDoc = await _firestore.collection('appointments').doc(appointmentId).get();
+    if (apptDoc.exists && apptDoc.data() != null) {
+      final d = apptDoc.data()!;
+      return QueueEntryModel(
+        queueEntryId: apptDoc.id,
+        appointmentId: apptDoc.id,
+        patientId: (d['patientId'] ?? d['patientNic'] ?? '').toString(),
+        patientName: (d['patientName'] ?? 'Patient').toString(),
+        tokenCode: (d['tokenCode'] ?? '—').toString(),
+        queuePosition: 1,
+        peopleAhead: 0,
+        status: _mapStatus(_statusOf(d)),
+        estimatedWaitMinutes: 0,
+        joinedAt: _toDate(d['createdAt']) ?? DateTime.now(),
+      );
+    }
+    return null;
+  }
+
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   /// Starts real-time listening. Safe to call many times.
@@ -492,6 +582,26 @@ class LiveQueueService extends ChangeNotifier {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
+      // Dual-sync: update queue_entries if document exists for this appointment
+      try {
+        final qEntrySnap = await _firestore
+            .collection('queue_entries')
+            .where('appointmentId', isEqualTo: apptId)
+            .limit(1)
+            .get();
+        if (qEntrySnap.docs.isNotEmpty) {
+          await qEntrySnap.docs.first.reference.update({
+            'status': 'waiting',
+            'rejoinRequested': true,
+            'rejoinReason': reason,
+            'rejoinedAt': FieldValue.serverTimestamp(),
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        }
+      } catch (e) {
+        debugPrint('rejoin queue_entries sync notice: $e');
+      }
+
       _pushNotification(
         type: 'rejoined',
         title: 'Rejoined the queue',
@@ -502,6 +612,29 @@ class LiveQueueService extends ChangeNotifier {
     } catch (e) {
       debugPrint('Error rejoining queue: $e');
       return false;
+    }
+  }
+
+  /// Spec method: Rejoin specific queue entry via atomic transaction
+  Future<bool> rejoinQueueEntry(String queueEntryId, {String reason = 'Requested rejoin'}) async {
+    try {
+      final entryRef = _firestore.collection('queue_entries').doc(queueEntryId);
+      await _firestore.runTransaction((tx) async {
+        final snap = await tx.get(entryRef);
+        if (snap.exists) {
+          tx.update(entryRef, {
+            'status': 'waiting',
+            'rejoinRequested': true,
+            'rejoinReason': reason,
+            'rejoinedAt': FieldValue.serverTimestamp(),
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        }
+      });
+      return await rejoinQueue(reason);
+    } catch (e) {
+      debugPrint('rejoinQueueEntry notice: $e');
+      return await rejoinQueue(reason);
     }
   }
 
