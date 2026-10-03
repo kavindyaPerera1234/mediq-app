@@ -8,6 +8,7 @@ import 'registration_screen.dart';
 import 'forgot_password_screen.dart';
 import 'verification_code_screen.dart';
 import 'splash_screen.dart';
+import 'package:mediq_app/features/admin_dashboard/screens/admin_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final bool isStaffMode;
@@ -69,7 +70,7 @@ class _LoginScreenState extends State<LoginScreen> {
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
-              builder: (_) => const SplashScreen(), // Re-enter splash to route properly
+              builder: (_) => const AdminDashboardScreen(), // Re-enter splash to route properly
             ),
             (route) => false,
           );
