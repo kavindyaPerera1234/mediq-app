@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../services/auth_service.dart';
@@ -15,16 +16,21 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   final _nicController = TextEditingController();
   final _ageController = TextEditingController();
 
   bool _isCaregiver = false;
   bool _isLoading = false;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     _nicController.dispose();
     _ageController.dispose();
     super.dispose();
@@ -35,26 +41,64 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
     setState(() => _isLoading = true);
 
-    final success = await AuthService().registerUser(
-      fullName: _nameController.text.trim(),
-      phoneNumber: _phoneController.text.trim(),
-      nic: _nicController.text.trim(),
-      age: int.tryParse(_ageController.text.trim()),
-      isCaregiver: _isCaregiver,
-    );
+    final rawPhone = _phoneController.text.trim();
+    final email = _emailController.text.trim().isNotEmpty
+        ? _emailController.text.trim()
+        : '$rawPhone@mediq.lk';
+    final password = _passwordController.text.trim().isNotEmpty
+        ? _passwordController.text.trim()
+        : 'Patient@123';
 
-    setState(() => _isLoading = false);
+    try {
+      final enteredNic = _nicController.text.trim();
+      final nicToSave = enteredNic.isNotEmpty ? enteredNic : null;
 
-    if (success && mounted) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => VerificationCodeScreen(
-            phoneNumber: _phoneController.text.trim(),
-            isRegistration: true,
-          ),
-        ),
+      await AuthService().registerPatientOrCaregiver(
+        email: email,
+        password: password,
+        fullName: _nameController.text.trim(),
+        phoneNumber: rawPhone,
+        nic: nicToSave,
+        age: int.tryParse(_ageController.text.trim()),
+        isCaregiver: _isCaregiver,
       );
+
+      setState(() => _isLoading = false);
+
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => VerificationCodeScreen(
+              phoneNumber: rawPhone,
+              isRegistration: true,
+            ),
+          ),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      setState(() => _isLoading = false);
+      String msg = 'Registration failed: ${e.message ?? e.code}';
+      if (e.code == 'email-already-in-use') {
+        msg = 'An account with this email/phone already exists. Please log in.';
+      } else if (e.code == 'weak-password') {
+        msg = 'Password is too weak. Please use at least 6 characters.';
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg), backgroundColor: AppColors.error),
+        );
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Registration error: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     }
   }
 
@@ -132,6 +176,42 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
                 const SizedBox(height: 18),
 
+                // Email Address (Optional)
+                _buildFieldLabel('Email Address (Optional)'),
+                TextFormField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
+                  decoration: _buildInputDecoration(
+                    hint: 'e.g. name@example.com (or leave empty)',
+                    icon: Icons.email_outlined,
+                  ),
+                ),
+
+                const SizedBox(height: 18),
+
+                // Password (Optional, defaults to Patient@123)
+                _buildFieldLabel('Password (Min 6 chars, Optional)'),
+                TextFormField(
+                  controller: _passwordController,
+                  obscureText: _obscurePassword,
+                  style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
+                  decoration: _buildInputDecoration(
+                    hint: 'Defaults to Patient@123',
+                    icon: Icons.lock_outline_rounded,
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                        color: AppColors.textSecondary,
+                        size: 20,
+                      ),
+                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 18),
+
                 // Row for NIC and Age
                 Row(
                   children: [
@@ -183,7 +263,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: _isCaregiver ? AppColors.primaryLight.withOpacity(0.5) : AppColors.surface,
+                    color: _isCaregiver ? AppColors.primaryLight.withValues(alpha: 0.5) : AppColors.surface,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: _isCaregiver ? AppColors.primary : AppColors.border,
@@ -267,9 +347,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
-  InputDecoration _buildInputDecoration({required String hint, required IconData icon}) {
+  InputDecoration _buildInputDecoration({
+    required String hint,
+    required IconData icon,
+    Widget? suffixIcon,
+  }) {
     return InputDecoration(
       prefixIcon: Icon(icon, color: AppColors.primary, size: 20),
+      suffixIcon: suffixIcon,
       hintText: hint,
       filled: true,
       fillColor: AppColors.surface,

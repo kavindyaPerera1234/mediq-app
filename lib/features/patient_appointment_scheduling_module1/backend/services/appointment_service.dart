@@ -46,6 +46,44 @@ class AppointmentService {
 
       await docRef.set(toSave.toMap()).timeout(const Duration(seconds: 4));
 
+      // Cross-module sync: write to Module 3's queue_entries and queue_sessions
+      try {
+        final sessionId = '${appointment.hospitalId}_${appointment.departmentId}_${appointment.appointmentDate}';
+        await _firestore.collection('queue_entries').doc(docRef.id).set({
+          'appointmentId': docRef.id,
+          'patientId': appointment.patientId.isNotEmpty ? appointment.patientId : appointment.patientNic,
+          'patientNic': appointment.patientNic,
+          'patientName': appointment.patientName,
+          'hospitalId': appointment.hospitalId,
+          'departmentId': appointment.departmentId,
+          'tokenCode': appointment.tokenCode,
+          'queueSessionId': sessionId,
+          'status': 'waiting',
+          'priority': appointment.priority,
+          'isCaregiverBooking': appointment.isCaregiverBooking,
+          'relationship': appointment.relationship,
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
+        await _firestore.collection('queue_sessions').doc(sessionId).set({
+          'sessionId': sessionId,
+          'hospitalId': appointment.hospitalId,
+          'hospitalName': appointment.hospitalName,
+          'departmentId': appointment.departmentId,
+          'departmentName': appointment.departmentName,
+          'date': appointment.appointmentDate,
+          'status': 'active',
+          'roomNumber': appointment.roomNumber.isNotEmpty ? appointment.roomNumber : 'OPD Room 01',
+          'doctorName': 'Duty Medical Officer',
+          'estimatedMinutesPerPatient': 4,
+          'delayMinutes': 0,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      } catch (syncErr) {
+        debugPrint('AppointmentService: cross-module queue sync notice: $syncErr');
+      }
+
       // Increment bookedCount in slot if available
       try {
         final slotDocId = '${appointment.departmentId}_${appointment.appointmentDate}';
@@ -66,12 +104,18 @@ class AppointmentService {
   Stream<List<AppointmentModel>> streamPatientAppointments(String patientNic) {
     try {
       return _appointmentsRef
-          .where('patientNic', isEqualTo: patientNic)
           .snapshots()
           .map((snapshot) {
-        final list = snapshot.docs.map((doc) => AppointmentModel.fromFirestore(doc)).toList();
+        final list = snapshot.docs
+            .map((doc) => AppointmentModel.fromFirestore(doc))
+            .where((app) => app.patientNic == patientNic || app.isCaregiverBooking)
+            .toList();
         // Sort newest first
-        list.sort((a, b) => (b.createdAt ?? DateTime.now()).compareTo(a.createdAt ?? DateTime.now()));
+        list.sort((a, b) {
+          final timeA = a.createdAt ?? DateTime.tryParse(a.appointmentDate) ?? DateTime(2020);
+          final timeB = b.createdAt ?? DateTime.tryParse(b.appointmentDate) ?? DateTime(2020);
+          return timeB.compareTo(timeA);
+        });
         return list;
       });
     } catch (e) {

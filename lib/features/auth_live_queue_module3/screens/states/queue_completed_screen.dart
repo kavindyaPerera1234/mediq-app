@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../services/live_queue_service.dart';
+import '../../../patient_appointment_scheduling_module1/screens/patient_main_screen.dart';
+import '../../../patient_appointment_scheduling_module1/screens/hospital_selection_screen.dart';
 
 class QueueCompletedScreen extends StatelessWidget {
   const QueueCompletedScreen({super.key});
@@ -12,32 +14,40 @@ class QueueCompletedScreen extends StatelessWidget {
     final session = queueService.session;
     final myEntry = queueService.myEntry;
 
+    final token = myEntry.tokenCode.isNotEmpty ? myEntry.tokenCode : 'A-001';
+    final patient = myEntry.patientName.isNotEmpty ? myEntry.patientName : 'Patient';
+    final room = session.roomNumber.isNotEmpty ? session.roomNumber : 'OPD Room 01';
+    final doctor = session.doctorName.isNotEmpty ? session.doctorName : 'Duty Medical Officer';
+    final dept = session.departmentName.isNotEmpty ? session.departmentName : 'OPD Clinic';
+    final hospital = session.hospitalName.isNotEmpty ? session.hospitalName : 'National Hospital of Sri Lanka';
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Spacer(flex: 1),
+              const SizedBox(height: 12),
 
               Center(
                 child: Container(
-                  width: 100,
-                  height: 100,
+                  width: 90,
+                  height: 90,
                   decoration: BoxDecoration(
                     color: AppColors.successLight,
                     shape: BoxShape.circle,
                     border: Border.all(color: AppColors.success, width: 3),
                   ),
                   child: const Center(
-                    child: Icon(Icons.verified_rounded, color: AppColors.success, size: 56),
+                    child: Icon(Icons.verified_rounded, color: AppColors.success, size: 52),
                   ),
                 ),
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
               Text(
                 'OPD Visit Completed!',
@@ -50,12 +60,12 @@ class QueueCompletedScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Thank you for visiting ${session.hospitalName}. Your consultation with ${session.doctorName} is successfully completed.',
+                'Thank you for visiting $hospital. Your consultation with $doctor is successfully completed.',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.inter(fontSize: 14, color: AppColors.textSecondary, height: 1.4),
               ),
 
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
 
               // Visit Summary Card
               Container(
@@ -66,7 +76,7 @@ class QueueCompletedScreen extends StatelessWidget {
                   border: Border.all(color: AppColors.border),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
+                      color: Colors.black.withValues(alpha: 0.04),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -74,30 +84,30 @@ class QueueCompletedScreen extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    _buildSummaryRow('Token Number', myEntry.tokenCode),
+                    _buildSummaryRow('Token Number', token),
                     const Divider(height: 20, color: AppColors.border),
-                    _buildSummaryRow('Patient Name', myEntry.patientName),
+                    _buildSummaryRow('Patient Name', patient),
                     const Divider(height: 20, color: AppColors.border),
-                    _buildSummaryRow('Clinic & Room', '${session.departmentName} (${session.roomNumber})'),
+                    _buildSummaryRow('Clinic & Room', '$dept ($room)'),
                     const Divider(height: 20, color: AppColors.border),
-                    _buildSummaryRow('Attending Doctor', session.doctorName),
+                    _buildSummaryRow('Attending Doctor', doctor),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
               // Next Stop: Hospital Pharmacy Reminder
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryLight.withOpacity(0.6),
+                  color: AppColors.primaryLight.withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.medication_rounded, color: AppColors.primary, size: 32),
+                    const Icon(Icons.medication_rounded, color: AppColors.primary, size: 30),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
@@ -119,12 +129,18 @@ class QueueCompletedScreen extends StatelessWidget {
                 ),
               ),
 
-              const Spacer(flex: 2),
+              const SizedBox(height: 28),
 
-              // Done Button
+              // Return to Dashboard Button
               ElevatedButton(
                 onPressed: () {
-                  Navigator.popUntil(context, (route) => route.isFirst);
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const PatientMainScreen(initialIndex: 0),
+                    ),
+                    (route) => false,
+                  );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
@@ -138,7 +154,31 @@ class QueueCompletedScreen extends StatelessWidget {
                   style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700),
                 ),
               ),
+
               const SizedBox(height: 12),
+
+              // Book Follow-up Button (Module 1 connection)
+              OutlinedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const HospitalSelectionScreen(),
+                    ),
+                  );
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(color: AppColors.primary, width: 1.5),
+                  minimumSize: const Size.fromHeight(52),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                child: Text(
+                  'Book Another / Follow-up OPD Appointment',
+                  style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700),
+                ),
+              ),
+              const SizedBox(height: 16),
             ],
           ),
         ),
@@ -152,11 +192,11 @@ class QueueCompletedScreen extends StatelessWidget {
       children: [
         Text(
           label,
-          style: GoogleFonts.inter(fontSize: 13, color: AppColors.textSecondary),
+          style: GoogleFonts.inter(fontSize: 14, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
         ),
         Text(
           value,
-          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+          style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
         ),
       ],
     );

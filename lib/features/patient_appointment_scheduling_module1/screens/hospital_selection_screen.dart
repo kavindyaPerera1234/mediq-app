@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../models/hospital_model.dart';
+import '../backend/backend.dart';
 import 'clinic_selection_screen.dart';
 
 class HospitalSelectionScreen extends StatefulWidget {
@@ -216,7 +216,6 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
         border: Border.all(color: AppColors.border),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             widget.isCaregiverBooking ? Icons.family_restroom_rounded : Icons.person_rounded,
@@ -224,12 +223,16 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
             color: AppColors.primary,
           ),
           const SizedBox(width: 8),
-          Text(
-            'Booking for: ${widget.patientName} (${widget.relationship})',
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppColors.primaryDark,
+          Expanded(
+            child: Text(
+              'Booking for: ${widget.patientName} (${widget.relationship})',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primaryDark,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           if (widget.priority != 'normal') ...[
@@ -301,7 +304,14 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ClinicSelectionScreen(hospital: hospital),
+            builder: (context) => ClinicSelectionScreen(
+              hospital: hospital,
+              isCaregiverBooking: widget.isCaregiverBooking,
+              patientName: widget.patientName,
+              patientNic: widget.patientNic,
+              relationship: widget.relationship,
+              priority: widget.priority,
+            ),
           ),
         );
       },
@@ -368,11 +378,13 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
                   ),
                   const SizedBox(height: 10),
 
-                  // Status Badges
-                  Row(
+                  // Status Badges (Wrap prevents overflow on narrow screens)
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                         decoration: BoxDecoration(
                           color: AppColors.statusGreenLight,
                           borderRadius: BorderRadius.circular(6),
@@ -383,7 +395,7 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
                             Icon(Icons.check_circle_rounded, size: 11, color: AppColors.statusGreen),
                             SizedBox(width: 4),
                             Text(
-                              'OPD Available Today',
+                              'Open Today',
                               style: TextStyle(
                                 fontSize: 10.5,
                                 fontWeight: FontWeight.bold,
@@ -393,9 +405,8 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                         decoration: BoxDecoration(
                           color: AppColors.background,
                           borderRadius: BorderRadius.circular(6),

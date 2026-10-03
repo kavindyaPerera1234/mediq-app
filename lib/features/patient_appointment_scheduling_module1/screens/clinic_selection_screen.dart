@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../models/hospital_model.dart';
+import '../backend/backend.dart';
 import 'date_selection_screen.dart';
 
 class ClinicSelectionScreen extends StatelessWidget {
@@ -257,6 +257,11 @@ class ClinicSelectionScreen extends StatelessWidget {
             builder: (context) => DateSelectionScreen(
               hospital: hospital,
               clinic: clinic,
+              isCaregiverBooking: isCaregiverBooking,
+              patientName: patientName,
+              patientNic: patientNic,
+              relationship: relationship,
+              priority: priority,
             ),
           ),
         );

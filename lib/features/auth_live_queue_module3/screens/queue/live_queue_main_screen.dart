@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../services/live_queue_service.dart';
 import '../../models/queue_entry_model.dart';
+import '../../../patient_appointment_scheduling_module1/screens/hospital_selection_screen.dart';
 import 'queue_journey_map_screen.dart';
 import 'queue_timeline_screen.dart';
 import 'estimated_waiting_time_screen.dart';
@@ -20,6 +22,32 @@ class LiveQueueMainScreen extends StatefulWidget {
 
 class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
   final LiveQueueService _queueService = LiveQueueService();
+  StreamSubscription<PatientQueueStatus>? _statusSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _statusSub = _queueService.statusChanges.listen((status) {
+      if (!mounted) return;
+      if (status == PatientQueueStatus.called) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const YourTurnFullscreenScreen()),
+        );
+      } else if (status == PatientQueueStatus.completed) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const QueueCompletedScreen()),
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _statusSub?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -91,6 +119,162 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // Active Appointments Switcher (when patient has multiple bookings)
+                  if (_queueService.myAppointments.length > 1) ...[
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      height: 44,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _queueService.myAppointments.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (context, i) {
+                          final appt = _queueService.myAppointments[i];
+                          final id = (appt['id'] ?? '').toString();
+                          final token = (appt['tokenCode'] ?? '—').toString();
+                          final dept = (appt['departmentName'] ?? 'Clinic').toString();
+                          final status = (appt['status'] ?? 'confirmed').toString().toUpperCase();
+                          final isSelected = id == _queueService.currentAppointmentId;
+
+                          return ChoiceChip(
+                            label: Text('$token • $dept ($status)'),
+                            selected: isSelected,
+                            selectedColor: AppColors.primary,
+                            backgroundColor: AppColors.surface,
+                            labelStyle: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: isSelected ? Colors.white : AppColors.textPrimary,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(
+                                color: isSelected ? AppColors.primary : AppColors.border,
+                                width: isSelected ? 1.5 : 1,
+                              ),
+                            ),
+                            onSelected: (_) => _queueService.selectAppointment(id),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+
+                  // Empty State Banner (if no active appointment)
+                  if (!_queueService.hasActiveAppointment) ...[
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      margin: const EdgeInsets.only(bottom: 20),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Column(
+                        children: [
+                          const Icon(Icons.event_busy_rounded, size: 48, color: AppColors.primary),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No Active OPD Queue Today',
+                            style: GoogleFonts.inter(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'You do not currently have a confirmed appointment for today\'s clinic sessions.',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.inter(fontSize: 14, color: AppColors.textSecondary),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const HospitalSelectionScreen()),
+                              );
+                            },
+                            icon: const Icon(Icons.calendar_month_rounded, color: Colors.white, size: 20),
+                            label: const Text('Book OPD Appointment'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  // Called / Turn Active Banner (triggers fullscreen alert)
+                  if (myEntry.status == PatientQueueStatus.called) ...[
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const YourTurnFullscreenScreen(),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF15803D),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF15803D).withValues(alpha: 0.35),
+                              blurRadius: 14,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.record_voice_over_rounded, color: Colors.white, size: 28),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'YOUR TURN IS CALLED NOW!',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Please enter ${session.roomNumber} immediately. Tap for alert.',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 13,
+                                      color: Colors.white.withValues(alpha: 0.95),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 18),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+
                   // Delay Banner (if active)
                   if (session.isDelayed) ...[
                     GestureDetector(
@@ -152,7 +336,7 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
                       border: Border.all(color: AppColors.border),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
+                          color: Colors.black.withValues(alpha: 0.04),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -240,7 +424,7 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.primary.withOpacity(0.28),
+                          color: AppColors.primary.withValues(alpha: 0.28),
                           blurRadius: 16,
                           offset: const Offset(0, 6),
                         ),
@@ -260,7 +444,7 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
                                   style: GoogleFonts.inter(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w800,
-                                    color: Colors.white.withOpacity(0.85),
+                                    color: Colors.white.withValues(alpha: 0.85),
                                     letterSpacing: 0.8,
                                   ),
                                 ),
@@ -278,9 +462,9 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.18),
+                                color: Colors.white.withValues(alpha: 0.18),
                                 borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: Colors.white.withOpacity(0.3)),
+                                border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
                               ),
                               child: Text(
                                 myEntry.status.name.toUpperCase(),
@@ -320,7 +504,7 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
                                     style: GoogleFonts.inter(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w500,
-                                      color: Colors.white.withOpacity(0.8),
+                                      color: Colors.white.withValues(alpha: 0.8),
                                     ),
                                   ),
                                   const SizedBox(height: 4),
@@ -346,7 +530,7 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
                                     style: GoogleFonts.inter(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w500,
-                                      color: Colors.white.withOpacity(0.8),
+                                      color: Colors.white.withValues(alpha: 0.8),
                                     ),
                                   ),
                                   const SizedBox(height: 4),

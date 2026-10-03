@@ -13,6 +13,11 @@ class YourTurnNowScreen extends StatelessWidget {
     final session = queueService.session;
     final myEntry = queueService.myEntry;
 
+    final room = session.roomNumber.isNotEmpty ? session.roomNumber : 'OPD Room 01';
+    final doctor = session.doctorName.isNotEmpty ? session.doctorName : 'Duty Medical Officer';
+    final token = myEntry.tokenCode.isNotEmpty ? myEntry.tokenCode : 'A-001';
+    final patient = myEntry.patientName.isNotEmpty ? myEntry.patientName : 'Patient';
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -28,7 +33,8 @@ class YourTurnNowScreen extends StatelessWidget {
         ),
       ),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -42,7 +48,7 @@ class YourTurnNowScreen extends StatelessWidget {
                   border: Border.all(color: AppColors.primary, width: 2),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.primary.withOpacity(0.08),
+                      color: AppColors.primary.withValues(alpha: 0.08),
                       blurRadius: 16,
                       offset: const Offset(0, 4),
                     ),
@@ -56,7 +62,7 @@ class YourTurnNowScreen extends StatelessWidget {
                         const Icon(Icons.door_front_door_outlined, color: AppColors.primary, size: 28),
                         const SizedBox(width: 8),
                         Text(
-                          session.roomNumber.toUpperCase(),
+                          room.toUpperCase(),
                           style: GoogleFonts.inter(
                             fontSize: 26,
                             fontWeight: FontWeight.w900,
@@ -67,11 +73,11 @@ class YourTurnNowScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Doctor: ${session.doctorName}',
+                      'Doctor: $doctor',
                       style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
                     ),
                     Text(
-                      'Token: ${myEntry.tokenCode} • ${myEntry.patientName}',
+                      'Token: $token • $patient',
                       style: GoogleFonts.inter(fontSize: 13, color: AppColors.textSecondary),
                     ),
                   ],
@@ -95,7 +101,7 @@ class YourTurnNowScreen extends StatelessWidget {
               _buildChecklistItem('List of current medicines or previous lab reports'),
               _buildChecklistItem('If using a wheelchair, notify the nursing officer at the door'),
 
-              const Spacer(),
+              const SizedBox(height: 28),
 
               // Consultation Complete Button
               ElevatedButton(
@@ -119,7 +125,7 @@ class YourTurnNowScreen extends StatelessWidget {
                   style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
             ],
           ),
         ),
@@ -139,12 +145,12 @@ class YourTurnNowScreen extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const Icon(Icons.check_circle_outline_rounded, color: AppColors.success, size: 22),
+            const Icon(Icons.check_circle_outline_rounded, color: AppColors.primary, size: 20),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 text,
-                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                style: GoogleFonts.inter(fontSize: 14, color: AppColors.textPrimary, fontWeight: FontWeight.w500),
               ),
             ),
           ],

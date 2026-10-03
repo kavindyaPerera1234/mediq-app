@@ -10,6 +10,14 @@ class QueueDelayedScreen extends StatelessWidget {
     final queueService = LiveQueueService();
     final session = queueService.session;
 
+    final doctor = session.doctorName.isNotEmpty ? session.doctorName : 'Duty Medical Officer';
+    final room = session.roomNumber.isNotEmpty ? session.roomNumber : 'OPD Room 01';
+    final dept = session.departmentName.isNotEmpty ? session.departmentName : 'OPD Clinic';
+    final delayMins = session.delayMinutes > 0 ? session.delayMinutes : 20;
+    final reason = (session.delayReason != null && session.delayReason!.isNotEmpty)
+        ? session.delayReason!
+        : 'Emergency trauma patient admitted for immediate examination.';
+
     return Scaffold(
       backgroundColor: const Color(0xFFFFFBEB), // Soft warm amber background
       appBar: AppBar(
@@ -21,7 +29,8 @@ class QueueDelayedScreen extends StatelessWidget {
         ),
       ),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -42,7 +51,7 @@ class QueueDelayedScreen extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
               Text(
                 'OPD Clinic Delayed',
@@ -55,7 +64,7 @@ class QueueDelayedScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Dr. H. M. Perera\'s clinic in Room 04 has announced a temporary queue delay.',
+                '$doctor\'s clinic in $room ($dept) has announced a temporary queue delay.',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.inter(
                   fontSize: 15,
@@ -64,7 +73,7 @@ class QueueDelayedScreen extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 28),
+              const SizedBox(height: 24),
 
               // Delay Information Box
               Container(
@@ -75,7 +84,7 @@ class QueueDelayedScreen extends StatelessWidget {
                   border: Border.all(color: const Color(0xFFFDE68A)),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFFD97706).withOpacity(0.08),
+                      color: const Color(0xFFD97706).withValues(alpha: 0.08),
                       blurRadius: 16,
                       offset: const Offset(0, 4),
                     ),
@@ -94,7 +103,7 @@ class QueueDelayedScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '+${session.delayMinutes > 0 ? session.delayMinutes : 25} Mins',
+                      '+$delayMins Mins',
                       style: GoogleFonts.inter(
                         fontSize: 42,
                         fontWeight: FontWeight.w900,
@@ -111,7 +120,7 @@ class QueueDelayedScreen extends StatelessWidget {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'Reason given by Clinic Staff:\n"${session.delayReason ?? 'Emergency trauma patient admitted for immediate examination.'}"',
+                            'Reason given by Clinic Staff:\n"$reason"',
                             style: GoogleFonts.inter(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
@@ -126,7 +135,7 @@ class QueueDelayedScreen extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
               // Comfort Advice Card for waiting patients
               Container(
@@ -150,7 +159,7 @@ class QueueDelayedScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       '• Your token position is preserved. You do not need to stand in the queue.\n'
-                      '• Feel free to sit in Waiting Lounge B or visit the Hospital Cafeteria.\n'
+                      '• Feel free to sit in the waiting lounge opposite $room or visit the Hospital Cafeteria.\n'
                       '• MediQ will alert you automatically when regular consultations resume.',
                       style: GoogleFonts.inter(
                         fontSize: 13,
@@ -162,7 +171,7 @@ class QueueDelayedScreen extends StatelessWidget {
                 ),
               ),
 
-              const Spacer(),
+              const SizedBox(height: 24),
 
               // Return Button
               ElevatedButton(
@@ -179,7 +188,7 @@ class QueueDelayedScreen extends StatelessWidget {
                   style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
             ],
           ),
         ),
