@@ -19,7 +19,7 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
   final _nameController = TextEditingController();
   final _nicController = TextEditingController();
 
-  String _selectedRelationship = 'Father';
+  String? _selectedRelationship;
   String _selectedPriority = 'normal';
 
   String? _selectedDependentNic;
@@ -59,7 +59,7 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
           isCaregiverBooking: _bookingMode == 'someone_else',
           patientName: _bookingMode == 'someone_else' ? _nameController.text.trim() : 'Sandeepani Perera',
           patientNic: _bookingMode == 'someone_else' ? _nicController.text.trim() : '200164801234',
-          relationship: _bookingMode == 'someone_else' ? _selectedRelationship : 'Self',
+          relationship: _bookingMode == 'someone_else' ? (_selectedRelationship ?? 'Other') : 'Self',
           priority: _bookingMode == 'someone_else' ? _selectedPriority : 'normal',
         ),
       ),
@@ -541,14 +541,13 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
                         child: Row(
                           children: [
                             ...dependents.map((dep) {
-                              final isSelected = _selectedDependentNic == dep.patientNic ||
-                                  _nicController.text.trim() == dep.patientNic;
+                              final isSelected = _selectedDependentNic == dep.patientNic;
                               return Padding(
                                 padding: const EdgeInsets.only(right: 8.0),
                                 child: ChoiceChip(
                                   avatar: Icon(
                                     isSelected ? Icons.check_circle_rounded : Icons.person_rounded,
-                                    size: 15,
+                                    size: 16,
                                     color: isSelected ? Colors.white : AppColors.primary,
                                   ),
                                   label: Text(
@@ -567,41 +566,28 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
                                   ),
                                   onSelected: (selected) {
                                     setState(() {
-                                      _selectedDependentNic = dep.patientNic;
-                                      _nameController.text = dep.patientName;
-                                      _nicController.text = dep.patientNic;
-                                      if (_relationships.contains(dep.relationship)) {
-                                        _selectedRelationship = dep.relationship;
+                                      if (selected) {
+                                        _selectedDependentNic = dep.patientNic;
+                                        _nameController.text = dep.patientName;
+                                        _nicController.text = dep.patientNic;
+                                        if (_relationships.contains(dep.relationship)) {
+                                          _selectedRelationship = dep.relationship;
+                                        } else {
+                                          _selectedRelationship = 'Other';
+                                        }
+                                        _selectedPriority = dep.priority;
                                       } else {
-                                        _selectedRelationship = 'Other';
+                                        _selectedDependentNic = null;
+                                        _nameController.clear();
+                                        _nicController.clear();
+                                        _selectedRelationship = null;
+                                        _selectedPriority = 'normal';
                                       }
-                                      _selectedPriority = dep.priority;
                                     });
                                   },
                                 ),
                               );
                             }),
-                            Padding(
-                              padding: const EdgeInsets.only(right: 8.0),
-                              child: ActionChip(
-                                avatar: const Icon(Icons.person_add_alt_1_rounded, size: 15, color: AppColors.textSecondary),
-                                label: const Text(
-                                  '+ New Patient',
-                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
-                                ),
-                                backgroundColor: AppColors.surface,
-                                side: const BorderSide(color: AppColors.border),
-                                onPressed: () {
-                                  setState(() {
-                                    _selectedDependentNic = null;
-                                    _nameController.clear();
-                                    _nicController.clear();
-                                    _selectedRelationship = 'Mother';
-                                    _selectedPriority = 'normal';
-                                  });
-                                },
-                              ),
-                            ),
                           ],
                         ),
                       ),
@@ -633,8 +619,10 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
             const SizedBox(height: 6),
             DropdownButtonFormField<String>(
               value: _selectedRelationship,
-              decoration: _inputDecoration('', Icons.people_outline),
+              hint: const Text('Select Relationship (e.g. Father, Mother...)', style: TextStyle(fontSize: 13, color: AppColors.textMuted)),
+              decoration: _inputDecoration('Select Relationship', Icons.people_outline),
               items: _relationships.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
+              validator: (val) => val == null || val.isEmpty ? 'Please select relationship' : null,
               onChanged: (val) {
                 if (val != null) setState(() => _selectedRelationship = val);
               },
