@@ -5,7 +5,6 @@ import 'firebase_options.dart';
 import 'core/constants/app_colors.dart';
 import 'core/constants/app_accessibility.dart';
 import 'features/auth_live_queue_module3/screens/auth/splash_screen.dart';
-import 'features/token_lifecycle_notification_module2/screens/digital_token_details_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
