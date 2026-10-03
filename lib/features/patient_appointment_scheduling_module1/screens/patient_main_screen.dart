@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/patient_bottom_nav_bar.dart';
 import 'senior_mode_settings_screen.dart';
+import '../../auth_live_queue_module3/screens/queue/live_queue_main_screen.dart';
 import '../../token_lifecycle_notification_module2/screens/notification_centre_screen.dart';
 import 'package:mediq_app/features/token_lifecycle_notification_module2/screens/my_appointments_screen.dart';
 import 'caregiver_setup_screen.dart';
