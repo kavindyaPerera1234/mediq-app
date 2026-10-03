@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_accessibility.dart';
 import '../backend/backend.dart';
 import 'appointment_review_screen.dart';
 
@@ -136,119 +137,124 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
     final morningSlots = _slots.where((s) => s.session == 'morning').toList();
     final afternoonSlots = _slots.where((s) => s.session == 'afternoon').toList();
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text(
-          'Select Time Slot',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.surface,
-        centerTitle: true,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
-          child: Column(
-            children: [
-              // Segmented 5-Step Stepper (Step 5 of 5)
-              _buildSegmentedStepper(),
-
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20.0, 16.0, 20.0, 100.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Context Summary Card
-                      _buildBookingContextCard(formattedDate),
-                      const SizedBox(height: 16),
-
-                      // HCI Capping Info Chip
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryLight.withValues(alpha: 0.35),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-                        ),
-                        child: Row(
-                          children: const [
-                            Icon(Icons.info_outline_rounded, size: 16, color: AppColors.primary),
-                            SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Slots are capped at 25 patients to minimize clinic waiting hall delays.',
-                                style: TextStyle(fontSize: 12, color: AppColors.primaryDark, fontWeight: FontWeight.w500),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // 1. Morning Session Header
-                      _buildSessionHeader(
-                        icon: Icons.wb_sunny_rounded,
-                        title: 'Morning Session',
-                        subtitle: '08:00 AM - 12:00 PM',
-                        color: Colors.orange.shade700,
-                      ),
-                      const SizedBox(height: 10),
-
-                      // Morning Slots Grid (2 Columns)
-                      _buildSlotGrid(morningSlots),
-
-                      const SizedBox(height: 24),
-
-                      // 2. Afternoon Session Header
-                      _buildSessionHeader(
-                        icon: Icons.wb_twilight_rounded,
-                        title: 'Afternoon Session',
-                        subtitle: '12:00 PM - 02:00 PM',
-                        color: Colors.blueGrey.shade700,
-                      ),
-                      const SizedBox(height: 10),
-
-                      // Afternoon Slots Grid (2 Columns)
-                      _buildSlotGrid(afternoonSlots),
-
-                      const SizedBox(height: 20),
-
-                      // Clean Legend
-                      Container(
-                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            _buildLegendItem(AppColors.statusGreen, 'Available'),
-                            _buildLegendItem(AppColors.statusOrange, 'Filling Fast'),
-                            _buildLegendItem(AppColors.textMuted, 'Full / Locked'),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Pinned Bottom Button
-              _buildBottomActionBar(),
-            ],
+    return ValueListenableBuilder<bool>(
+      valueListenable: AppAccessibility.isHighContrastMode,
+      builder: (context, isDark, _) {
+        return Scaffold(
+          backgroundColor: AppColors.pageBg,
+          appBar: AppBar(
+            title: const Text(
+              'Select Time Slot',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+            backgroundColor: AppColors.appBarBg,
+            foregroundColor: Colors.white,
+            centerTitle: true,
+            elevation: isDark ? 1 : 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_rounded),
+              onPressed: () => Navigator.pop(context),
+            ),
           ),
-        ),
-      ),
+          body: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: Column(
+                children: [
+                  // Segmented 5-Step Stepper (Step 5 of 5)
+                  _buildSegmentedStepper(),
+
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20.0, 16.0, 20.0, 100.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Context Summary Card
+                          _buildBookingContextCard(formattedDate),
+                          const SizedBox(height: 16),
+
+                          // HCI Capping Info Chip
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: AppColors.chipBg,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: AppColors.accentColor.withValues(alpha: 0.3)),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.info_outline_rounded, size: 16, color: AppColors.accentColor),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Slots are capped at 25 patients to minimize clinic waiting hall delays.',
+                                    style: TextStyle(fontSize: 12, color: AppColors.accentColor, fontWeight: FontWeight.w500),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+
+                          // 1. Morning Session Header
+                          _buildSessionHeader(
+                            icon: Icons.wb_sunny_rounded,
+                            title: 'Morning Session',
+                            subtitle: '08:00 AM - 12:00 PM',
+                            color: Colors.orange.shade700,
+                          ),
+                          const SizedBox(height: 10),
+
+                          // Morning Slots Grid (2 Columns)
+                          _buildSlotGrid(morningSlots),
+
+                          const SizedBox(height: 24),
+
+                          // 2. Afternoon Session Header
+                          _buildSessionHeader(
+                            icon: Icons.wb_twilight_rounded,
+                            title: 'Afternoon Session',
+                            subtitle: '12:00 PM - 02:00 PM',
+                            color: Colors.blueGrey.shade700,
+                          ),
+                          const SizedBox(height: 10),
+
+                          // Afternoon Slots Grid (2 Columns)
+                          _buildSlotGrid(afternoonSlots),
+
+                          const SizedBox(height: 20),
+
+                          // Clean Legend
+                          Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                            decoration: BoxDecoration(
+                              color: AppColors.cardSurface,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: AppColors.cardBorder),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: [
+                                _buildLegendItem(AppColors.statusGreen, 'Available'),
+                                _buildLegendItem(AppColors.statusOrange, 'Filling Fast'),
+                                _buildLegendItem(AppColors.bodyText, 'Full / Locked'),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Pinned Bottom Button
+                  _buildBottomActionBar(),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -264,12 +270,12 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
         const SizedBox(width: 8),
         Text(
           title,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark),
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.headingText),
         ),
         const SizedBox(width: 8),
         Text(
           '($subtitle)',
-          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          style: TextStyle(fontSize: 12, color: AppColors.bodyText),
         ),
       ],
     );
@@ -312,23 +318,23 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: isFull
-              ? const Color(0xFFF1F5F9)
+              ? (AppColors.isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9))
               : isSelected
-                  ? AppColors.primaryLight.withValues(alpha: 0.4)
-                  : AppColors.surface,
+                  ? AppColors.chipBg
+                  : AppColors.cardSurface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isFull
-                ? AppColors.border
+                ? AppColors.cardBorder
                 : isSelected
-                    ? AppColors.primary
-                    : AppColors.border,
+                    ? AppColors.accentColor
+                    : AppColors.cardBorder,
             width: isSelected ? 2 : 1,
           ),
           boxShadow: [
             if (isSelected)
               BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.12),
+                color: AppColors.accentColor.withValues(alpha: 0.15),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
@@ -349,10 +355,10 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
                         Icons.access_time_rounded,
                         size: 14,
                         color: isFull
-                            ? AppColors.textMuted
+                            ? AppColors.bodyText
                             : isSelected
-                                ? AppColors.primary
-                                : AppColors.textSecondary,
+                                ? AppColors.accentColor
+                                : AppColors.bodyText,
                       ),
                       const SizedBox(width: 5),
                       Expanded(
@@ -362,10 +368,10 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
                             color: isFull
-                                ? AppColors.textMuted
+                                ? AppColors.bodyText
                                 : isSelected
-                                    ? AppColors.primary
-                                    : AppColors.textDark,
+                                    ? AppColors.accentColor
+                                    : AppColors.headingText,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -375,9 +381,9 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
                   ),
                 ),
                 if (isSelected)
-                  const Icon(Icons.check_circle_rounded, size: 16, color: AppColors.primary)
+                  Icon(Icons.check_circle_rounded, size: 16, color: AppColors.accentColor)
                 else if (isFull)
-                  const Icon(Icons.lock_outline_rounded, size: 14, color: AppColors.textMuted),
+                  Icon(Icons.lock_outline_rounded, size: 14, color: AppColors.bodyText),
               ],
             ),
             const SizedBox(height: 6),
@@ -404,7 +410,7 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? AppColors.primary.withValues(alpha: 0.15)
+                      ? AppColors.accentColor.withValues(alpha: 0.2)
                       : isAlmostFull
                           ? AppColors.statusOrange.withValues(alpha: 0.15)
                           : AppColors.statusGreen.withValues(alpha: 0.12),
@@ -420,7 +426,7 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
                     color: isSelected
-                        ? AppColors.primary
+                        ? AppColors.accentColor
                         : isAlmostFull
                             ? AppColors.statusOrange
                             : AppColors.statusGreen,
@@ -437,22 +443,22 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
   Widget _buildSegmentedStepper() {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
+      decoration: BoxDecoration(
+        color: AppColors.cardSurface,
+        border: Border(bottom: BorderSide(color: AppColors.cardBorder, width: 1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
+            children: [
               Text(
                 'Step 5 of 5: Time Slot Selection',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
+                  color: AppColors.accentColor,
                 ),
               ),
               Text(
@@ -460,7 +466,7 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
-                  color: AppColors.textMuted,
+                  color: AppColors.bodyText,
                 ),
               ),
             ],
@@ -492,10 +498,10 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
         height: 6,
         decoration: BoxDecoration(
           color: isActive
-              ? AppColors.primary
+              ? AppColors.accentColor
               : isCompleted
                   ? AppColors.statusGreen
-                  : AppColors.border,
+                  : AppColors.cardBorder,
           borderRadius: BorderRadius.circular(3),
         ),
       ),
@@ -507,20 +513,20 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.cardSurface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.cardBorder),
       ),
       child: Column(
         children: [
           Row(
             children: [
-              const Icon(Icons.local_hospital_rounded, size: 16, color: AppColors.primary),
+              Icon(Icons.local_hospital_rounded, size: 16, color: AppColors.accentColor),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   widget.hospital.name,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.headingText),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -535,13 +541,13 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
               Expanded(
                 child: Text(
                   '${widget.clinic.name} (${widget.clinic.roomNumber})',
-                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  style: TextStyle(fontSize: 12, color: AppColors.bodyText),
                 ),
               ),
               const SizedBox(width: 8),
               Text(
                 formattedDate,
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.primary),
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.accentColor),
               ),
             ],
           ),
@@ -553,7 +559,7 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
               Expanded(
                 child: Text(
                   'Patient: ${widget.patientName} (${widget.relationship})',
-                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+                  style: TextStyle(fontSize: 12, color: AppColors.bodyText, fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -575,7 +581,7 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
         const SizedBox(width: 5),
         Text(
           text,
-          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+          style: TextStyle(fontSize: 11, color: AppColors.bodyText),
         ),
       ],
     );
@@ -586,11 +592,11 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        border: const Border(top: BorderSide(color: AppColors.border, width: 1)),
+        color: AppColors.cardSurface,
+        border: Border(top: BorderSide(color: AppColors.cardBorder, width: 1)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.textDark.withValues(alpha: 0.04),
+            color: AppColors.isDark ? Colors.black26 : AppColors.textDark.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, -3),
           ),
@@ -603,8 +609,8 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
           child: ElevatedButton(
             onPressed: _proceedToReview,
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.surface,
+              backgroundColor: AppColors.accentColor,
+              foregroundColor: AppColors.isDark ? Colors.black : Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -612,13 +618,21 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
+              children: [
                 Text(
                   'Review Appointment',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.isDark ? Colors.black : Colors.white,
+                  ),
                 ),
-                SizedBox(width: 8),
-                Icon(Icons.arrow_forward_rounded, size: 18),
+                const SizedBox(width: 8),
+                Icon(
+                  Icons.arrow_forward_rounded,
+                  size: 18,
+                  color: AppColors.isDark ? Colors.black : Colors.white,
+                ),
               ],
             ),
           ),

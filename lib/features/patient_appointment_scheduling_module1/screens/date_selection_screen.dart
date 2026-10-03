@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_accessibility.dart';
 import '../backend/backend.dart';
 import 'time_slot_selection_screen.dart';
 
@@ -64,212 +65,217 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
   Widget build(BuildContext context) {
     final formattedDate = DateFormat('EEEE, d MMMM yyyy').format(_selectedDay);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text(
-          'Select Appointment Date',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.surface,
-        centerTitle: true,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
-          child: Column(
-            children: [
-              // Segmented 5-Step Stepper (Step 4 of 5)
-              _buildSegmentedStepper(),
+    return ValueListenableBuilder<bool>(
+      valueListenable: AppAccessibility.isHighContrastMode,
+      builder: (context, isDark, _) {
+        return Scaffold(
+          backgroundColor: AppColors.pageBg,
+          appBar: AppBar(
+            title: const Text(
+              'Select Appointment Date',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+            backgroundColor: AppColors.appBarBg,
+            foregroundColor: Colors.white,
+            centerTitle: true,
+            elevation: isDark ? 1 : 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_rounded),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
+          body: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: Column(
+                children: [
+                  // Segmented 5-Step Stepper (Step 4 of 5)
+                  _buildSegmentedStepper(),
 
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Context Summary Card (Hospital & Clinic)
-                      _buildBookingContextCard(),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Context Summary Card (Hospital & Clinic)
+                          _buildBookingContextCard(),
 
-                      const SizedBox(height: 16),
+                          const SizedBox(height: 16),
 
-                      const Text(
-                        'Choose Clinic Date',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textDark,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Select an available date on the OPD calendar for consultation.',
-                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.3),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Interactive Calendar Card
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppColors.border),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.textDark.withValues(alpha: 0.03),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
+                          Text(
+                            'Choose Clinic Date',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.headingText,
                             ),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            TableCalendar(
-                              firstDay: DateTime.now().subtract(const Duration(days: 1)),
-                              lastDay: DateTime.now().add(const Duration(days: 90)),
-                              focusedDay: _focusedDay,
-                              currentDay: DateTime.now(),
-                              selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-                              // Prevent selecting Sundays or past days
-                              enabledDayPredicate: (day) {
-                                return day.weekday != DateTime.sunday &&
-                                    day.isAfter(DateTime.now().subtract(const Duration(days: 1)));
-                              },
-                              onDaySelected: (selectedDay, focusedDay) {
-                                setState(() {
-                                  _selectedDay = selectedDay;
-                                  _focusedDay = focusedDay;
-                                });
-                              },
-                              headerStyle: const HeaderStyle(
-                                formatButtonVisible: false,
-                                titleCentered: true,
-                                titleTextStyle: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.textDark,
-                                ),
-                                leftChevronIcon: Icon(Icons.chevron_left, color: AppColors.primary),
-                                rightChevronIcon: Icon(Icons.chevron_right, color: AppColors.primary),
-                              ),
-                              calendarStyle: CalendarStyle(
-                                outsideDaysVisible: false,
-                                selectedDecoration: const BoxDecoration(
-                                  color: AppColors.primary,
-                                  shape: BoxShape.circle,
-                                ),
-                                selectedTextStyle: const TextStyle(
-                                  color: AppColors.surface,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                defaultTextStyle: const TextStyle(
-                                  color: AppColors.textDark,
-                                  fontSize: 14,
-                                ),
-                                weekendTextStyle: const TextStyle(
-                                  color: AppColors.statusOrange,
-                                  fontSize: 14,
-                                ),
-                                disabledTextStyle: const TextStyle(
-                                  color: AppColors.textMuted,
-                                  fontSize: 14,
-                                ),
-                                todayDecoration: BoxDecoration(
-                                  color: AppColors.primaryLight,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: AppColors.primary, width: 1.2),
-                                ),
-                                todayTextStyle: const TextStyle(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            const Divider(height: 24, color: AppColors.border),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Select an available date on the OPD calendar for consultation.',
+                            style: TextStyle(fontSize: 13, color: AppColors.bodyText, height: 1.3),
+                          ),
+                          const SizedBox(height: 16),
 
-                            // Calendar Legend
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                _buildLegend(AppColors.primary, 'Selected'),
-                                const SizedBox(width: 14),
-                                _buildLegend(AppColors.textDark, 'Available'),
-                                const SizedBox(width: 14),
-                                _buildLegend(AppColors.textMuted, 'Closed / Sunday'),
+                          // Interactive Calendar Card
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: AppColors.cardSurface,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: AppColors.cardBorder),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.isDark ? Colors.black26 : AppColors.textDark.withValues(alpha: 0.03),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
                               ],
                             ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Selected Date Confirmation Card
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryLight.withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-                        ),
-                        child: Column(
-                          children: [
-                            const Text(
-                              'SELECTED APPOINTMENT DATE',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              formattedDate,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textDark,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: const [
-                                Icon(Icons.check_circle_rounded, size: 14, color: AppColors.statusGreen),
-                                SizedBox(width: 4),
-                                Text(
-                                  'OPD Morning Session Available (8:00 AM - 12:00 PM)',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.statusGreen,
+                            child: Column(
+                              children: [
+                                TableCalendar(
+                                  firstDay: DateTime.now().subtract(const Duration(days: 1)),
+                                  lastDay: DateTime.now().add(const Duration(days: 90)),
+                                  focusedDay: _focusedDay,
+                                  currentDay: DateTime.now(),
+                                  selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                                  // Prevent selecting Sundays or past days
+                                  enabledDayPredicate: (day) {
+                                    return day.weekday != DateTime.sunday &&
+                                        day.isAfter(DateTime.now().subtract(const Duration(days: 1)));
+                                  },
+                                  onDaySelected: (selectedDay, focusedDay) {
+                                    setState(() {
+                                      _selectedDay = selectedDay;
+                                      _focusedDay = focusedDay;
+                                    });
+                                  },
+                                  headerStyle: HeaderStyle(
+                                    formatButtonVisible: false,
+                                    titleCentered: true,
+                                    titleTextStyle: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.headingText,
+                                    ),
+                                    leftChevronIcon: Icon(Icons.chevron_left, color: AppColors.accentColor),
+                                    rightChevronIcon: Icon(Icons.chevron_right, color: AppColors.accentColor),
+                                  ),
+                                  calendarStyle: CalendarStyle(
+                                    outsideDaysVisible: false,
+                                    selectedDecoration: BoxDecoration(
+                                      color: AppColors.accentColor,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    selectedTextStyle: TextStyle(
+                                      color: isDark ? Colors.black : Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    defaultTextStyle: TextStyle(
+                                      color: AppColors.headingText,
+                                      fontSize: 14,
+                                    ),
+                                    weekendTextStyle: const TextStyle(
+                                      color: AppColors.statusOrange,
+                                      fontSize: 14,
+                                    ),
+                                    disabledTextStyle: TextStyle(
+                                      color: AppColors.bodyText.withValues(alpha: 0.5),
+                                      fontSize: 14,
+                                    ),
+                                    todayDecoration: BoxDecoration(
+                                      color: AppColors.chipBg,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: AppColors.accentColor, width: 1.2),
+                                    ),
+                                    todayTextStyle: TextStyle(
+                                      color: AppColors.accentColor,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
+                                Divider(height: 24, color: AppColors.cardBorder),
+
+                                // Calendar Legend
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    _buildLegend(AppColors.accentColor, 'Selected'),
+                                    const SizedBox(width: 14),
+                                    _buildLegend(AppColors.headingText, 'Available'),
+                                    const SizedBox(width: 14),
+                                    _buildLegend(AppColors.bodyText, 'Closed / Sunday'),
+                                  ],
+                                ),
                               ],
                             ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                    ],
-                  ),
-                ),
-              ),
+                          ),
+                          const SizedBox(height: 16),
 
-              // Pinned Bottom Continue Button
-              _buildBottomActionBar(),
-            ],
+                          // Selected Date Confirmation Card
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: AppColors.chipBg,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: AppColors.accentColor.withValues(alpha: 0.3)),
+                            ),
+                            child: Column(
+                              children: [
+                                Text(
+                                  'SELECTED APPOINTMENT DATE',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.accentColor,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  formattedDate,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.headingText,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: const [
+                                    Icon(Icons.check_circle_rounded, size: 14, color: AppColors.statusGreen),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'OPD Morning Session Available (8:00 AM - 12:00 PM)',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.statusGreen,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Pinned Bottom Continue Button
+                  _buildBottomActionBar(),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -277,22 +283,22 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
   Widget _buildSegmentedStepper() {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
+      decoration: BoxDecoration(
+        color: AppColors.cardSurface,
+        border: Border(bottom: BorderSide(color: AppColors.cardBorder, width: 1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
+            children: [
               Text(
                 'Step 4 of 5: Date Selection',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
+                  color: AppColors.accentColor,
                 ),
               ),
               Text(
@@ -300,7 +306,7 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
-                  color: AppColors.textMuted,
+                  color: AppColors.bodyText,
                 ),
               ),
             ],
@@ -332,10 +338,10 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
         height: 6,
         decoration: BoxDecoration(
           color: isActive
-              ? AppColors.primary
+              ? AppColors.accentColor
               : isCompleted
                   ? AppColors.statusGreen
-                  : AppColors.border,
+                  : AppColors.cardBorder,
           borderRadius: BorderRadius.circular(3),
         ),
       ),
@@ -347,20 +353,20 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.cardSurface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.cardBorder),
       ),
       child: Column(
         children: [
           Row(
             children: [
-              const Icon(Icons.local_hospital_rounded, size: 16, color: AppColors.primary),
+              Icon(Icons.local_hospital_rounded, size: 16, color: AppColors.accentColor),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   widget.hospital.name,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.headingText),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -375,7 +381,7 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
               Expanded(
                 child: Text(
                   '${widget.clinic.name} • ${widget.clinic.hours}',
-                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  style: TextStyle(fontSize: 12, color: AppColors.bodyText),
                 ),
               ),
             ],
@@ -388,7 +394,7 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
               Expanded(
                 child: Text(
                   'Patient: ${widget.patientName} (${widget.relationship})',
-                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+                  style: TextStyle(fontSize: 12, color: AppColors.bodyText, fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -410,7 +416,7 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
         const SizedBox(width: 6),
         Text(
           text,
-          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+          style: TextStyle(fontSize: 11, color: AppColors.bodyText),
         ),
       ],
     );
@@ -421,11 +427,11 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        border: const Border(top: BorderSide(color: AppColors.border, width: 1)),
+        color: AppColors.cardSurface,
+        border: Border(top: BorderSide(color: AppColors.cardBorder, width: 1)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.textDark.withValues(alpha: 0.04),
+            color: AppColors.isDark ? Colors.black26 : AppColors.textDark.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, -3),
           ),
@@ -438,8 +444,8 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
           child: ElevatedButton(
             onPressed: _proceedToTimeSlots,
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.surface,
+              backgroundColor: AppColors.accentColor,
+              foregroundColor: AppColors.isDark ? Colors.black : Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -447,13 +453,21 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
+              children: [
                 Text(
                   'Continue to Time Slots',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.isDark ? Colors.black : Colors.white,
+                  ),
                 ),
-                SizedBox(width: 8),
-                Icon(Icons.arrow_forward_rounded, size: 18),
+                const SizedBox(width: 8),
+                Icon(
+                  Icons.arrow_forward_rounded,
+                  size: 18,
+                  color: AppColors.isDark ? Colors.black : Colors.white,
+                ),
               ],
             ),
           ),

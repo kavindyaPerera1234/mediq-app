@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_accessibility.dart';
 import 'hospital_selection_screen.dart';
 import '../admin/screens/hospital_admin_dashboard.dart';
 import '../backend/backend.dart';
@@ -68,101 +69,106 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text(
-          'Book OPD Appointment',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.surface,
-        centerTitle: true,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.admin_panel_settings_outlined),
-            tooltip: 'Module 1 Hospital Admin Console',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const HospitalAdminDashboard()),
-              );
-            },
-          ),
-        ],
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
-          child: Column(
-            children: [
-              // Ministry of Health Sri Lanka Trust Banner
-              _buildTrustBanner(),
-
-              // Segmented 5-Step Stepper (Clean & uncluttered)
-              _buildSegmentedStepper(),
-
-              Expanded(
-                child: SingleChildScrollView(
-                  // 100px bottom padding ensures sticky button never cuts off the bottom chips/inputs
-                  padding: const EdgeInsets.fromLTRB(20.0, 16.0, 20.0, 100.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Who is this appointment for?',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textDark,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'Please choose an option below to proceed with government OPD booking.',
-                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Option 1: Myself
-                      _buildOptionCard(
-                        id: 'myself',
-                        title: 'Booking for Myself',
-                        subtitle: 'I am the primary patient receiving OPD consultation.',
-                        icon: Icons.person_rounded,
-                      ),
-
-                      const SizedBox(height: 14),
-
-                      // Option 2: Someone Else (Caregiver Mode)
-                      _buildOptionCard(
-                        id: 'someone_else',
-                        title: 'Booking for Someone Else',
-                        subtitle: 'I am a caregiver booking for a parent, child, or dependent.',
-                        icon: Icons.family_restroom_rounded,
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Dynamic Content: Shows ONLY after user selects an option
-                      if (_bookingMode == 'myself')
-                        _buildMyselfProfileCard()
-                      else if (_bookingMode == 'someone_else')
-                        _buildCaregiverForm()
-                      else
-                        _buildSelectionPrompt(),
-                    ],
-                  ),
-                ),
+    return ValueListenableBuilder<bool>(
+      valueListenable: AppAccessibility.isHighContrastMode,
+      builder: (context, isDark, _) {
+        return Scaffold(
+          backgroundColor: AppColors.pageBg,
+          appBar: AppBar(
+            title: const Text(
+              'Book OPD Appointment',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+            backgroundColor: AppColors.appBarBg,
+            foregroundColor: Colors.white,
+            centerTitle: true,
+            elevation: isDark ? 1 : 0,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.admin_panel_settings_outlined),
+                tooltip: 'Module 1 Hospital Admin Console',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const HospitalAdminDashboard()),
+                  );
+                },
               ),
-
-              // Pinned Bottom Action Button
-              _buildBottomActionBar(),
             ],
           ),
-        ),
-      ),
+          body: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: Column(
+                children: [
+                  // Ministry of Health Sri Lanka Trust Banner
+                  _buildTrustBanner(),
+
+                  // Segmented 5-Step Stepper (Clean & uncluttered)
+                  _buildSegmentedStepper(),
+
+                  Expanded(
+                    child: SingleChildScrollView(
+                      // 100px bottom padding ensures sticky button never cuts off the bottom chips/inputs
+                      padding: const EdgeInsets.fromLTRB(20.0, 16.0, 20.0, 100.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Who is this appointment for?',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.headingText,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Please choose an option below to proceed with government OPD booking.',
+                            style: TextStyle(fontSize: 13, color: AppColors.bodyText, height: 1.4),
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Option 1: Myself
+                          _buildOptionCard(
+                            id: 'myself',
+                            title: 'Booking for Myself',
+                            subtitle: 'I am the primary patient receiving OPD consultation.',
+                            icon: Icons.person_rounded,
+                          ),
+
+                          const SizedBox(height: 14),
+
+                          // Option 2: Someone Else (Caregiver Mode)
+                          _buildOptionCard(
+                            id: 'someone_else',
+                            title: 'Booking for Someone Else',
+                            subtitle: 'I am a caregiver booking for a parent, child, or dependent.',
+                            icon: Icons.family_restroom_rounded,
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // Dynamic Content: Shows ONLY after user selects an option
+                          if (_bookingMode == 'myself')
+                            _buildMyselfProfileCard()
+                          else if (_bookingMode == 'someone_else')
+                            _buildCaregiverForm()
+                          else
+                            _buildSelectionPrompt(),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Pinned Bottom Action Button
+                  _buildBottomActionBar(),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -172,20 +178,20 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.primaryLight.withValues(alpha: 0.6),
-        border: const Border(bottom: BorderSide(color: AppColors.border, width: 0.8)),
+        color: AppColors.chipBg,
+        border: Border(bottom: BorderSide(color: AppColors.cardBorder, width: 0.8)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
-          Icon(Icons.health_and_safety_outlined, size: 16, color: AppColors.primary),
-          SizedBox(width: 8),
+        children: [
+          Icon(Icons.health_and_safety_outlined, size: 16, color: AppColors.accentColor),
+          const SizedBox(width: 8),
           Text(
             'Ministry of Health Sri Lanka • Free OPD E-Channeling',
             style: TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w600,
-              color: AppColors.primaryDark,
+              color: AppColors.accentColor,
               letterSpacing: 0.2,
             ),
           ),
@@ -198,22 +204,22 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
   Widget _buildSegmentedStepper() {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
+      decoration: BoxDecoration(
+        color: AppColors.cardSurface,
+        border: Border(bottom: BorderSide(color: AppColors.cardBorder, width: 1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
+            children: [
               Text(
                 'Step 1 of 5: Patient Details',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
+                  color: AppColors.accentColor,
                 ),
               ),
               Text(
@@ -221,7 +227,7 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
-                  color: AppColors.textMuted,
+                  color: AppColors.bodyText,
                 ),
               ),
             ],
@@ -253,10 +259,10 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
         height: 6,
         decoration: BoxDecoration(
           color: isActive
-              ? AppColors.primary
+              ? AppColors.accentColor
               : isCompleted
                   ? AppColors.statusGreen
-                  : AppColors.border,
+                  : AppColors.cardBorder,
           borderRadius: BorderRadius.circular(3),
         ),
       ),
@@ -268,18 +274,18 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.cardSurface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.cardBorder),
       ),
       child: Row(
-        children: const [
-          Icon(Icons.touch_app_outlined, color: AppColors.primary, size: 24),
-          SizedBox(width: 14),
+        children: [
+          Icon(Icons.touch_app_outlined, color: AppColors.accentColor, size: 24),
+          const SizedBox(width: 14),
           Expanded(
             child: Text(
               'Select one of the two options above to enter patient details and proceed.',
-              style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
+              style: TextStyle(fontSize: 13, color: AppColors.bodyText, height: 1.4),
             ),
           ),
         ],
@@ -303,18 +309,17 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          // Soft tint when selected so it clearly pops
-          color: isSelected ? AppColors.primaryLight.withValues(alpha: 0.5) : AppColors.surface,
+          color: isSelected ? AppColors.chipBg : AppColors.cardSurface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.border,
+            color: isSelected ? AppColors.accentColor : AppColors.cardBorder,
             width: isSelected ? 2 : 1,
           ),
           boxShadow: [
             BoxShadow(
               color: isSelected
-                  ? AppColors.primary.withValues(alpha: 0.08)
-                  : AppColors.textDark.withValues(alpha: 0.03),
+                  ? AppColors.accentColor.withValues(alpha: 0.12)
+                  : (AppColors.isDark ? Colors.black26 : AppColors.textDark.withValues(alpha: 0.03)),
               blurRadius: isSelected ? 10 : 4,
               offset: const Offset(0, 2),
             ),
@@ -325,12 +330,12 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.primaryLight : AppColors.background,
+                color: isSelected ? AppColors.accentColor.withValues(alpha: 0.2) : AppColors.innerCardBg,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 icon,
-                color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                color: isSelected ? AppColors.accentColor : AppColors.bodyText,
                 size: 26,
               ),
             ),
@@ -344,15 +349,15 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: isSelected ? AppColors.primary : AppColors.textDark,
+                      color: isSelected ? AppColors.accentColor : AppColors.headingText,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: AppColors.textSecondary,
+                      color: AppColors.bodyText,
                       height: 1.3,
                     ),
                   ),
@@ -361,7 +366,7 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
             ),
             Icon(
               isSelected ? Icons.check_circle_rounded : Icons.radio_button_off_rounded,
-              color: isSelected ? AppColors.primary : AppColors.textMuted,
+              color: isSelected ? AppColors.accentColor : AppColors.bodyText,
               size: 22,
             ),
           ],
@@ -375,12 +380,12 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.cardSurface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primaryLight, width: 1.5),
+        border: Border.all(color: AppColors.cardBorder, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.04),
+            color: AppColors.isDark ? Colors.black26 : AppColors.primary.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -393,15 +398,15 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
-                children: const [
-                  Icon(Icons.verified_user_rounded, color: AppColors.statusGreen, size: 20),
-                  SizedBox(width: 8),
+                children: [
+                  const Icon(Icons.verified_user_rounded, color: AppColors.statusGreen, size: 20),
+                  const SizedBox(width: 8),
                   Text(
                     'Verified Profile Details',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.textDark,
+                      color: AppColors.headingText,
                     ),
                   ),
                 ],
@@ -421,11 +426,11 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
                   minimumSize: const Size(40, 24),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                child: const Text('Edit', style: TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.bold)),
+                child: Text('Edit', style: TextStyle(fontSize: 12, color: AppColors.accentColor, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
-          const Divider(height: 20, color: AppColors.border),
+          Divider(height: 20, color: AppColors.cardBorder),
           _buildInfoRow('Full Name:', 'Sandeepani Perera'),
           const SizedBox(height: 10),
           _buildInfoRow('National ID (NIC):', '200164801234'),
@@ -435,17 +440,17 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.primaryLight,
+              color: AppColors.chipBg,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
-              children: const [
-                Icon(Icons.info_outline, color: AppColors.primary, size: 18),
-                SizedBox(width: 10),
+              children: [
+                Icon(Icons.info_outline, color: AppColors.accentColor, size: 18),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     'Appointment token & queue SMS will be sent to your registered mobile number.',
-                    style: TextStyle(fontSize: 12, color: AppColors.primary, height: 1.3),
+                    style: TextStyle(fontSize: 12, color: AppColors.accentColor, height: 1.3),
                   ),
                 ),
               ],
@@ -460,8 +465,8 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-        Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+        Text(label, style: TextStyle(fontSize: 12, color: AppColors.bodyText)),
+        Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.headingText)),
       ],
     );
   }
@@ -473,12 +478,12 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
       child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: AppColors.cardSurface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.statusOrangeLight, width: 1.5),
+          border: Border.all(color: AppColors.cardBorder, width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: AppColors.statusOrange.withValues(alpha: 0.04),
+              color: AppColors.isDark ? Colors.black26 : AppColors.statusOrange.withValues(alpha: 0.04),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -488,20 +493,20 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              children: const [
-                Icon(Icons.edit_note_rounded, color: AppColors.statusOrange, size: 22),
-                SizedBox(width: 8),
+              children: [
+                const Icon(Icons.edit_note_rounded, color: AppColors.statusOrange, size: 22),
+                const SizedBox(width: 8),
                 Text(
                   'Patient Information (Dependent)',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.textDark,
+                    color: AppColors.headingText,
                   ),
                 ),
               ],
             ),
-            const Divider(height: 22, color: AppColors.border),
+            Divider(height: 22, color: AppColors.cardBorder),
 
             // Quick Select from Registered Dependents
             StreamBuilder<List<CaregiverPatientModel>>(
@@ -514,23 +519,23 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
                   margin: const EdgeInsets.only(bottom: 16),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.primaryLight.withValues(alpha: 0.35),
+                    color: AppColors.chipBg,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                    border: Border.all(color: AppColors.accentColor.withValues(alpha: 0.3)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
-                        children: const [
-                          Icon(Icons.family_restroom_rounded, size: 16, color: AppColors.primary),
-                          SizedBox(width: 6),
+                        children: [
+                          Icon(Icons.family_restroom_rounded, size: 16, color: AppColors.accentColor),
+                          const SizedBox(width: 6),
                           Text(
                             'Saved Family Dependents (Tap to auto-fill)',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.primaryDark,
+                              color: AppColors.accentColor,
                             ),
                           ),
                         ],
@@ -548,21 +553,21 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
                                   avatar: Icon(
                                     isSelected ? Icons.check_circle_rounded : Icons.person_rounded,
                                     size: 16,
-                                    color: isSelected ? Colors.white : AppColors.primary,
+                                    color: isSelected ? (AppColors.isDark ? Colors.black : Colors.white) : AppColors.accentColor,
                                   ),
                                   label: Text(
                                     '${dep.patientName} (${dep.relationship})',
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
-                                      color: isSelected ? Colors.white : AppColors.textDark,
+                                      color: isSelected ? (AppColors.isDark ? Colors.black : Colors.white) : AppColors.headingText,
                                     ),
                                   ),
                                   selected: isSelected,
-                                  selectedColor: AppColors.primary,
-                                  backgroundColor: AppColors.surface,
+                                  selectedColor: AppColors.accentColor,
+                                  backgroundColor: AppColors.innerCardBg,
                                   side: BorderSide(
-                                    color: isSelected ? AppColors.primary : AppColors.border,
+                                    color: isSelected ? AppColors.accentColor : AppColors.cardBorder,
                                   ),
                                   onSelected: (selected) {
                                     setState(() {
@@ -597,31 +602,36 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
               },
             ),
 
-            const Text('Patient Full Name *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+            Text('Patient Full Name *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.headingText)),
             const SizedBox(height: 6),
             TextFormField(
               controller: _nameController,
+              style: TextStyle(fontSize: 14, color: AppColors.headingText),
               decoration: _inputDecoration('e.g., Sunil Perera', Icons.person_outline),
               validator: (val) => val == null || val.trim().isEmpty ? 'Please enter patient name' : null,
             ),
             const SizedBox(height: 14),
 
-            const Text('NIC / Birth Certificate No *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+            Text('NIC / Birth Certificate No *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.headingText)),
             const SizedBox(height: 6),
             TextFormField(
               controller: _nicController,
+              style: TextStyle(fontSize: 14, color: AppColors.headingText),
               decoration: _inputDecoration('e.g., 195812345678', Icons.badge_outlined),
               validator: (val) => val == null || val.trim().isEmpty ? 'Please enter NIC or Birth Cert No' : null,
             ),
             const SizedBox(height: 14),
 
-            const Text('Relationship to Patient *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+            Text('Relationship to Patient *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.headingText)),
             const SizedBox(height: 6),
             DropdownButtonFormField<String>(
               value: _selectedRelationship,
-              hint: const Text('Select Relationship (e.g. Father, Mother...)', style: TextStyle(fontSize: 13, color: AppColors.textMuted)),
+              dropdownColor: AppColors.cardSurface,
+              style: TextStyle(fontSize: 14, color: AppColors.headingText),
+              iconEnabledColor: AppColors.headingText,
+              hint: Text('Select Relationship (e.g. Father, Mother...)', style: TextStyle(fontSize: 13, color: AppColors.bodyText)),
               decoration: _inputDecoration('Select Relationship', Icons.people_outline),
-              items: _relationships.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
+              items: _relationships.map((r) => DropdownMenuItem(value: r, child: Text(r, style: TextStyle(color: AppColors.headingText)))).toList(),
               validator: (val) => val == null || val.isEmpty ? 'Please select relationship' : null,
               onChanged: (val) {
                 if (val != null) setState(() => _selectedRelationship = val);
@@ -629,7 +639,7 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
             ),
             const SizedBox(height: 16),
 
-            const Text('Special Priority Category', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+            Text('Special Priority Category', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.headingText)),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -653,14 +663,17 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
       label: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: isSelected ? AppColors.surface : AppColors.textDark),
+          Icon(icon, size: 14, color: isSelected ? (AppColors.isDark ? Colors.black : Colors.white) : AppColors.headingText),
           const SizedBox(width: 4),
-          Text(label, style: TextStyle(fontSize: 11, color: isSelected ? AppColors.surface : AppColors.textDark)),
+          Text(label, style: TextStyle(fontSize: 11, color: isSelected ? (AppColors.isDark ? Colors.black : Colors.white) : AppColors.headingText)),
         ],
       ),
       selected: isSelected,
-      selectedColor: AppColors.primary,
-      backgroundColor: AppColors.background,
+      selectedColor: AppColors.accentColor,
+      backgroundColor: AppColors.innerCardBg,
+      side: BorderSide(
+        color: isSelected ? AppColors.accentColor : AppColors.cardBorder,
+      ),
       onSelected: (selected) {
         if (selected) setState(() => _selectedPriority = value);
       },
@@ -669,23 +682,23 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
 
   InputDecoration _inputDecoration(String hint, IconData icon) {
     return InputDecoration(
-      prefixIcon: Icon(icon, color: AppColors.textMuted, size: 20),
+      prefixIcon: Icon(icon, color: AppColors.bodyText, size: 20),
       hintText: hint,
-      hintStyle: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+      hintStyle: TextStyle(fontSize: 13, color: AppColors.bodyText),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       filled: true,
-      fillColor: AppColors.surfaceMuted,
+      fillColor: AppColors.innerCardBg,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: AppColors.border),
+        borderSide: BorderSide(color: AppColors.cardBorder),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: AppColors.border),
+        borderSide: BorderSide(color: AppColors.cardBorder),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: AppColors.borderFocused, width: 1.5),
+        borderSide: BorderSide(color: AppColors.accentColor, width: 1.5),
       ),
     );
   }
@@ -696,11 +709,11 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        border: const Border(top: BorderSide(color: AppColors.border, width: 1)),
+        color: AppColors.cardSurface,
+        border: Border(top: BorderSide(color: AppColors.cardBorder, width: 1)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.textDark.withValues(alpha: 0.04),
+            color: AppColors.isDark ? Colors.black26 : AppColors.textDark.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, -3),
           ),
@@ -713,8 +726,8 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
           child: ElevatedButton(
             onPressed: _proceedToHospitalSelection,
             style: ElevatedButton.styleFrom(
-              backgroundColor: isOptionSelected ? AppColors.primary : AppColors.border,
-              foregroundColor: isOptionSelected ? AppColors.surface : AppColors.textMuted,
+              backgroundColor: isOptionSelected ? AppColors.accentColor : (AppColors.isDark ? const Color(0xFF334155) : AppColors.border),
+              foregroundColor: isOptionSelected ? (AppColors.isDark ? Colors.black : Colors.white) : AppColors.bodyText,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -728,14 +741,14 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
-                    color: isOptionSelected ? AppColors.surface : AppColors.textMuted,
+                    color: isOptionSelected ? (AppColors.isDark ? Colors.black : Colors.white) : AppColors.bodyText,
                   ),
                 ),
                 const SizedBox(width: 8),
                 Icon(
                   Icons.arrow_forward_rounded,
                   size: 18,
-                  color: isOptionSelected ? AppColors.surface : AppColors.textMuted,
+                  color: isOptionSelected ? (AppColors.isDark ? Colors.black : Colors.white) : AppColors.bodyText,
                 ),
               ],
             ),

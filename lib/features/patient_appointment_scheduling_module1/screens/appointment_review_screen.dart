@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_accessibility.dart';
 import '../../../core/services/voice_guidance_service.dart';
 import '../backend/backend.dart';
 import 'booking_confirmation_screen.dart';
@@ -113,169 +114,174 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
   Widget build(BuildContext context) {
     final formattedDate = DateFormat('EEEE, d MMMM yyyy').format(widget.selectedDate);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text(
-          'Review Appointment',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.surface,
-        centerTitle: true,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
-          child: Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Header card with Verified Trust badge
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryLight.withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.verified_user_rounded, color: AppColors.primary, size: 22),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: const [
-                                  Text(
-                                    'Ministry of Health Sri Lanka',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.primary,
-                                    ),
-                                  ),
-                                  SizedBox(height: 2),
-                                  Text(
-                                    'Please review your OPD clinic appointment details carefully before final submission.',
-                                    style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                                  ),
-                                ],
-                              ),
+    return ValueListenableBuilder<bool>(
+      valueListenable: AppAccessibility.isHighContrastMode,
+      builder: (context, isDark, _) {
+        return Scaffold(
+          backgroundColor: AppColors.pageBg,
+          appBar: AppBar(
+            title: const Text(
+              'Review Appointment',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+            backgroundColor: AppColors.appBarBg,
+            foregroundColor: Colors.white,
+            centerTitle: true,
+            elevation: isDark ? 1 : 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_rounded),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
+          body: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Header card with Verified Trust badge
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: AppColors.chipBg,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppColors.accentColor.withValues(alpha: 0.3)),
                             ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // 1. Patient Details Card
-                      _buildSectionCard(
-                        title: 'Patient Information',
-                        icon: Icons.person_rounded,
-                        children: [
-                          _buildDetailRow('Patient Full Name', widget.patientName),
-                          const Divider(height: 18, color: AppColors.border),
-                          _buildDetailRow('National ID (NIC)', widget.patientNic),
-                          const Divider(height: 18, color: AppColors.border),
-                          _buildDetailRow(
-                            'Booking Type',
-                            widget.isCaregiverBooking
-                                ? 'Caregiver (${widget.relationship})'
-                                : 'Self Booking',
-                          ),
-                          const Divider(height: 18, color: AppColors.border),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Triage Priority',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textSecondary,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              _buildPriorityBadge(widget.priority),
-                            ],
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-
-                      // 2. Clinical Booking Details Card
-                      _buildSectionCard(
-                        title: 'Hospital & Clinic Details',
-                        icon: Icons.local_hospital_rounded,
-                        children: [
-                          _buildDetailRow('Hospital', widget.hospital.name),
-                          const Divider(height: 18, color: AppColors.border),
-                          _buildDetailRow(
-                            'OPD Specialty Clinic',
-                            '${widget.clinic.name} (${widget.clinic.roomNumber})',
-                          ),
-                          const Divider(height: 18, color: AppColors.border),
-                          _buildDetailRow('Consultation Date', formattedDate),
-                          const Divider(height: 18, color: AppColors.border),
-                          _buildDetailRow('Staggered Time Slot', widget.selectedTimeSlot),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-
-                      // 3. Instructions & Guidelines Callout
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: const [
-                                Icon(Icons.info_outline_rounded, color: AppColors.statusOrange, size: 18),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Important Arrival Guidance',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.textDark,
+                            child: Row(
+                              children: [
+                                Icon(Icons.verified_user_rounded, color: AppColors.accentColor, size: 22),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Ministry of Health Sri Lanka',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.accentColor,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Please review your OPD clinic appointment details carefully before final submission.',
+                                        style: TextStyle(fontSize: 11, color: AppColors.bodyText),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 8),
-                            _buildGuidelineItem('Arrive at the hospital 15 minutes before your slot.'),
-                            _buildGuidelineItem('Present your digital token QR pass at OPD Room Counter.'),
-                            _buildGuidelineItem('Bring your original National ID (NIC) or Health Clinic Card.'),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                    ],
-                  ),
-                ),
-              ),
+                          ),
+                          const SizedBox(height: 16),
 
-              // Bottom Confirm Button
-              _buildBottomAction(),
-            ],
+                          // 1. Patient Details Card
+                          _buildSectionCard(
+                            title: 'Patient Information',
+                            icon: Icons.person_rounded,
+                            children: [
+                              _buildDetailRow('Patient Full Name', widget.patientName),
+                              Divider(height: 18, color: AppColors.cardBorder),
+                              _buildDetailRow('National ID (NIC)', widget.patientNic),
+                              Divider(height: 18, color: AppColors.cardBorder),
+                              _buildDetailRow(
+                                'Booking Type',
+                                widget.isCaregiverBooking
+                                    ? 'Caregiver (${widget.relationship})'
+                                    : 'Self Booking',
+                              ),
+                              Divider(height: 18, color: AppColors.cardBorder),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Triage Priority',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.bodyText,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  _buildPriorityBadge(widget.priority),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+
+                          // 2. Clinical Booking Details Card
+                          _buildSectionCard(
+                            title: 'Hospital & Clinic Details',
+                            icon: Icons.local_hospital_rounded,
+                            children: [
+                              _buildDetailRow('Hospital', widget.hospital.name),
+                              Divider(height: 18, color: AppColors.cardBorder),
+                              _buildDetailRow(
+                                'OPD Specialty Clinic',
+                                '${widget.clinic.name} (${widget.clinic.roomNumber})',
+                              ),
+                              Divider(height: 18, color: AppColors.cardBorder),
+                              _buildDetailRow('Consultation Date', formattedDate),
+                              Divider(height: 18, color: AppColors.cardBorder),
+                              _buildDetailRow('Staggered Time Slot', widget.selectedTimeSlot),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+
+                          // 3. Instructions & Guidelines Callout
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: AppColors.cardSurface,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppColors.cardBorder),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.info_outline_rounded, color: AppColors.statusOrange, size: 18),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Important Arrival Guidance',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.headingText,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                _buildGuidelineItem('Arrive at the hospital 15 minutes before your slot.'),
+                                _buildGuidelineItem('Present your digital token QR pass at OPD Room Counter.'),
+                                _buildGuidelineItem('Bring your original National ID (NIC) or Health Clinic Card.'),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Bottom Confirm Button
+                  _buildBottomAction(),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -288,12 +294,12 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.cardSurface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.cardBorder),
         boxShadow: [
           BoxShadow(
-            color: AppColors.textDark.withValues(alpha: 0.03),
+            color: AppColors.isDark ? Colors.black26 : AppColors.textDark.withValues(alpha: 0.03),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -304,14 +310,14 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
         children: [
           Row(
             children: [
-              Icon(icon, size: 18, color: AppColors.primary),
+              Icon(icon, size: 18, color: AppColors.accentColor),
               const SizedBox(width: 8),
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textDark,
+                  color: AppColors.headingText,
                 ),
               ),
             ],
@@ -330,9 +336,9 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
-            color: AppColors.textSecondary,
+            color: AppColors.bodyText,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -341,10 +347,10 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
           child: Text(
             value,
             textAlign: TextAlign.right,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.bold,
-              color: AppColors.textDark,
+              color: AppColors.headingText,
             ),
           ),
         ),
@@ -395,11 +401,11 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('• ', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+          Text('• ', style: TextStyle(color: AppColors.bodyText, fontSize: 13)),
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.3),
+              style: TextStyle(fontSize: 12, color: AppColors.bodyText, height: 1.3),
             ),
           ),
         ],
@@ -411,11 +417,11 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        border: const Border(top: BorderSide(color: AppColors.border, width: 1)),
+        color: AppColors.cardSurface,
+        border: Border(top: BorderSide(color: AppColors.cardBorder, width: 1)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.textDark.withValues(alpha: 0.04),
+            color: AppColors.isDark ? Colors.black26 : AppColors.textDark.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, -3),
           ),
@@ -428,8 +434,8 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
           child: ElevatedButton(
             onPressed: _isSubmitting ? null : _handleConfirmAppointment,
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.surface,
+              backgroundColor: AppColors.accentColor,
+              foregroundColor: AppColors.isDark ? Colors.black : Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -446,12 +452,16 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
                   )
                 : Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(Icons.check_circle_rounded, size: 20),
-                      SizedBox(width: 8),
+                    children: [
+                      Icon(Icons.check_circle_rounded, size: 20, color: AppColors.isDark ? Colors.black : Colors.white),
+                      const SizedBox(width: 8),
                       Text(
                         'Confirm Appointment',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.isDark ? Colors.black : Colors.white,
+                        ),
                       ),
                     ],
                   ),
