@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../services/live_queue_service.dart';
+import '../../../patient_appointment_scheduling_module1/screens/patient_main_screen.dart';
+import '../../../patient_appointment_scheduling_module1/screens/hospital_selection_screen.dart';
 
 class QueueCompletedScreen extends StatelessWidget {
   const QueueCompletedScreen({super.key});
@@ -66,7 +68,7 @@ class QueueCompletedScreen extends StatelessWidget {
                   border: Border.all(color: AppColors.border),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
+                      color: Colors.black.withValues(alpha: 0.04),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -91,9 +93,9 @@ class QueueCompletedScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryLight.withOpacity(0.6),
+                  color: AppColors.primaryLight.withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
@@ -121,10 +123,16 @@ class QueueCompletedScreen extends StatelessWidget {
 
               const Spacer(flex: 2),
 
-              // Done Button
+              // Return to Dashboard Button
               ElevatedButton(
                 onPressed: () {
-                  Navigator.popUntil(context, (route) => route.isFirst);
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const PatientMainScreen(initialIndex: 0),
+                    ),
+                    (route) => false,
+                  );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
@@ -136,6 +144,30 @@ class QueueCompletedScreen extends StatelessWidget {
                 child: Text(
                   'Back to Home Dashboard',
                   style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // Book Follow-up Button (Module 1 connection)
+              OutlinedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const HospitalSelectionScreen(),
+                    ),
+                  );
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(color: AppColors.primary, width: 1.5),
+                  minimumSize: const Size.fromHeight(52),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                child: Text(
+                  'Book Follow-up Appointment',
+                  style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700),
                 ),
               ),
               const SizedBox(height: 12),
