@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../backend/backend.dart';
 import 'senior_mode_settings_screen.dart';
@@ -77,7 +78,10 @@ class PatientHomeScreen extends StatelessWidget {
                   stream: appointmentService.streamPatientAppointments(patientNic),
                   builder: (context, snapshot) {
                     final appointments = snapshot.data ?? [];
-                    final activeAppointments = appointments.where((a) => a.status == 'confirmed').toList();
+                    final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+                    final activeAppointments = appointments
+                        .where((a) => a.status == 'confirmed' && a.appointmentDate.compareTo(todayStr) >= 0)
+                        .toList();
 
                     if (activeAppointments.isNotEmpty) {
                       return _buildActiveTokenCard(context, activeAppointments.first);
@@ -231,6 +235,22 @@ class PatientHomeScreen extends StatelessWidget {
                       style: const TextStyle(fontSize: 11, color: Colors.white70),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        appointment.isCaregiverBooking
+                            ? '👨‍👩‍👧 For: ${appointment.patientName} (${appointment.relationship})'
+                            : '👤 For: ${appointment.patientName} (Self)',
+                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),

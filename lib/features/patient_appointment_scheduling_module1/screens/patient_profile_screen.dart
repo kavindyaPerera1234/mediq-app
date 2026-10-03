@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../backend/backend.dart';
 import 'senior_mode_settings_screen.dart';
@@ -21,6 +22,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
 
   final String _currentUserId = 'user_sandeepani_001';
   final String _currentPatientNic = '200164801234';
+  String _appointmentFilter = 'upcoming'; // 'upcoming' or 'past'
 
   @override
   void initState() {
@@ -691,160 +693,252 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
               }
 
               final list = snapshot.data ?? [];
-              if (list.isEmpty) {
-                return Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: AppColors.background,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Center(
-                    child: Text(
-                      'No booked appointments found. Book your first appointment in Tab 1!',
-                      style: TextStyle(fontSize: 12, color: AppColors.textMuted),
-                    ),
-                  ),
-                );
-              }
+              final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+              final upcomingList = list.where((app) {
+                if (app.status == 'cancelled') return false;
+                return app.appointmentDate.compareTo(todayStr) >= 0;
+              }).toList();
+
+              final pastList = list.where((app) {
+                if (app.status == 'cancelled') return true;
+                return app.appointmentDate.compareTo(todayStr) < 0;
+              }).toList();
+
+              final displayedList = _appointmentFilter == 'upcoming' ? upcomingList : pastList;
 
               return Column(
-                children: list.take(5).map((app) {
-                  final isConfirmed = app.status == 'confirmed';
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 10),
+                children: [
+                  // Segmented Filter Tabs: Upcoming vs Past History
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(3),
                     decoration: BoxDecoration(
                       color: AppColors.background,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: AppColors.border),
                     ),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
-                      onTap: () => _showTokenPassModal(app),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.primaryLight.withValues(alpha: 0.6),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        app.tokenCode,
-                                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.primary),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.border.withValues(alpha: 0.5),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        app.roomNumber,
-                                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textDark),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                      decoration: BoxDecoration(
-                                        color: isConfirmed
-                                            ? AppColors.statusGreen.withValues(alpha: 0.12)
-                                            : AppColors.error.withValues(alpha: 0.12),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        app.status.toUpperCase(),
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                          color: isConfirmed ? AppColors.statusGreen : AppColors.error,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    const Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.textMuted),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              app.departmentName,
-                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${app.hospitalName} • ${app.appointmentDate} • ${app.timeSlot}',
-                              style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Icon(
-                                  app.isCaregiverBooking ? Icons.family_restroom_rounded : Icons.person_outline_rounded,
-                                  size: 13,
-                                  color: app.isCaregiverBooking ? AppColors.statusOrange : AppColors.primary,
-                                ),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    app.isCaregiverBooking
-                                        ? 'Patient: ${app.patientName} (${app.relationship})'
-                                        : 'Patient: ${app.patientName} (Self)',
-                                    style: TextStyle(
-                                      fontSize: 11.5,
-                                      fontWeight: FontWeight.w600,
-                                      color: app.isCaregiverBooking ? AppColors.statusOrange : AppColors.primary,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            if (isConfirmed) ...[
-                              const SizedBox(height: 8),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  GestureDetector(
-                                    onTap: () => _confirmCancelAppointment(app),
-                                    child: const Text(
-                                      'Cancel Slot',
-                                      style: TextStyle(fontSize: 11, color: AppColors.error, fontWeight: FontWeight.bold),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 14),
-                                  GestureDetector(
-                                    onTap: () => _showTokenPassModal(app),
-                                    child: const Text(
-                                      'View Pass →',
-                                      style: TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.bold),
-                                    ),
-                                  ),
-                                ],
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(8),
+                            onTap: () => setState(() => _appointmentFilter = 'upcoming'),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: _appointmentFilter == 'upcoming' ? AppColors.surface : Colors.transparent,
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: _appointmentFilter == 'upcoming'
+                                    ? [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 4, offset: const Offset(0, 1))]
+                                    : null,
                               ),
-                            ],
-                          ],
+                              child: Center(
+                                child: Text(
+                                  'Upcoming Active (${upcomingList.length})',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: _appointmentFilter == 'upcoming' ? AppColors.primary : AppColors.textSecondary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(8),
+                            onTap: () => setState(() => _appointmentFilter = 'past'),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: _appointmentFilter == 'past' ? AppColors.surface : Colors.transparent,
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: _appointmentFilter == 'past'
+                                    ? [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 4, offset: const Offset(0, 1))]
+                                    : null,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  'Past History (${pastList.length})',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: _appointmentFilter == 'past' ? AppColors.primary : AppColors.textSecondary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  if (displayedList.isEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Center(
+                        child: Text(
+                          _appointmentFilter == 'upcoming'
+                              ? 'No upcoming appointments. Book your next visit in Tab 1!'
+                              : 'No past appointments found.',
+                          style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
                         ),
                       ),
-                    ),
-                  );
-                }).toList(),
+                    )
+                  else
+                    ...displayedList.map((app) {
+                      final isConfirmed = app.status == 'confirmed';
+                      final isUpcoming = isConfirmed && app.appointmentDate.compareTo(todayStr) >= 0;
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () => _showTokenPassModal(app),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.primaryLight.withValues(alpha: 0.6),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            app.tokenCode,
+                                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.primary),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.border.withValues(alpha: 0.5),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            app.roomNumber,
+                                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: isUpcoming
+                                                ? AppColors.statusGreen.withValues(alpha: 0.12)
+                                                : (app.status == 'cancelled'
+                                                    ? AppColors.error.withValues(alpha: 0.12)
+                                                    : Colors.blueGrey.withValues(alpha: 0.12)),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            isUpcoming
+                                                ? 'ACTIVE'
+                                                : (app.status == 'cancelled' ? 'CANCELLED' : 'COMPLETED'),
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: isUpcoming
+                                                  ? AppColors.statusGreen
+                                                  : (app.status == 'cancelled' ? AppColors.error : Colors.blueGrey),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        const Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.textMuted),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  app.departmentName,
+                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${app.hospitalName} • ${app.appointmentDate} • ${app.timeSlot}',
+                                  style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      app.isCaregiverBooking ? Icons.family_restroom_rounded : Icons.person_outline_rounded,
+                                      size: 13,
+                                      color: app.isCaregiverBooking ? AppColors.statusOrange : AppColors.primary,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        app.isCaregiverBooking
+                                            ? 'Patient: ${app.patientName} (${app.relationship})'
+                                            : 'Patient: ${app.patientName} (Self)',
+                                        style: TextStyle(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: app.isCaregiverBooking ? AppColors.statusOrange : AppColors.primary,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    if (isUpcoming) ...[
+                                      GestureDetector(
+                                        onTap: () => _confirmCancelAppointment(app),
+                                        child: const Text(
+                                          'Cancel Slot',
+                                          style: TextStyle(fontSize: 11, color: AppColors.error, fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 14),
+                                    ],
+                                    GestureDetector(
+                                      onTap: () => _showTokenPassModal(app),
+                                      child: const Text(
+                                        'View Pass →',
+                                        style: TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                ],
               );
             },
           ),
