@@ -525,11 +525,20 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildInfoColumn('GENDER', _profile.gender),
+              Expanded(child: _buildInfoColumn('GENDER', _profile.gender)),
               Container(width: 1, height: 24, color: AppColors.border),
-              _buildInfoColumn('DOB', _profile.dateOfBirth),
+              Expanded(child: _buildInfoColumn('DOB', _profile.dateOfBirth)),
               Container(width: 1, height: 24, color: AppColors.border),
-              _buildInfoColumn('EMERGENCY', _profile.emergencyContactName),
+              Expanded(
+                child: Tooltip(
+                  message: 'Emergency Contact: ${_profile.emergencyContactName} (${_profile.emergencyContactPhone})',
+                  child: _buildInfoColumn(
+                    'EMG. CONTACT',
+                    _profile.emergencyContactName,
+                    icon: Icons.phone_in_talk_rounded,
+                  ),
+                ),
+              ),
             ],
           ),
         ],
@@ -537,12 +546,34 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
     );
   }
 
-  Widget _buildInfoColumn(String label, String value) {
+  Widget _buildInfoColumn(String label, String value, {IconData? icon}) {
     return Column(
       children: [
-        Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted)),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 10, color: AppColors.textMuted),
+              const SizedBox(width: 3),
+            ],
+            Flexible(
+              child: Text(
+                label,
+                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 2),
-        Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
       ],
     );
   }
