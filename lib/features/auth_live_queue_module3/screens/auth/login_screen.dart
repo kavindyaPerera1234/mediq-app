@@ -3,11 +3,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../services/auth_service.dart';
-import '../../../patient_appointment_scheduling_module1/screens/patient_main_screen.dart';
 import 'registration_screen.dart';
 import 'forgot_password_screen.dart';
 import 'verification_code_screen.dart';
-import 'splash_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final bool isStaffMode;
@@ -57,41 +55,22 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_isStaff) {
       // ── Staff / Admin login: Firebase Auth email + password ──────────
       try {
-        final role = await authService.loginWithEmailPassword(
+        await authService.loginWithEmailPassword(
           _phoneOrEmailController.text.trim(),
           _passwordController.text.trim(),
         );
 
         if (!mounted) return;
 
-        if (role == 'admin') {
-          // Route to Admin Dashboard — clear all previous routes
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const SplashScreen(), // Re-enter splash to route properly
-            ),
-            (route) => false,
-          );
-        } else if (role == 'patient' || role == 'caregiver') {
-          // Rare case: patient account used on staff form
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const PatientMainScreen(),
-            ),
-            (route) => false,
-          );
-        } else {
-          // doctor / nurse / receptionist / staff
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const SplashScreen(), // Re-enter splash to route properly
-            ),
-            (route) => false,
-          );
+        if (!authService.isUserActive()) {
+          setState(() {
+            _isLoading = false;
+            _errorMessage = 'This account has been deactivated. Please contact hospital admin.';
+          });
+          return;
         }
+
+        authService.routeUserByRole(context);
       } on FirebaseAuthException catch (e) {
         setState(() {
           _isLoading = false;
@@ -123,10 +102,34 @@ class _LoginScreenState extends State<LoginScreen> {
         });
       }
     } else {
-      // ── Patient login: phone OTP flow ─────────────────────────────────
-      bool success = await authService.loginPatient(
-        _phoneOrEmailController.text.trim(),
-      );
+      // ── Patient login: phone OTP or email flow ─────────────────────────
+      final input = _phoneOrEmailController.text.trim();
+      final password = _passwordController.text.trim();
+
+      // Support patient email + password login if password is provided
+      if (input.contains('@') && password.isNotEmpty) {
+        try {
+          await authService.loginWithEmailPassword(input, password);
+          if (!mounted) return;
+          if (!authService.isUserActive()) {
+            setState(() {
+              _isLoading = false;
+              _errorMessage = 'This account has been deactivated.';
+            });
+            return;
+          }
+          authService.routeUserByRole(context);
+          return;
+        } on FirebaseAuthException catch (e) {
+          setState(() {
+            _isLoading = false;
+            _errorMessage = e.message ?? 'Login failed.';
+          });
+          return;
+        }
+      }
+
+      bool success = await authService.loginPatient(input);
 
       setState(() => _isLoading = false);
 
@@ -135,7 +138,7 @@ class _LoginScreenState extends State<LoginScreen> {
           context,
           MaterialPageRoute(
             builder: (context) => VerificationCodeScreen(
-              phoneNumber: _phoneOrEmailController.text.trim(),
+              phoneNumber: input,
             ),
           ),
         );
@@ -268,7 +271,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     decoration: BoxDecoration(
                       color: AppColors.errorLight,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.error.withOpacity(0.3)),
+                      border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       children: [
