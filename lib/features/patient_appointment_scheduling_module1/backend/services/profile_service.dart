@@ -37,6 +37,52 @@ class ProfileService {
     }
   }
 
+  /// Get accessibility settings from profile
+  Future<Map<String, bool>> getAccessibilitySettings(String patientNic) async {
+    try {
+      final doc = await _profilesRef.doc(patientNic).get().timeout(const Duration(seconds: 3));
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>? ?? {};
+        return {
+          'largeTextMode': data['largeTextMode'] ?? true,
+          'highContrastMode': data['highContrastMode'] ?? false,
+          'simplifiedNav': data['simplifiedNav'] ?? false,
+          'voiceGuidance': data['voiceGuidance'] ?? false,
+        };
+      }
+    } catch (e) {
+      debugPrint('ProfileService: getAccessibilitySettings fallback $e');
+    }
+    return {
+      'largeTextMode': true,
+      'highContrastMode': false,
+      'simplifiedNav': false,
+      'voiceGuidance': false,
+    };
+  }
+
+  /// Save full accessibility settings to Firestore
+  Future<void> saveAccessibilitySettings({
+    required String patientNic,
+    required bool largeTextMode,
+    required bool highContrastMode,
+    required bool simplifiedNav,
+    required bool voiceGuidance,
+  }) async {
+    try {
+      await _profilesRef.doc(patientNic).set({
+        'isSeniorModeEnabled': largeTextMode || highContrastMode || simplifiedNav || voiceGuidance,
+        'largeTextMode': largeTextMode,
+        'highContrastMode': highContrastMode,
+        'simplifiedNav': simplifiedNav,
+        'voiceGuidance': voiceGuidance,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true)).timeout(const Duration(seconds: 4));
+    } catch (e) {
+      debugPrint('ProfileService: saveAccessibilitySettings error: $e');
+    }
+  }
+
   /// Toggle Senior Accessibility Mode preference in database
   Future<void> toggleSeniorMode(String patientNic, bool enabled) async {
     try {
