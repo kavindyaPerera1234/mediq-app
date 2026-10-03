@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_accessibility.dart';
 import '../backend/backend.dart';
 import '../admin/screens/hospital_admin_dashboard.dart';
 
@@ -35,6 +36,7 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
         _simplifiedNav = settings['simplifiedNav'] ?? false;
         _voiceGuidance = settings['voiceGuidance'] ?? false;
       });
+      AppAccessibility.setLargeTextMode(_largeTextMode);
     }
   }
 
@@ -45,7 +47,10 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
     bool? voice,
   }) async {
     setState(() {
-      if (largeText != null) _largeTextMode = largeText;
+      if (largeText != null) {
+        _largeTextMode = largeText;
+        AppAccessibility.setLargeTextMode(largeText);
+      }
       if (highContrast != null) _highContrastMode = highContrast;
       if (simplified != null) _simplifiedNav = simplified;
       if (voice != null) _voiceGuidance = voice;
