@@ -42,9 +42,11 @@ class LiveQueueService extends ChangeNotifier {
   String? _error;
 
   String? _myApptId;
+  String? _selectedApptId;
   Map<String, dynamic>? _myAppt;
   List<QueryDocumentSnapshot<Map<String, dynamic>>> _deptDocs = [];
   Map<String, dynamic>? _sessionDoc;
+  List<Map<String, dynamic>> _myAppointmentsList = [];
 
   QueueSessionModel? _session;
   QueueEntryModel? _entry;
@@ -61,6 +63,47 @@ class LiveQueueService extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get hasActiveAppointment => _entry != null;
+
+  /// All active bookings for this patient in real time
+  List<Map<String, dynamic>> get myAppointments => List.unmodifiable(_myAppointmentsList);
+  String? get currentAppointmentId => _myApptId;
+
+  /// Switch the active queue view to a specific booking
+  void selectAppointment(String apptId) {
+    _selectedApptId = apptId;
+    final match = _myAppointmentsList.where((a) => a['id'] == apptId).toList();
+    if (match.isNotEmpty) {
+      _myApptId = apptId;
+      _myAppt = match.first;
+      final hospitalId = (_myAppt!['hospitalId'] ?? '').toString();
+      final departmentId = (_myAppt!['departmentId'] ?? '').toString();
+      final date = (_myAppt!['appointmentDate'] ?? '').toString();
+
+      _watchedDepartment = departmentId;
+      _queueSub?.cancel();
+      _queueSub = _firestore
+          .collection('appointments')
+          .where('departmentId', isEqualTo: departmentId)
+          .snapshots()
+          .listen((s) {
+        _deptDocs = s.docs;
+        _isLoading = false;
+        _recompute();
+      }, onError: _onStreamError);
+
+      final sessionId = sessionIdFor(hospitalId, departmentId, date);
+      _watchedSessionId = sessionId;
+      _sessionDoc = null;
+      _sessionSub?.cancel();
+      _sessionSub = _firestore.collection('queue_sessions').doc(sessionId).snapshots().listen((s) {
+        _sessionDoc = s.data();
+        _recompute();
+      }, onError: (e) => debugPrint('queue_sessions stream notice: $e'));
+
+      _recompute();
+    }
+    notifyListeners();
+  }
 
   QueueSessionModel get session => _session ?? _emptySession();
   QueueEntryModel get myEntry => _entry ?? _emptyEntry();
@@ -216,31 +259,73 @@ class LiveQueueService extends ChangeNotifier {
     final today = _todayString();
     final active = snap.docs.where((d) => _statusOf(d.data()) != 'cancelled').toList();
 
+    _myAppointmentsList = active.map((d) {
+      final map = Map<String, dynamic>.from(d.data());
+      map['id'] = d.id;
+      return map;
+    }).toList();
+
     QueryDocumentSnapshot<Map<String, dynamic>>? pick;
 
-    // 1. Today's appointment — prefer one still in progress.
-    final todays = active.where((d) => d.data()['appointmentDate'] == today).toList();
-    if (todays.isNotEmpty) {
-      todays.sort((a, b) => _orderOf(a.data()).compareTo(_orderOf(b.data())));
-      pick = todays.firstWhere(
-        (d) => !_isFinished(_statusOf(d.data())),
-        orElse: () => todays.last,
-      );
-    } else {
-      // 2. Otherwise the next upcoming appointment.
-      final upcoming = active.where((d) {
-        final date = (d.data()['appointmentDate'] ?? '').toString();
-        return date.compareTo(today) > 0 && !_isFinished(_statusOf(d.data()));
-      }).toList()
-        ..sort((a, b) {
-          final c = (a.data()['appointmentDate'] ?? '')
-              .toString()
-              .compareTo((b.data()['appointmentDate'] ?? '').toString());
-          return c != 0
-              ? c
-              : (a.data()['timeSlot'] ?? '').toString().compareTo((b.data()['timeSlot'] ?? '').toString());
+    // 1. Explicit user selection
+    if (_selectedApptId != null) {
+      final match = active.where((d) => d.id == _selectedApptId).toList();
+      if (match.isNotEmpty) {
+        pick = match.first;
+      }
+    }
+
+    // 2. Urgent: Any appointment currently being called or in consultation
+    if (pick == null) {
+      final called = active.where((d) {
+        final st = _statusOf(d.data());
+        return st == 'called' || st == 'serving' || st == 'in_consultation';
+      }).toList();
+      if (called.isNotEmpty) {
+        pick = called.first;
+      }
+    }
+
+    // 3. Today's active appointment (prefer in-progress, avoid old missed)
+    if (pick == null) {
+      final todays = active.where((d) => d.data()['appointmentDate'] == today).toList();
+      if (todays.isNotEmpty) {
+        final inProgress = todays.where((d) => !_isFinished(_statusOf(d.data())) && _statusOf(d.data()) != 'missed').toList();
+        if (inProgress.isNotEmpty) {
+          inProgress.sort((a, b) => _orderOf(a.data()).compareTo(_orderOf(b.data())));
+          pick = inProgress.first;
+        } else {
+          pick = todays.first;
+        }
+      }
+    }
+
+    // 4. Active upcoming bookings (CONFIRMED / WAITING) — SORT BY NEWEST (createdAt desc)!
+    if (pick == null) {
+      final validUpcoming = active.where((d) {
+        final st = _statusOf(d.data());
+        return st != 'completed' && st != 'done' && st != 'missed' && st != 'cancelled';
+      }).toList();
+
+      if (validUpcoming.isNotEmpty) {
+        validUpcoming.sort((a, b) {
+          final ta = _toDate(a.data()['createdAt']) ?? DateTime(2000);
+          final tb = _toDate(b.data()['createdAt']) ?? DateTime(2000);
+          return tb.compareTo(ta); // newest first!
         });
-      if (upcoming.isNotEmpty) pick = upcoming.first;
+        pick = validUpcoming.first;
+      }
+    }
+
+    // 5. Fallback: Any active appointment sorted newest first
+    if (pick == null && active.isNotEmpty) {
+      final sorted = List<QueryDocumentSnapshot<Map<String, dynamic>>>.from(active)
+        ..sort((a, b) {
+          final ta = _toDate(a.data()['createdAt']) ?? DateTime(2000);
+          final tb = _toDate(b.data()['createdAt']) ?? DateTime(2000);
+          return tb.compareTo(ta);
+        });
+      pick = sorted.first;
     }
 
     if (pick == null) {
@@ -345,12 +430,19 @@ class LiveQueueService extends ChangeNotifier {
     final mapped = ordered.map((e) => _mapStatus(_statusOf(e.value))).toList();
     int servingIdx = mapped.indexWhere((st) => st == PatientQueueStatus.called);
     if (servingIdx < 0) servingIdx = mapped.indexWhere((st) => st == PatientQueueStatus.waiting);
+    final explicitServing = (s['currentTokenServing'] ?? s['currentToken'])?.toString();
     String nowServing = '—';
-    if (servingIdx >= 0) {
+    if (explicitServing != null && explicitServing.isNotEmpty && explicitServing != '—') {
+      nowServing = explicitServing;
+    } else if (servingIdx >= 0) {
       nowServing = (ordered[servingIdx].value['tokenCode'] ?? '—').toString();
     } else if (ordered.isNotEmpty) {
       final lastDone = mapped.lastIndexWhere((st) => st == PatientQueueStatus.completed);
-      if (lastDone >= 0) nowServing = (ordered[lastDone].value['tokenCode'] ?? '—').toString();
+      if (lastDone >= 0) {
+        nowServing = (ordered[lastDone].value['tokenCode'] ?? '—').toString();
+      } else {
+        nowServing = (ordered.first.value['tokenCode'] ?? 'A-001').toString();
+      }
     }
 
     // Build entries
