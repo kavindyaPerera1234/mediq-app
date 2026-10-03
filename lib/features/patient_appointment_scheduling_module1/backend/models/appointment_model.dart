@@ -66,6 +66,8 @@ class AppointmentModel {
     DateTime? created;
     if (data['createdAt'] is Timestamp) {
       created = (data['createdAt'] as Timestamp).toDate();
+    } else if (data['createdAt'] is String) {
+      created = DateTime.tryParse(data['createdAt']);
     }
 
     return AppointmentModel(

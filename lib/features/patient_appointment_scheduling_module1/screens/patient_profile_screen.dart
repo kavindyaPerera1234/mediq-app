@@ -791,6 +791,31 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                               '${app.hospitalName} • ${app.appointmentDate} • ${app.timeSlot}',
                               style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
                             ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Icon(
+                                  app.isCaregiverBooking ? Icons.family_restroom_rounded : Icons.person_outline_rounded,
+                                  size: 13,
+                                  color: app.isCaregiverBooking ? AppColors.statusOrange : AppColors.primary,
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    app.isCaregiverBooking
+                                        ? 'Patient: ${app.patientName} (${app.relationship})'
+                                        : 'Patient: ${app.patientName} (Self)',
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: app.isCaregiverBooking ? AppColors.statusOrange : AppColors.primary,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
                             if (isConfirmed) ...[
                               const SizedBox(height: 8),
                               Row(
