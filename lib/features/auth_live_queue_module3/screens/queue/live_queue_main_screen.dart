@@ -209,6 +209,72 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
                     ),
                   ],
 
+                  // Called / Turn Active Banner (triggers fullscreen alert)
+                  if (myEntry.status == PatientQueueStatus.called) ...[
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const YourTurnFullscreenScreen(),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF15803D),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF15803D).withValues(alpha: 0.35),
+                              blurRadius: 14,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.record_voice_over_rounded, color: Colors.white, size: 28),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'YOUR TURN IS CALLED NOW!',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Please enter ${session.roomNumber} immediately. Tap for alert.',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 13,
+                                      color: Colors.white.withValues(alpha: 0.95),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 18),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+
                   // Delay Banner (if active)
                   if (session.isDelayed) ...[
                     GestureDetector(

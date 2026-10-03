@@ -259,6 +259,11 @@ class LiveQueueService extends ChangeNotifier {
     final today = _todayString();
     final active = snap.docs.where((d) => _statusOf(d.data()) != 'cancelled').toList();
 
+    // Ensure all active appointments have corresponding queue_entries in Firestore
+    for (final doc in active) {
+      _ensureQueueEntrySynced(doc.id, doc.data());
+    }
+
     _myAppointmentsList = active.map((d) {
       final map = Map<String, dynamic>.from(d.data());
       map['id'] = d.id;
@@ -531,11 +536,14 @@ class LiveQueueService extends ChangeNotifier {
     final entry = _entry;
     if (entry == null) return;
 
-    // New appointment being tracked → set a baseline, don't fire alerts.
+    // New appointment being tracked → set a baseline, don't fire alerts unless already called.
     if (_trackedApptId != entry.appointmentId) {
       _trackedApptId = entry.appointmentId;
       _lastStatus = entry.status;
       _lastDelayed = isDelayed;
+      if (entry.status == PatientQueueStatus.called) {
+        _statusController.add(entry.status);
+      }
       return;
     }
 
@@ -633,6 +641,31 @@ class LiveQueueService extends ChangeNotifier {
     } catch (e) {
       debugPrint('LiveQueueService notification write notice: $e');
     }
+  }
+
+  void _ensureQueueEntrySynced(String apptId, Map<String, dynamic> data) {
+    try {
+      final hospId = (data['hospitalId'] ?? '').toString();
+      final deptId = (data['departmentId'] ?? '').toString();
+      final date = (data['appointmentDate'] ?? '').toString();
+      final sessId = sessionIdFor(hospId, deptId, date);
+
+      _firestore.collection('queue_entries').doc(apptId).set({
+        'appointmentId': apptId,
+        'patientId': (data['patientId'] ?? data['patientNic'] ?? '').toString(),
+        'patientNic': (data['patientNic'] ?? '').toString(),
+        'patientName': (data['patientName'] ?? 'Patient').toString(),
+        'hospitalId': hospId,
+        'departmentId': deptId,
+        'tokenCode': (data['tokenCode'] ?? '—').toString(),
+        'queueSessionId': sessId,
+        'status': data['status'] ?? 'waiting',
+        'priority': data['priority'] ?? 'normal',
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true)).catchError((e) {
+        debugPrint('Background queue_entry sync note: $e');
+      });
+    } catch (_) {}
   }
 
   // ── Patient actions ───────────────────────────────────────────────────────
