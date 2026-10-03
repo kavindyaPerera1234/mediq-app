@@ -4,6 +4,7 @@ import '../models/queue_session.dart';
 import '../models/queue_entry.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
+import '../services/seed_data_service.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/statistic_card.dart';
 import '../widgets/status_badge.dart';
@@ -37,7 +38,34 @@ class StaffDashboardScreen extends StatefulWidget {
 
 class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
   final FirestoreService _firestoreService = FirestoreService();
+  final SeedDataService _seedDataService = SeedDataService();
   int _currentBottomNavIndex = 0;
+  bool _isSeeding = false;
+
+  Future<void> _handleSeedDatabase() async {
+    setState(() {
+      _isSeeding = true;
+    });
+
+    final success = await _seedDataService.seedDemoData();
+
+    setState(() {
+      _isSeeding = false;
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            success
+                ? 'Cloud Firestore database populated successfully!'
+                : 'Failed to populate database. Check Firebase connection/rules.',
+          ),
+          backgroundColor: success ? AppColors.success : AppColors.error,
+        ),
+      );
+    }
+  }
 
   void _openScreen(Widget screen) {
     Navigator.push(
@@ -141,6 +169,17 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
         title: const Text('MediQ OPD Portal'),
         automaticallyImplyLeading: false,
         actions: [
+          IconButton(
+            icon: _isSeeding
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                  )
+                : const Icon(Icons.cloud_upload_rounded, color: AppColors.primary),
+            tooltip: 'Seed Cloud Firestore Database',
+            onPressed: _isSeeding ? null : _handleSeedDatabase,
+          ),
           IconButton(
             icon: const Icon(Icons.apps_rounded, color: AppColors.primary),
             tooltip: 'All 14 Screens Quick Navigator',
