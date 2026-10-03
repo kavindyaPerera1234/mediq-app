@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
-import '../models/hospital_model.dart';
+import '../backend/backend.dart';
 import 'patient_main_screen.dart';
 
 class BookingConfirmationScreen extends StatelessWidget {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../models/hospital_model.dart';
+import '../backend/backend.dart';
 import 'clinic_selection_screen.dart';
 
 class HospitalSelectionScreen extends StatefulWidget {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../services/hospital_admin_service.dart';
+import '../../backend/backend.dart';
 
 class AdminTimeSlotConfig {
   final String id;

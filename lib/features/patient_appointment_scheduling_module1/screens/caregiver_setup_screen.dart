@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import 'hospital_selection_screen.dart';
 import '../admin/screens/hospital_admin_dashboard.dart';
-import '../models/caregiver_model.dart';
-import '../services/caregiver_service.dart';
+import '../backend/backend.dart';
 
 class CaregiverSetupScreen extends StatefulWidget {
   const CaregiverSetupScreen({super.key});

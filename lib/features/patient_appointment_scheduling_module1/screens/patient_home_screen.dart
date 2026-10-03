@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
-import '../models/appointment_model.dart';
-import '../services/appointment_service.dart';
+import '../backend/backend.dart';
 import 'senior_mode_settings_screen.dart';
 
 class PatientHomeScreen extends StatelessWidget {
