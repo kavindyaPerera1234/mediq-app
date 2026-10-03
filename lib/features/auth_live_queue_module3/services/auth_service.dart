@@ -71,10 +71,34 @@ class AuthService extends ChangeNotifier {
 
   /// Signs in with email + password via Firebase Auth, then reads the user doc
   /// from Firestore to get their role and active status.
-  Future<String> loginWithEmailPassword(String email, String password) async {
+  Future<String> loginWithEmailPassword(String phoneOrEmail, String password) async {
     try {
+      String emailToUse = phoneOrEmail.trim();
+
+      // If the user entered a phone number instead of email:
+      if (!emailToUse.contains('@')) {
+        final formattedPhone = formatToE164(emailToUse);
+        final userQuery = await _firestore
+            .collection(AppConstants.usersCollection)
+            .where('phoneNumber', isEqualTo: formattedPhone)
+            .limit(1)
+            .get();
+
+        if (userQuery.docs.isNotEmpty) {
+          final data = userQuery.docs.first.data();
+          final storedEmail = (data['email'] ?? '').toString();
+          if (storedEmail.isNotEmpty && storedEmail.contains('@')) {
+            emailToUse = storedEmail;
+          } else {
+            emailToUse = '${formattedPhone.replaceAll('+', '')}@mediq.lk';
+          }
+        } else {
+          emailToUse = '${formattedPhone.replaceAll('+', '')}@mediq.lk';
+        }
+      }
+
       final credential = await _auth.signInWithEmailAndPassword(
-        email: email.trim(),
+        email: emailToUse,
         password: password.trim(),
       );
 
@@ -105,7 +129,7 @@ class AuthService extends ChangeNotifier {
           userId: uid,
           fullName: credential.user!.displayName ?? 'Staff Member',
           phoneNumber: '',
-          email: email.trim(),
+          email: emailToUse,
           role: UserRole.staff,
           isActive: true,
           createdAt: DateTime.now(),
@@ -221,41 +245,27 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  // ── Patient Login with Phone Number (demo / SMS OTP fallback) ─────────────
+  // ── Patient Login with Phone Number (lookup registered user) ─────────────
 
   Future<bool> loginPatient(String phoneNumber) async {
+    final formatted = formatToE164(phoneNumber);
     try {
       final query = await _firestore
           .collection(AppConstants.usersCollection)
-          .where('phoneNumber', isEqualTo: phoneNumber.trim())
+          .where('phoneNumber', isEqualTo: formatted)
           .limit(1)
           .get();
 
       if (query.docs.isNotEmpty) {
         final doc = query.docs.first;
         _currentUser = UserModel.fromMap(doc.data(), id: doc.id);
-      } else {
-        _currentUser = UserModel(
-          userId: 'patient_${DateTime.now().millisecondsSinceEpoch}',
-          fullName: 'Kamal Gunaratne',
-          phoneNumber: phoneNumber.trim(),
-          role: UserRole.patient,
-          createdAt: DateTime.now(),
-        );
+        notifyListeners();
+        return true;
       }
-      notifyListeners();
-      return true;
+      return false;
     } catch (e) {
-      debugPrint("Login notice: $e (using fallback session)");
-      _currentUser = UserModel(
-        userId: 'patient_${DateTime.now().millisecondsSinceEpoch}',
-        fullName: 'Kamal Gunaratne',
-        phoneNumber: phoneNumber.trim(),
-        role: UserRole.patient,
-        createdAt: DateTime.now(),
-      );
-      notifyListeners();
-      return true;
+      debugPrint("Login patient lookup notice: $e");
+      return false;
     }
   }
 
