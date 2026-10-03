@@ -257,6 +257,11 @@ class ClinicSelectionScreen extends StatelessWidget {
             builder: (context) => DateSelectionScreen(
               hospital: hospital,
               clinic: clinic,
+              isCaregiverBooking: isCaregiverBooking,
+              patientName: patientName,
+              patientNic: patientNic,
+              relationship: relationship,
+              priority: priority,
             ),
           ),
         );
