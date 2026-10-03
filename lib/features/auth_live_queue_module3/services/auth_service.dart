@@ -373,4 +373,87 @@ class AuthService extends ChangeNotifier {
 
   bool get isPatientOrCaregiver =>
       role == UserRole.patient || role == UserRole.caregiver;
+
+  // ── Firebase Phone Authentication (SMS Verification) ───────────────────────
+
+  /// Format local or international phone numbers to E.164 (e.g. +94771234567)
+  static String formatToE164(String raw) {
+    String clean = raw.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+    if (clean.startsWith('+')) return clean;
+    if (clean.startsWith('00')) return '+${clean.substring(2)}';
+    if (clean.startsWith('0')) {
+      return '+94${clean.substring(1)}';
+    }
+    if (clean.startsWith('94')) {
+      return '+$clean';
+    }
+    // Default prefix Sri Lanka (+94)
+    return '+94$clean';
+  }
+
+  /// Sends a real 6-digit SMS verification code to the phone number via Firebase Auth
+  Future<void> sendPhoneVerification({
+    required String phoneNumber,
+    required void Function(String verificationId, int? resendToken) onCodeSent,
+    required void Function(FirebaseAuthException error) onVerificationFailed,
+    required void Function(PhoneAuthCredential credential) onVerificationCompleted,
+    int? resendToken,
+  }) async {
+    final formattedNumber = formatToE164(phoneNumber);
+    debugPrint('AuthService: Sending SMS OTP to $formattedNumber');
+
+    await _auth.verifyPhoneNumber(
+      phoneNumber: formattedNumber,
+      forceResendingToken: resendToken,
+      verificationCompleted: (PhoneAuthCredential credential) {
+        debugPrint('AuthService: Phone verification automatically completed.');
+        onVerificationCompleted(credential);
+      },
+      verificationFailed: (FirebaseAuthException e) {
+        debugPrint('AuthService: Phone verification failed: ${e.code} - ${e.message}');
+        onVerificationFailed(e);
+      },
+      codeSent: (String verificationId, int? newResendToken) {
+        debugPrint('AuthService: SMS verification code sent! verificationId=$verificationId');
+        onCodeSent(verificationId, newResendToken);
+      },
+      codeAutoRetrievalTimeout: (String verificationId) {
+        debugPrint('AuthService: Auto retrieval timeout for $verificationId');
+      },
+      timeout: const Duration(seconds: 60),
+    );
+  }
+
+  /// Verifies the 6-digit SMS OTP against Firebase Auth
+  Future<bool> verifyPhoneOtp({
+    required String verificationId,
+    required String smsCode,
+  }) async {
+    try {
+      final credential = PhoneAuthProvider.credential(
+        verificationId: verificationId,
+        smsCode: smsCode.trim(),
+      );
+
+      final user = _auth.currentUser;
+      if (user != null) {
+        try {
+          await user.linkWithCredential(credential);
+        } on FirebaseAuthException catch (linkErr) {
+          if (linkErr.code == 'credential-already-in-use' || linkErr.code == 'provider-already-linked') {
+            // Already linked
+          } else {
+            await _auth.signInWithCredential(credential);
+          }
+        }
+      } else {
+        await _auth.signInWithCredential(credential);
+      }
+      return true;
+    } on FirebaseAuthException catch (e) {
+      debugPrint('AuthService: verifyPhoneOtp error: ${e.code} - ${e.message}');
+      rethrow;
+    }
+  }
 }
+
