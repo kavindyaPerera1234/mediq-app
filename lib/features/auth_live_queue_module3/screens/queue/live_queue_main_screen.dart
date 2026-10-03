@@ -119,6 +119,47 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // Active Appointments Switcher (when patient has multiple bookings)
+                  if (_queueService.myAppointments.length > 1) ...[
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      height: 44,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _queueService.myAppointments.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (context, i) {
+                          final appt = _queueService.myAppointments[i];
+                          final id = (appt['id'] ?? '').toString();
+                          final token = (appt['tokenCode'] ?? '—').toString();
+                          final dept = (appt['departmentName'] ?? 'Clinic').toString();
+                          final status = (appt['status'] ?? 'confirmed').toString().toUpperCase();
+                          final isSelected = id == _queueService.currentAppointmentId;
+
+                          return ChoiceChip(
+                            label: Text('$token • $dept ($status)'),
+                            selected: isSelected,
+                            selectedColor: AppColors.primary,
+                            backgroundColor: AppColors.surface,
+                            labelStyle: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: isSelected ? Colors.white : AppColors.textPrimary,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(
+                                color: isSelected ? AppColors.primary : AppColors.border,
+                                width: isSelected ? 1.5 : 1,
+                              ),
+                            ),
+                            onSelected: (_) => _queueService.selectAppointment(id),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+
                   // Empty State Banner (if no active appointment)
                   if (!_queueService.hasActiveAppointment) ...[
                     Container(
