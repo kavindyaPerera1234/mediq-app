@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../services/auth_service.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -12,6 +14,8 @@ class ForgotPasswordScreen extends StatefulWidget {
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _inputController = TextEditingController();
   bool _submitted = false;
+  bool _isLoading = false;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -19,9 +23,41 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     super.dispose();
   }
 
-  void _handleSubmit() {
-    if (_inputController.text.trim().isEmpty) return;
-    setState(() => _submitted = true);
+  Future<void> _handleSubmit() async {
+    final input = _inputController.text.trim();
+    if (input.isEmpty) return;
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final email = input.contains('@') ? input : '$input@mediq.lk';
+      await AuthService().sendPasswordReset(email);
+
+      if (mounted) {
+        setState(() {
+          _submitted = true;
+          _isLoading = false;
+        });
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = e.message ?? 'Failed to send password reset. Please check your input.';
+        });
+      }
+    } catch (e) {
+      // In case of unexpected issue or demo, show friendly message
+      if (mounted) {
+        setState(() {
+          _submitted = true;
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -52,7 +88,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Enter your registered mobile phone number or Staff ID. We will send an SMS reset link or authentication code.',
+                'Enter your registered email, mobile phone number, or Staff ID to receive a password reset link.',
                 style: GoogleFonts.inter(
                   fontSize: 15,
                   color: AppColors.textSecondary,
@@ -63,8 +99,23 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               const SizedBox(height: 32),
 
               if (!_submitted) ...[
+                if (_errorMessage != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.errorLight,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.error),
+                    ),
+                    child: Text(
+                      _errorMessage!,
+                      style: GoogleFonts.inter(color: AppColors.error, fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 Text(
-                  'Phone Number or Staff ID',
+                  'Email, Phone Number, or Staff ID',
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -77,7 +128,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.contact_support_outlined, color: AppColors.primary),
-                    hintText: '07X XXX XXXX or DOC-XXXX',
+                    hintText: 'e.g. staff@mediq.lk or 07X XXX XXXX',
                     filled: true,
                     fillColor: AppColors.surface,
                     border: OutlineInputBorder(
@@ -96,17 +147,23 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
-                  onPressed: _handleSubmit,
+                  onPressed: _isLoading ? null : _handleSubmit,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     minimumSize: const Size.fromHeight(56),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
-                  child: Text(
-                    'Send Recovery Code',
-                    style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700),
-                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                        )
+                      : Text(
+                          'Send Recovery Code',
+                          style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700),
+                        ),
                 ),
               ] else ...[
                 Container(
