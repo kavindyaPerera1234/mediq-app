@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_accessibility.dart';
+import '../../../core/services/voice_guidance_service.dart';
+import '../backend/backend.dart';
+import '../admin/screens/hospital_admin_dashboard.dart';
 
 class SeniorModeSettingsScreen extends StatefulWidget {
   const SeniorModeSettingsScreen({super.key});
@@ -10,19 +14,97 @@ class SeniorModeSettingsScreen extends StatefulWidget {
 }
 
 class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
-  // Toggle states matching our Figma design
-  bool _largeTextMode = true; // Active in Figma!
+  final ProfileService _profileService = ProfileService();
+  final String _patientNic = '200164801234';
+
+  bool _largeTextMode = true;
   bool _highContrastMode = false;
   bool _simplifiedNav = false;
   bool _voiceGuidance = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final settings = await _profileService.getAccessibilitySettings(_patientNic);
+    if (mounted) {
+      setState(() {
+        _largeTextMode = settings['largeTextMode'] ?? true;
+        _highContrastMode = settings['highContrastMode'] ?? false;
+        _simplifiedNav = settings['simplifiedNav'] ?? false;
+        _voiceGuidance = settings['voiceGuidance'] ?? false;
+      });
+      AppAccessibility.setLargeTextMode(_largeTextMode);
+      AppAccessibility.setHighContrastMode(_highContrastMode);
+      AppAccessibility.setSimplifiedNav(_simplifiedNav);
+      AppAccessibility.setVoiceGuidance(_voiceGuidance);
+    }
+  }
+
+  Future<void> _updateSetting({
+    bool? largeText,
+    bool? highContrast,
+    bool? simplified,
+    bool? voice,
+  }) async {
+    setState(() {
+      if (largeText != null) {
+        _largeTextMode = largeText;
+        AppAccessibility.setLargeTextMode(largeText);
+      }
+      if (highContrast != null) {
+        _highContrastMode = highContrast;
+        AppAccessibility.setHighContrastMode(highContrast);
+      }
+      if (simplified != null) {
+        _simplifiedNav = simplified;
+        AppAccessibility.setSimplifiedNav(simplified);
+      }
+      if (voice != null) {
+        _voiceGuidance = voice;
+        AppAccessibility.setVoiceGuidance(voice);
+      }
+    });
+
+    if (voice == true) {
+      VoiceGuidanceService.speak(
+        "Voice Guidance is activated. OPD tokens and screen navigation will be announced aloud.",
+        context: context,
+      );
+    } else if (voice == false) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Voice Guidance disabled."),
+          duration: Duration(milliseconds: 1500),
+        ),
+      );
+    }
+
+    await _profileService.saveAccessibilitySettings(
+      patientNic: _patientNic,
+      largeTextMode: _largeTextMode,
+      highContrastMode: _highContrastMode,
+      simplifiedNav: _simplifiedNav,
+      voiceGuidance: _voiceGuidance,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        title: const Text(
+          'Accessibility & Senior Mode',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
         backgroundColor: Colors.white,
-        elevation: 0,
+        foregroundColor: AppColors.textPrimary,
+        elevation: 0.5,
         leading: Container(
           margin: const EdgeInsets.all(8),
           decoration: BoxDecoration(
@@ -37,13 +119,13 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // 1. Header Title & Subtitle
               Text(
-                'Accessibility',
+                'Accessibility Settings',
                 style: GoogleFonts.inter(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -52,7 +134,7 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Senior & Accessibility Options',
+                'Senior & Accessibility options apply instantly across the whole application',
                 style: GoogleFonts.inter(
                   fontSize: 13,
                   color: AppColors.textSecondary,
@@ -60,63 +142,47 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
               ),
               const SizedBox(height: 24),
 
-              // 2. Toggle 1: Large Text Mode (Active State)
+              // 2. Toggle 1: Large Text Mode
               _buildToggleCard(
                 title: 'Large Text Mode',
-                subtitle: 'Enlarges all labels & numbers',
+                subtitle: 'Enlarges all labels, tokens & hospital text (1.35x)',
                 icon: Icons.text_fields_outlined,
                 isActive: _largeTextMode,
-                onChanged: (val) {
-                  setState(() {
-                    _largeTextMode = val;
-                  });
-                },
+                onChanged: (val) => _updateSetting(largeText: val),
               ),
               const SizedBox(height: 14),
 
               // 3. Toggle 2: High Contrast Mode
               _buildToggleCard(
                 title: 'High Contrast Mode',
-                subtitle: 'Crisp black & white elements',
+                subtitle: 'Crisp dark theme with high-contrast amber accents',
                 icon: Icons.contrast_outlined,
                 isActive: _highContrastMode,
-                onChanged: (val) {
-                  setState(() {
-                    _highContrastMode = val;
-                  });
-                },
+                onChanged: (val) => _updateSetting(highContrast: val),
               ),
               const SizedBox(height: 14),
 
               // 4. Toggle 3: Simplified Navigation
               _buildToggleCard(
                 title: 'Simplified Navigation',
-                subtitle: 'Bigger buttons, no complex menus',
+                subtitle: 'Converts bottom navigation into 3 large senior buttons',
                 icon: Icons.grid_view_outlined,
                 isActive: _simplifiedNav,
-                onChanged: (val) {
-                  setState(() {
-                    _simplifiedNav = val;
-                  });
-                },
+                onChanged: (val) => _updateSetting(simplified: val),
               ),
               const SizedBox(height: 14),
 
               // 5. Toggle 4: Voice Guidance
               _buildToggleCard(
                 title: 'Voice Guidance',
-                subtitle: 'Announce token changes aloud',
+                subtitle: 'Announces booked tokens & directions aloud with speech',
                 icon: Icons.volume_up_outlined,
                 isActive: _voiceGuidance,
-                onChanged: (val) {
-                  setState(() {
-                    _voiceGuidance = val;
-                  });
-                },
+                onChanged: (val) => _updateSetting(voice: val),
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 24),
 
-              // 6. Live Preview Card (Figma Large Text Comparison Box)
+              // 6. Live Preview Comparison Box
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(18),
@@ -124,11 +190,11 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: AppColors.border),
-                  boxShadow: [
+                  boxShadow: const [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.02),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
+                      color: Colors.black12,
+                      blurRadius: 6,
+                      offset: Offset(0, 2),
                     ),
                   ],
                 ),
@@ -136,7 +202,7 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'PREVIEW (LARGE TEXT MODE)',
+                      'LIVE PREVIEW (SENIOR MODE ADAPTATION)',
                       style: GoogleFonts.inter(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
@@ -161,7 +227,7 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Standard Size',
+                                  'Standard (1.0x)',
                                   style: GoogleFonts.inter(
                                     fontSize: 11,
                                     color: AppColors.textSecondary,
@@ -188,20 +254,21 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               color: _largeTextMode
-                                  ? AppColors.primaryLight.withOpacity(0.5)
+                                  ? AppColors.primaryLight.withValues(alpha: 0.5)
                                   : const Color(0xFFF8FAFC),
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
                                 color: _largeTextMode
                                     ? AppColors.primary
                                     : AppColors.border,
+                                width: _largeTextMode ? 1.5 : 1,
                               ),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Enlarged Size',
+                                  'Senior Large (1.35x)',
                                   style: GoogleFonts.inter(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
@@ -214,7 +281,7 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                                 Text(
                                   'A-024',
                                   style: GoogleFonts.inter(
-                                    fontSize: 26, // Big 26px bold font!
+                                    fontSize: 26,
                                     fontWeight: FontWeight.w800,
                                     color: _largeTextMode
                                         ? AppColors.primary
@@ -231,6 +298,63 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                 ),
               ),
               const SizedBox(height: 20),
+
+              // Clean Link to Hospital Admin Console
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryLight,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.admin_panel_settings_outlined, color: AppColors.primary, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Hospital Admin Dashboard',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Configure OPD clinics & slot limits',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppColors.textSecondary),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const HospitalAdminDashboard()),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
             ],
           ),
         ),

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'core/constants/app_colors.dart';
+import 'core/constants/app_accessibility.dart';
 import 'features/auth_live_queue_module3/screens/auth/splash_screen.dart';
 
 void main() async {
@@ -26,23 +27,63 @@ class MediQApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'MediQ - OPD Queue Management',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        scaffoldBackgroundColor: AppColors.background,
-        primaryColor: AppColors.primary,
-        textTheme: GoogleFonts.interTextTheme(
-          Theme.of(context).textTheme,
-        ),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: AppColors.primary,
-          primary: AppColors.primary,
-          surface: AppColors.surface,
-        ),
-        useMaterial3: true,
-      ),
-      home: const SplashScreen(),
+    return AnimatedBuilder(
+      animation: Listenable.merge([
+        AppAccessibility.isLargeTextMode,
+        AppAccessibility.isHighContrastMode,
+        AppAccessibility.isSimplifiedNav,
+        AppAccessibility.isVoiceGuidance,
+      ]),
+      builder: (context, _) {
+        final isLargeText = AppAccessibility.isLargeTextMode.value;
+        final isHighContrast = AppAccessibility.isHighContrastMode.value;
+
+        return MaterialApp(
+          title: 'MediQ - OPD Queue Management',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            scaffoldBackgroundColor: isHighContrast ? const Color(0xFF0F172A) : AppColors.background,
+            primaryColor: isHighContrast ? const Color(0xFFF59E0B) : AppColors.primary,
+            cardColor: isHighContrast ? const Color(0xFF1E293B) : AppColors.surface,
+            textTheme: GoogleFonts.interTextTheme(
+              isHighContrast ? ThemeData.dark().textTheme : Theme.of(context).textTheme,
+            ),
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: isHighContrast ? const Color(0xFFF59E0B) : AppColors.primary,
+              primary: isHighContrast ? const Color(0xFFF59E0B) : AppColors.primary,
+              surface: isHighContrast ? const Color(0xFF1E293B) : AppColors.surface,
+              brightness: isHighContrast ? Brightness.dark : Brightness.light,
+            ),
+            useMaterial3: true,
+          ),
+          builder: (context, child) {
+            final mediaQuery = MediaQuery.of(context);
+            Widget content = MediaQuery(
+              data: mediaQuery.copyWith(
+                textScaler: isLargeText
+                    ? const TextScaler.linear(1.35)
+                    : const TextScaler.linear(1.0),
+              ),
+              child: child!,
+            );
+
+            if (isHighContrast) {
+              content = ColorFiltered(
+                colorFilter: const ColorFilter.matrix(<double>[
+                  -1.0,  0.0,  0.0, 0.0, 255.0,
+                   0.0, -1.0,  0.0, 0.0, 255.0,
+                   0.0,  0.0, -1.0, 0.0, 255.0,
+                   0.0,  0.0,  0.0, 1.0,   0.0,
+                ]),
+                child: content,
+              );
+            }
+
+            return content;
+          },
+          home: const SplashScreen(),
+        );
+      },
     );
   }
 }

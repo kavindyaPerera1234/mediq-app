@@ -7,6 +7,7 @@ class OpdClinic {
   final String hours;
   final IconData icon;
   final bool isOpen;
+  final String roomNumber;
 
   OpdClinic({
     required this.id,
@@ -14,6 +15,7 @@ class OpdClinic {
     required this.hours,
     required this.icon,
     this.isOpen = true,
+    this.roomNumber = 'OPD Room 01',
   });
 }
 
@@ -46,30 +48,35 @@ class GovernmentHospital {
             name: 'General Medicine',
             hours: '8:00 AM - 12:00 PM',
             icon: Icons.medical_services_outlined, // Stethoscope
+            roomNumber: 'OPD Room 01',
           ),
           OpdClinic(
             id: 'ortho',
             name: 'Orthopedics (Bone)',
             hours: '8:00 AM - 12:00 PM',
             icon: Icons.accessibility_new_outlined, // Bone / Mobility
+            roomNumber: 'OPD Room 03',
           ),
           OpdClinic(
             id: 'ent',
             name: 'ENT (Ear, Nose, Throat)',
             hours: '8:30 AM - 12:00 PM',
             icon: Icons.hearing_outlined, // Ear
+            roomNumber: 'OPD Room 07',
           ),
           OpdClinic(
             id: 'derma',
             name: 'Dermatology (Skin)',
             hours: '8:30 AM - 11:30 AM',
             icon: Icons.healing_outlined, // Skin
+            roomNumber: 'OPD Room 09',
           ),
           OpdClinic(
             id: 'pedia',
             name: 'Pediatrics (Children)',
             hours: '8:00 AM - 1:00 PM',
             icon: Icons.child_care_outlined, // Baby
+            roomNumber: 'OPD Room 05',
           ),
         ],
       ),
@@ -83,6 +90,7 @@ class GovernmentHospital {
             name: 'General Medicine OPD',
             hours: '8:00 AM - 12:00 PM',
             icon: Icons.medical_services_outlined,
+            roomNumber: 'OPD Room 02',
           ),
         ],
       ),
@@ -96,6 +104,7 @@ class GovernmentHospital {
             name: 'Pediatrics OPD',
             hours: '8:00 AM - 1:00 PM',
             icon: Icons.child_care_outlined,
+            roomNumber: 'OPD Room 04',
           ),
         ],
       ),
@@ -109,6 +118,7 @@ class GovernmentHospital {
             name: 'General Medicine OPD',
             hours: '8:00 AM - 12:00 PM',
             icon: Icons.medical_services_outlined,
+            roomNumber: 'OPD Room 01',
           ),
         ],
       ),
