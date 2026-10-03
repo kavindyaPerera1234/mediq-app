@@ -6,7 +6,6 @@ import '../../services/auth_service.dart';
 import 'registration_screen.dart';
 import 'forgot_password_screen.dart';
 import 'verification_code_screen.dart';
-import 'package:mediq_app/features/admin_dashboard/screens/admin_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final bool isStaffMode;
@@ -428,15 +427,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 // Submit Button
                 ElevatedButton(
-                  onPressed: _isLoading ? null :
-                  () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const AdminDashboardScreen(),
-                      ),
-                    );
-                  },
+                  onPressed: _isLoading ? null : _handleLogin,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
