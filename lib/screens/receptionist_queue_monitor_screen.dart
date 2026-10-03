@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/constants/app_colors.dart';
+import '../core/constants/app_constants.dart';
 import '../models/queue_session.dart';
 import '../models/queue_entry.dart';
 import '../services/auth_service.dart';
@@ -28,6 +29,12 @@ class _ReceptionistQueueMonitorScreenState extends State<ReceptionistQueueMonito
     final staffUser = widget.authService.currentUserModel;
     final staffProfile = widget.authService.currentStaffProfile;
     final userRole = staffProfile?.role ?? staffUser?.role ?? 'receptionist';
+    final hId = staffProfile?.hospitalId ?? 'nhsl';
+    final dId = staffProfile?.departmentId ?? 'gen_med';
+    final genMedSessionId = AppConstants.defaultQueueSessionId(
+      hId.isNotEmpty ? hId : 'nhsl',
+      dId.isNotEmpty ? dId : 'gen_med',
+    );
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -125,20 +132,20 @@ class _ReceptionistQueueMonitorScreenState extends State<ReceptionistQueueMonito
 
               // Department 1: General Medicine OPD (Real-time Firestore)
               StreamBuilder<QueueSession?>(
-                stream: _firestoreService.streamQueueSession('QS-001'),
+                stream: _firestoreService.streamQueueSession(genMedSessionId),
                 builder: (context, sessionSnapshot) {
                   final session = sessionSnapshot.data ??
                       QueueSession(
-                        queueSessionId: 'QS-001',
-                        hospitalId: 'HOSP-001',
-                        departmentId: 'DEPT-001',
-                        date: '2026-09-24',
+                        queueSessionId: genMedSessionId,
+                        hospitalId: hId.isNotEmpty ? hId : 'nhsl',
+                        departmentId: dId.isNotEmpty ? dId : 'gen_med',
+                        date: DateTime.now().toString().split(' ')[0],
                         status: 'active',
                         currentTokenNumber: 'A-019',
                       );
 
                   return StreamBuilder<List<QueueEntry>>(
-                    stream: _firestoreService.streamQueueEntries('QS-001'),
+                    stream: _firestoreService.streamQueueEntries(genMedSessionId),
                     builder: (context, entriesSnapshot) {
                       final entries = entriesSnapshot.data ?? [];
                       final waitingCount = entries
@@ -154,6 +161,7 @@ class _ReceptionistQueueMonitorScreenState extends State<ReceptionistQueueMonito
                         waitingCount: waitingCount,
                         hasEmergency: hasEmergency,
                         delayMessage: session.delayMinutes > 0 ? session.delayReason : null,
+                        queueSessionId: genMedSessionId,
                       );
                     },
                   );
@@ -197,6 +205,7 @@ class _ReceptionistQueueMonitorScreenState extends State<ReceptionistQueueMonito
     required int waitingCount,
     bool hasEmergency = false,
     String? delayMessage,
+    String queueSessionId = '',
   }) {
     return Card(
       elevation: 1,
@@ -211,7 +220,9 @@ class _ReceptionistQueueMonitorScreenState extends State<ReceptionistQueueMonito
             MaterialPageRoute(
               builder: (context) => PatientQueueListScreen(
                 authService: widget.authService,
-                queueSessionId: 'QS-001',
+                queueSessionId: queueSessionId.isNotEmpty
+                    ? queueSessionId
+                    : AppConstants.defaultQueueSessionId(),
               ),
             ),
           );

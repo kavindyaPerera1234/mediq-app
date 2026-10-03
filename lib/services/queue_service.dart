@@ -124,8 +124,20 @@ class QueueService {
         'updatedAt': now,
       });
 
+      // Update appointments document status for Member 1 & 2 real-time sync (PDF item 5)
+      if (nextPatient.appointmentId.isNotEmpty) {
+        try {
+          await _db.collection(AppConstants.appointmentsCollection).doc(nextPatient.appointmentId).update({
+            'status': AppConstants.statusCalled,
+            'calledAt': now,
+            'updatedAt': now,
+          });
+        } catch (_) {}
+      }
+
       // 6. Update queue session current token
       await _db.collection(AppConstants.queueSessionsCollection).doc(queueSessionId).update({
+        'currentToken': nextPatient.tokenNumber,
         'currentTokenNumber': nextPatient.tokenNumber,
         'updatedAt': now,
       });
@@ -220,7 +232,7 @@ class QueueService {
     } catch (e) {
       final fallbackPatient = QueueEntry(
         queueEntryId: queueEntryId,
-        queueSessionId: 'QS-001',
+        queueSessionId: AppConstants.defaultQueueSessionId(),
         appointmentId: 'APT-019',
         patientId: 'pat-019',
         tokenNumber: 'A-019',
@@ -275,7 +287,7 @@ class QueueService {
     } catch (e) {
       final fallbackPatient = QueueEntry(
         queueEntryId: queueEntryId,
-        queueSessionId: 'QS-001',
+        queueSessionId: AppConstants.defaultQueueSessionId(),
         appointmentId: 'APT-019',
         patientId: 'pat-019',
         tokenNumber: 'A-019',
@@ -345,7 +357,7 @@ class QueueService {
     } catch (e) {
       final fallbackPatient = QueueEntry(
         queueEntryId: queueEntryId,
-        queueSessionId: 'QS-001',
+        queueSessionId: AppConstants.defaultQueueSessionId(),
         appointmentId: 'APT-020',
         patientId: 'pat-020',
         tokenNumber: 'A-020',
@@ -407,7 +419,7 @@ class QueueService {
 
     final fallbackPatient = QueueEntry(
       queueEntryId: queueEntryId,
-      queueSessionId: 'QS-001',
+      queueSessionId: AppConstants.defaultQueueSessionId(),
       appointmentId: 'APT-019',
       patientId: 'pat-019',
       tokenNumber: 'A-019',

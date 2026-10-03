@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/constants/app_colors.dart';
+import '../core/constants/app_constants.dart';
 import '../models/queue_entry.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
@@ -15,7 +16,7 @@ class EmergencyPriorityScreen extends StatefulWidget {
   const EmergencyPriorityScreen({
     super.key,
     required this.authService,
-    this.queueSessionId = 'QS-001',
+    this.queueSessionId = '',
   });
 
   @override
@@ -27,6 +28,10 @@ class _EmergencyPriorityScreenState extends State<EmergencyPriorityScreen> {
   final QueueService _queueService = QueueService();
   String? _selectedQueueEntryId;
   bool _isLoading = false;
+
+  String get effectiveSessionId => widget.queueSessionId.isNotEmpty
+      ? widget.queueSessionId
+      : AppConstants.defaultQueueSessionId();
 
   Future<void> _handleConfirmEmergency(QueueEntry selectedPatient) async {
     setState(() {
@@ -65,7 +70,7 @@ class _EmergencyPriorityScreenState extends State<EmergencyPriorityScreen> {
       ),
       body: SafeArea(
         child: StreamBuilder<List<QueueEntry>>(
-          stream: _firestoreService.streamQueueEntries(widget.queueSessionId),
+          stream: _firestoreService.streamQueueEntries(effectiveSessionId),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
               return const LoadingWidget(message: 'Loading Waiting Queue...');
@@ -80,7 +85,7 @@ class _EmergencyPriorityScreenState extends State<EmergencyPriorityScreen> {
               eligibleWaiting = [
                 QueueEntry(
                   queueEntryId: 'QE-pat-019',
-                  queueSessionId: widget.queueSessionId,
+                  queueSessionId: effectiveSessionId,
                   appointmentId: 'APT-019',
                   patientId: 'pat-019',
                   tokenNumber: 'A-019',

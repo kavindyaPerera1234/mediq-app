@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/constants/app_colors.dart';
+import '../core/constants/app_constants.dart';
 import '../models/queue_session.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
@@ -14,7 +15,7 @@ class QueuePauseResumeScreen extends StatefulWidget {
   const QueuePauseResumeScreen({
     super.key,
     required this.authService,
-    this.queueSessionId = 'QS-001',
+    this.queueSessionId = '',
   });
 
   @override
@@ -26,6 +27,10 @@ class _QueuePauseResumeScreenState extends State<QueuePauseResumeScreen> {
   final QueueService _queueService = QueueService();
   String _selectedReason = 'Lunch Break';
   bool _isLoading = false;
+
+  String get effectiveSessionId => widget.queueSessionId.isNotEmpty
+      ? widget.queueSessionId
+      : AppConstants.defaultQueueSessionId();
 
   final List<String> _pauseReasons = [
     'Lunch Break',
@@ -41,7 +46,7 @@ class _QueuePauseResumeScreenState extends State<QueuePauseResumeScreen> {
 
     final staffUserId = widget.authService.currentUserModel?.uid ?? 'staff-uid';
     final result = await _queueService.pauseQueue(
-      queueSessionId: widget.queueSessionId,
+      queueSessionId: effectiveSessionId,
       staffUserId: staffUserId,
       reason: _selectedReason,
     );
@@ -70,7 +75,7 @@ class _QueuePauseResumeScreenState extends State<QueuePauseResumeScreen> {
 
     final staffUserId = widget.authService.currentUserModel?.uid ?? 'staff-uid';
     final result = await _queueService.resumeQueue(
-      queueSessionId: widget.queueSessionId,
+      queueSessionId: effectiveSessionId,
       staffUserId: staffUserId,
     );
 
@@ -100,7 +105,7 @@ class _QueuePauseResumeScreenState extends State<QueuePauseResumeScreen> {
       ),
       body: SafeArea(
         child: StreamBuilder<QueueSession?>(
-          stream: _firestoreService.streamQueueSession(widget.queueSessionId),
+          stream: _firestoreService.streamQueueSession(effectiveSessionId),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
               return const LoadingWidget(message: 'Loading Queue Status...');
@@ -108,10 +113,10 @@ class _QueuePauseResumeScreenState extends State<QueuePauseResumeScreen> {
 
             final session = snapshot.data ??
                 QueueSession(
-                  queueSessionId: widget.queueSessionId,
-                  hospitalId: 'HOSP-001',
-                  departmentId: 'DEPT-001',
-                  date: '2026-09-24',
+                  queueSessionId: effectiveSessionId,
+                  hospitalId: 'nhsl',
+                  departmentId: 'gen_med',
+                  date: DateTime.now().toString().split(' ')[0],
                   status: 'active',
                 );
 
