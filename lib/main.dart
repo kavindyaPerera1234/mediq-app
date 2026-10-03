@@ -21,6 +21,7 @@ void main() async {
     SeedDataService().seedDemoData().catchError((e) {
       debugPrint('Firestore Seeding Note: $e');
       return false;
+    });
   } catch (e) {
     debugPrint("Firebase initialization notice: $e");
   }
