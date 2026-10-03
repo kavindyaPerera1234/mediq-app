@@ -24,15 +24,16 @@ class _LoginScreenState extends State<LoginScreen> {
   late bool _isStaff;
   bool _isLoading = false;
   bool _obscurePassword = true;
+  bool _useOtpLogin = false;
   String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
     _isStaff = widget.isStaffMode;
-    if (!_isStaff) {
-      _phoneOrEmailController.text = "0771234567"; // Helpful demo preset
-    }
+    // Keep inputs completely clean and empty for real users
+    _phoneOrEmailController.clear();
+    _passwordController.clear();
   }
 
   @override
@@ -51,14 +52,13 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     final authService = AuthService();
+    final input = _phoneOrEmailController.text.trim();
+    final password = _passwordController.text.trim();
 
-    if (_isStaff) {
-      // ── Staff / Admin login: Firebase Auth email + password ──────────
+    // ── Staff or Patient Password Login ─────────────────────────────────────
+    if (_isStaff || !_useOtpLogin) {
       try {
-        await authService.loginWithEmailPassword(
-          _phoneOrEmailController.text.trim(),
-          _passwordController.text.trim(),
-        );
+        await authService.loginWithEmailPassword(input, password);
 
         if (!mounted) return;
 
@@ -76,14 +76,16 @@ class _LoginScreenState extends State<LoginScreen> {
           _isLoading = false;
           switch (e.code) {
             case 'user-not-found':
-              _errorMessage = 'No account found with this email.';
+              _errorMessage = _isStaff
+                  ? 'No account found with this email.'
+                  : 'No account found with this phone/email. Please register first.';
               break;
             case 'wrong-password':
             case 'invalid-credential':
-              _errorMessage = 'Incorrect email or password.';
+              _errorMessage = 'Incorrect password. Please try again.';
               break;
             case 'invalid-email':
-              _errorMessage = 'Please enter a valid email address.';
+              _errorMessage = 'Please enter a valid email address or phone number.';
               break;
             case 'user-disabled':
               _errorMessage = 'This account has been disabled.';
@@ -92,7 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
               _errorMessage = 'Too many attempts. Please try again later.';
               break;
             default:
-              _errorMessage = 'Login failed: ${e.message}';
+              _errorMessage = e.message ?? 'Login failed. Please check your credentials.';
           }
         });
       } catch (e) {
@@ -102,38 +104,11 @@ class _LoginScreenState extends State<LoginScreen> {
         });
       }
     } else {
-      // ── Patient login: phone OTP or email flow ─────────────────────────
-      final input = _phoneOrEmailController.text.trim();
-      final password = _passwordController.text.trim();
-
-      // If password provided, sign in with email or phone + password
-      if (password.isNotEmpty) {
-        try {
-          await authService.loginWithEmailPassword(input, password);
-          if (!mounted) return;
-          if (!authService.isUserActive()) {
-            setState(() {
-              _isLoading = false;
-              _errorMessage = 'This account has been deactivated.';
-            });
-            return;
-          }
-          authService.routeUserByRole(context);
-          return;
-        } on FirebaseAuthException catch (e) {
-          setState(() {
-            _isLoading = false;
-            _errorMessage = e.message ?? 'Login failed.';
-          });
-          return;
-        }
-      }
-
-      // If no password provided, proceed with SMS OTP verification
-      bool success = await authService.loginPatient(input);
+      // ── Optional SMS OTP Login ───────────────────────────────────────────
+      bool userExists = await authService.loginPatient(input);
       setState(() => _isLoading = false);
 
-      if (success && mounted) {
+      if (userExists && mounted) {
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -142,7 +117,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         );
-      } else if (!success && mounted) {
+      } else if (!userExists && mounted) {
         setState(() {
           _errorMessage = 'No patient account registered with this phone number. Please register first.';
         });
@@ -172,7 +147,7 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 // Header
                 Text(
-                  _isStaff ? 'Staff / Admin Login' : 'Patient Sign In',
+                  _isStaff ? 'Staff / Admin Sign In' : 'Patient Sign In',
                   style: GoogleFonts.inter(
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
@@ -182,8 +157,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 8),
                 Text(
                   _isStaff
-                      ? 'Enter your email and password. Admin and staff accounts are verified through Firebase Authentication.'
-                      : 'Enter your mobile number to receive a secure one-time verification code.',
+                      ? 'Sign in with your hospital staff credentials.'
+                      : (_useOtpLogin
+                          ? 'Enter your mobile number to receive a secure one-time verification code.'
+                          : 'Sign in with your mobile number or email and password.'),
                   style: GoogleFonts.inter(
                     fontSize: 15,
                     fontWeight: FontWeight.w400,
@@ -209,8 +186,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           onTap: () {
                             setState(() {
                               _isStaff = false;
+                              _useOtpLogin = false;
                               _errorMessage = null;
-                              _phoneOrEmailController.text = "0771234567";
+                              _phoneOrEmailController.clear();
                               _passwordController.clear();
                             });
                           },
@@ -238,6 +216,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           onTap: () {
                             setState(() {
                               _isStaff = true;
+                              _useOtpLogin = false;
                               _errorMessage = null;
                               _phoneOrEmailController.clear();
                               _passwordController.clear();
@@ -268,10 +247,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 28),
 
-                // Error message banner
+                // Error Banner
                 if (_errorMessage != null) ...[
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     decoration: BoxDecoration(
                       color: AppColors.errorLight,
                       borderRadius: BorderRadius.circular(10),
@@ -300,7 +279,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 // Input Field 1: Phone / Email
                 Text(
-                  _isStaff ? 'Email Address' : 'Mobile Phone Number',
+                  _isStaff ? 'Email Address' : 'Mobile Phone Number or Email',
                   style: GoogleFonts.inter(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -310,14 +289,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _phoneOrEmailController,
-                  keyboardType: _isStaff ? TextInputType.emailAddress : TextInputType.phone,
+                  keyboardType: _isStaff ? TextInputType.emailAddress : TextInputType.text,
                   style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
                   decoration: InputDecoration(
                     prefixIcon: Icon(
-                      _isStaff ? Icons.email_outlined : Icons.phone_android_rounded,
+                      _isStaff ? Icons.email_outlined : Icons.person_outline_rounded,
                       color: AppColors.primary,
                     ),
-                    hintText: _isStaff ? 'admin@hospital.lk' : '07X XXX XXXX',
+                    hintText: _isStaff ? 'e.g. admin@mediq.lk' : '07X XXX XXXX or email',
                     filled: true,
                     fillColor: AppColors.surface,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -336,7 +315,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return _isStaff ? 'Please enter your email' : 'Please enter your mobile number';
+                      return _isStaff ? 'Please enter your email' : 'Please enter your phone number or email';
                     }
                     if (_isStaff && !value.contains('@')) {
                       return 'Please enter a valid email address';
@@ -345,8 +324,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                 ),
 
-                // Password field (always visible for staff, hidden for patient)
-                if (_isStaff) ...[
+                // Password field (visible whenever not using OTP mode)
+                if (!_useOtpLogin) ...[
                   const SizedBox(height: 18),
                   Text(
                     'Password',
@@ -370,7 +349,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                       ),
-                      hintText: 'Enter password',
+                      hintText: 'Enter your password',
                       filled: true,
                       fillColor: AppColors.surface,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -388,7 +367,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     validator: (value) {
-                      if (_isStaff && (value == null || value.trim().isEmpty)) {
+                      if (!_useOtpLogin && (value == null || value.trim().isEmpty)) {
                         return 'Please enter your password';
                       }
                       return null;
@@ -396,30 +375,55 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ],
 
-                // Forgot Password link
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const ForgotPasswordScreen(),
+                // Action Links Row (OTP Toggle & Forgot Password)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      if (!_isStaff)
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _useOtpLogin = !_useOtpLogin;
+                              _errorMessage = null;
+                            });
+                          },
+                          child: Text(
+                            _useOtpLogin ? 'Use Password Sign In' : 'Sign in with SMS Code',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        )
+                      else
+                        const SizedBox.shrink(),
+
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const ForgotPasswordScreen(),
+                            ),
+                          );
+                        },
+                        child: Text(
+                          'Forgot Password?',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
                         ),
-                      );
-                    },
-                    child: Text(
-                      'Forgot Details / Need Help?',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.primary,
                       ),
-                    ),
+                    ],
                   ),
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
                 // Submit Button
                 ElevatedButton(
@@ -440,7 +444,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                         )
                       : Text(
-                          _isStaff ? 'Sign In' : 'Send Verification Code',
+                          _useOtpLogin ? 'Send Verification Code' : 'Sign In',
                           style: GoogleFonts.inter(
                             fontSize: 17,
                             fontWeight: FontWeight.w700,
@@ -448,7 +452,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                 ),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: 28),
 
                 // Registration footer (patient only)
                 if (!_isStaff)
@@ -475,14 +479,14 @@ class _LoginScreenState extends State<LoginScreen> {
                           'Register Here',
                           style: GoogleFonts.inter(
                             fontSize: 14,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w800,
                             color: AppColors.primary,
-                            decoration: TextDecoration.underline,
                           ),
                         ),
                       ),
                     ],
                   ),
+                const SizedBox(height: 16),
               ],
             ),
           ),
