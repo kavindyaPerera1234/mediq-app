@@ -88,6 +88,33 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     const Divider(color: AppColors.border),
                     const SizedBox(height: 12),
 
+                    Center(
+                      child: Column(
+                        children: [
+                          CircleAvatar(
+                            radius: 36,
+                            backgroundColor: AppColors.primaryLight,
+                            backgroundImage: _profile.photoUrl.isNotEmpty ? NetworkImage(_profile.photoUrl) : null,
+                            child: _profile.photoUrl.isEmpty
+                                ? Text(
+                                    _profile.fullName.isNotEmpty ? _profile.fullName[0] : 'P',
+                                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.primary),
+                                  )
+                                : null,
+                          ),
+                          TextButton.icon(
+                            icon: const Icon(Icons.camera_alt_rounded, size: 16),
+                            label: const Text('Change Profile Photo', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                            onPressed: () {
+                              Navigator.pop(context);
+                              _showProfilePhotoModal();
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
                     _buildFieldLabel('Full Name'),
                     TextField(
                       controller: nameController,
@@ -169,18 +196,13 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
                         onPressed: () async {
-                          final updated = PatientProfileModel(
-                            patientId: _profile.patientId,
+                          final updated = _profile.copyWith(
                             fullName: nameController.text.trim(),
-                            nic: _profile.nic,
                             phone: phoneController.text.trim(),
                             email: emailController.text.trim(),
                             bloodGroup: bloodGroup,
-                            dateOfBirth: _profile.dateOfBirth,
-                            gender: _profile.gender,
                             emergencyContactName: emergencyNameController.text.trim(),
                             emergencyContactPhone: emergencyPhoneController.text.trim(),
-                            isSeniorModeEnabled: _profile.isSeniorModeEnabled,
                           );
 
                           setState(() {
@@ -208,6 +230,205 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
           },
         );
       },
+    );
+  }
+
+  void _showProfilePhotoModal() {
+    final urlController = TextEditingController(text: _profile.photoUrl);
+
+    final List<Map<String, String>> presetAvatars = [
+      {
+        'label': 'Female (Default)',
+        'url': 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&fit=crop&crop=faces',
+      },
+      {
+        'label': 'Nurse / Doctor',
+        'url': 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=200&fit=crop&crop=faces',
+      },
+      {
+        'label': 'Elderly Mother',
+        'url': 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=200&fit=crop&crop=faces',
+      },
+      {
+        'label': 'Elderly Father',
+        'url': 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&fit=crop&crop=faces',
+      },
+      {
+        'label': 'Male Patient',
+        'url': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&fit=crop&crop=faces',
+      },
+      {
+        'label': 'Young Adult',
+        'url': 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&fit=crop&crop=faces',
+      },
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalCtx) {
+        return Container(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(modalCtx).viewInsets.bottom + 24,
+          ),
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Choose Profile Photo',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: () => Navigator.pop(modalCtx),
+                    ),
+                  ],
+                ),
+                const Divider(color: AppColors.border),
+                const SizedBox(height: 12),
+                const Text(
+                  'Select a Profile Avatar:',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                ),
+                const SizedBox(height: 12),
+
+                // Avatar Horizontal Selector
+                SizedBox(
+                  height: 96,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: presetAvatars.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 14),
+                    itemBuilder: (context, idx) {
+                      final item = presetAvatars[idx];
+                      final isSelected = _profile.photoUrl == item['url'];
+                      return GestureDetector(
+                        onTap: () async {
+                          Navigator.pop(modalCtx);
+                          await _saveProfilePhoto(item['url']!);
+                        },
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: isSelected ? AppColors.primary : Colors.transparent,
+                                  width: 2.5,
+                                ),
+                              ),
+                              child: CircleAvatar(
+                                radius: 28,
+                                backgroundImage: NetworkImage(item['url']!),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              item['label']!.split(' ')[0],
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Divider(color: AppColors.border),
+                const SizedBox(height: 12),
+
+                // Option 2: Enter Custom Photo URL
+                const Text(
+                  'Or Paste Image Web URL:',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: urlController,
+                        decoration: _inputDecoration('https://... image.jpg'),
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: () async {
+                        final url = urlController.text.trim();
+                        if (url.isNotEmpty) {
+                          Navigator.pop(modalCtx);
+                          await _saveProfilePhoto(url);
+                        }
+                      },
+                      child: const Text('Apply', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Option 3: Remove Profile Photo
+                if (_profile.photoUrl.isNotEmpty) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error, size: 18),
+                      label: const Text('Remove Profile Photo', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppColors.error),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: () async {
+                        Navigator.pop(modalCtx);
+                        await _saveProfilePhoto('');
+                      },
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _saveProfilePhoto(String newUrl) async {
+    setState(() {
+      _profile = _profile.copyWith(photoUrl: newUrl);
+    });
+    final success = await _profileService.updateProfilePhoto(_currentPatientNic, newUrl);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(success ? 'Profile photo updated successfully!' : 'Failed to update photo online.'),
+        backgroundColor: success ? AppColors.statusGreen : AppColors.error,
+        duration: const Duration(seconds: 2),
+      ),
     );
   }
 
@@ -475,16 +696,99 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
       ),
       child: Column(
         children: [
+          // Top bar inside profile card with Settings & Senior Mode button
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.verified_user_rounded, size: 14, color: AppColors.primary),
+                    SizedBox(width: 4),
+                    Text(
+                      'Verified Patient',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
+                    ),
+                  ],
+                ),
+              ),
+              // Prominent Settings Button at Top of Profile
+              InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const SeniorModeSettingsScreen()),
+                  );
+                },
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.settings_outlined, size: 16, color: AppColors.primary),
+                      SizedBox(width: 5),
+                      Text(
+                        'Settings',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
           Row(
             children: [
-              // Avatar
-              CircleAvatar(
-                radius: 32,
-                backgroundColor: AppColors.primaryLight,
-                child: Text(
-                  _profile.fullName.isNotEmpty ? _profile.fullName[0] : 'P',
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.primary),
-                ),
+              // Interactive Avatar with Camera Badge
+              Stack(
+                children: [
+                  GestureDetector(
+                    onTap: _showProfilePhotoModal,
+                    child: CircleAvatar(
+                      radius: 34,
+                      backgroundColor: AppColors.primaryLight,
+                      backgroundImage: _profile.photoUrl.isNotEmpty
+                          ? NetworkImage(_profile.photoUrl)
+                          : null,
+                      child: _profile.photoUrl.isEmpty
+                          ? Text(
+                              _profile.fullName.isNotEmpty ? _profile.fullName[0] : 'P',
+                              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.primary),
+                            )
+                          : null,
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: GestureDetector(
+                      onTap: _showProfilePhotoModal,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: const Icon(Icons.camera_alt_rounded, size: 13, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(width: 14),
               Expanded(
