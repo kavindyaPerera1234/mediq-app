@@ -15,6 +15,7 @@ class QueueService {
     String appointmentId = '',
     String previousStatus = '',
     String newStatus = '',
+    String reason = '',
   }) async {
     final now = FieldValue.serverTimestamp();
     await _db.collection(AppConstants.queueEventsCollection).add({
@@ -22,9 +23,11 @@ class QueueService {
       'queueEntryId': queueEntryId,
       'appointmentId': appointmentId,
       'performedBy': performedBy,
+      'actionType': eventType,
       'eventType': eventType,
       'previousStatus': previousStatus,
       'newStatus': newStatus,
+      'reason': reason,
       'createdAt': now,
     });
   }
