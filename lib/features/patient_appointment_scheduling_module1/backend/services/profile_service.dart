@@ -37,6 +37,20 @@ class ProfileService {
     }
   }
 
+  /// Update profile photo URL directly
+  Future<bool> updateProfilePhoto(String patientNic, String photoUrl) async {
+    try {
+      await _profilesRef
+          .doc(patientNic)
+          .set({'photoUrl': photoUrl, 'updatedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true))
+          .timeout(const Duration(seconds: 4));
+      return true;
+    } catch (e) {
+      debugPrint('ProfileService: updateProfilePhoto error: $e');
+      return false;
+    }
+  }
+
   /// Get accessibility settings from profile
   Future<Map<String, bool>> getAccessibilitySettings(String patientNic) async {
     try {

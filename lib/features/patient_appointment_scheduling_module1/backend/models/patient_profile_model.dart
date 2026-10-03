@@ -12,6 +12,7 @@ class PatientProfileModel {
   final String emergencyContactName;
   final String emergencyContactPhone;
   final bool isSeniorModeEnabled;
+  final String photoUrl;
 
   const PatientProfileModel({
     required this.patientId,
@@ -25,7 +26,38 @@ class PatientProfileModel {
     this.emergencyContactName = 'Sunil Perera',
     this.emergencyContactPhone = '+94 77 987 6543',
     this.isSeniorModeEnabled = false,
+    this.photoUrl = '',
   });
+
+  PatientProfileModel copyWith({
+    String? patientId,
+    String? fullName,
+    String? nic,
+    String? phone,
+    String? email,
+    String? bloodGroup,
+    String? dateOfBirth,
+    String? gender,
+    String? emergencyContactName,
+    String? emergencyContactPhone,
+    bool? isSeniorModeEnabled,
+    String? photoUrl,
+  }) {
+    return PatientProfileModel(
+      patientId: patientId ?? this.patientId,
+      fullName: fullName ?? this.fullName,
+      nic: nic ?? this.nic,
+      phone: phone ?? this.phone,
+      email: email ?? this.email,
+      bloodGroup: bloodGroup ?? this.bloodGroup,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      gender: gender ?? this.gender,
+      emergencyContactName: emergencyContactName ?? this.emergencyContactName,
+      emergencyContactPhone: emergencyContactPhone ?? this.emergencyContactPhone,
+      isSeniorModeEnabled: isSeniorModeEnabled ?? this.isSeniorModeEnabled,
+      photoUrl: photoUrl ?? this.photoUrl,
+    );
+  }
 
   Map<String, dynamic> toMap() {
     return {
@@ -40,6 +72,7 @@ class PatientProfileModel {
       'emergencyContactName': emergencyContactName,
       'emergencyContactPhone': emergencyContactPhone,
       'isSeniorModeEnabled': isSeniorModeEnabled,
+      'photoUrl': photoUrl,
       'updatedAt': FieldValue.serverTimestamp(),
     };
   }
@@ -58,6 +91,7 @@ class PatientProfileModel {
       emergencyContactName: data['emergencyContactName'] ?? 'Sunil Perera',
       emergencyContactPhone: data['emergencyContactPhone'] ?? '+94 77 987 6543',
       isSeniorModeEnabled: data['isSeniorModeEnabled'] ?? false,
+      photoUrl: data['photoUrl'] ?? '',
     );
   }
 
@@ -74,6 +108,7 @@ class PatientProfileModel {
       emergencyContactName: 'Sunil Perera',
       emergencyContactPhone: '+94 77 987 6543',
       isSeniorModeEnabled: false,
+      photoUrl: '',
     );
   }
 }
