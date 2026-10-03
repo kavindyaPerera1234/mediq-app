@@ -51,9 +51,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
     try {
       final enteredNic = _nicController.text.trim();
-      final nicToSave = enteredNic.isNotEmpty
-          ? enteredNic
-          : (rawPhone.contains('774021333') ? '200164801234' : null);
+      final nicToSave = enteredNic.isNotEmpty ? enteredNic : null;
 
       await AuthService().registerPatientOrCaregiver(
         email: email,

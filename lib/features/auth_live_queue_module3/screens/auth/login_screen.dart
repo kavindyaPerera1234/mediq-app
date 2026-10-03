@@ -106,8 +106,8 @@ class _LoginScreenState extends State<LoginScreen> {
       final input = _phoneOrEmailController.text.trim();
       final password = _passwordController.text.trim();
 
-      // Support patient email + password login if password is provided
-      if (input.contains('@') && password.isNotEmpty) {
+      // If password provided, sign in with email or phone + password
+      if (password.isNotEmpty) {
         try {
           await authService.loginWithEmailPassword(input, password);
           if (!mounted) return;
@@ -129,8 +129,8 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
 
+      // If no password provided, proceed with SMS OTP verification
       bool success = await authService.loginPatient(input);
-
       setState(() => _isLoading = false);
 
       if (success && mounted) {
@@ -142,6 +142,10 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         );
+      } else if (!success && mounted) {
+        setState(() {
+          _errorMessage = 'No patient account registered with this phone number. Please register first.';
+        });
       }
     }
   }
