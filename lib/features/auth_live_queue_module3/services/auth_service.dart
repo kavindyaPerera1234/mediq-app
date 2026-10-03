@@ -4,7 +4,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../patient_appointment_scheduling_module1/screens/patient_main_screen.dart';
-import '../../patient_appointment_scheduling_module1/admin/screens/hospital_admin_dashboard.dart';
 import '../screens/auth/splash_screen.dart';
 
 class AuthService extends ChangeNotifier {
@@ -78,11 +77,36 @@ class AuthService extends ChangeNotifier {
       // If the user entered a phone number instead of email:
       if (!emailToUse.contains('@')) {
         final formattedPhone = formatToE164(emailToUse);
-        final userQuery = await _firestore
+        final rawPhone = emailToUse;
+
+        // Query Firestore users collection with both formatted and raw representations
+        var userQuery = await _firestore
             .collection(AppConstants.usersCollection)
             .where('phoneNumber', isEqualTo: formattedPhone)
             .limit(1)
             .get();
+
+        if (userQuery.docs.isEmpty) {
+          userQuery = await _firestore
+              .collection(AppConstants.usersCollection)
+              .where('phoneNumber', isEqualTo: rawPhone)
+              .limit(1)
+              .get();
+        }
+        if (userQuery.docs.isEmpty) {
+          userQuery = await _firestore
+              .collection(AppConstants.usersCollection)
+              .where('phone', isEqualTo: rawPhone)
+              .limit(1)
+              .get();
+        }
+        if (userQuery.docs.isEmpty) {
+          userQuery = await _firestore
+              .collection(AppConstants.usersCollection)
+              .where('phone', isEqualTo: formattedPhone)
+              .limit(1)
+              .get();
+        }
 
         if (userQuery.docs.isNotEmpty) {
           final data = userQuery.docs.first.data();
@@ -249,12 +273,35 @@ class AuthService extends ChangeNotifier {
 
   Future<bool> loginPatient(String phoneNumber) async {
     final formatted = formatToE164(phoneNumber);
+    final raw = phoneNumber.trim();
     try {
-      final query = await _firestore
+      var query = await _firestore
           .collection(AppConstants.usersCollection)
           .where('phoneNumber', isEqualTo: formatted)
           .limit(1)
           .get();
+
+      if (query.docs.isEmpty) {
+        query = await _firestore
+            .collection(AppConstants.usersCollection)
+            .where('phoneNumber', isEqualTo: raw)
+            .limit(1)
+            .get();
+      }
+      if (query.docs.isEmpty) {
+        query = await _firestore
+            .collection(AppConstants.usersCollection)
+            .where('phone', isEqualTo: raw)
+            .limit(1)
+            .get();
+      }
+      if (query.docs.isEmpty) {
+        query = await _firestore
+            .collection(AppConstants.usersCollection)
+            .where('phone', isEqualTo: formatted)
+            .limit(1)
+            .get();
+      }
 
       if (query.docs.isNotEmpty) {
         final doc = query.docs.first;
@@ -323,7 +370,7 @@ class AuthService extends ChangeNotifier {
     if (r == UserRole.admin) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const HospitalAdminDashboard()),
+        MaterialPageRoute(builder: (_) => const SplashScreen()),
         (route) => false,
       );
     } else if (isStaff) {
