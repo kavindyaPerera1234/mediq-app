@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
 import 'login_screen.dart';
 import 'registration_screen.dart';
-import 'package:mediq_app/screens/staff_login_screen.dart';
 
 enum AppLanguage { english, sinhala, tamil }
 
@@ -284,7 +283,7 @@ class _WelcomeEntryScreenState extends State<WelcomeEntryScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const StaffLoginScreen(),
+                        builder: (context) => const LoginScreen(isStaffMode: true),
                       ),
                     );
                   },
