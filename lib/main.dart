@@ -23,9 +23,9 @@ void main() async {
     debugPrint('Firebase Initialization Warning: $e');
   }
 
-  // Pre-load Doctor Silva auth session to bypass login screen by default
+  // Load authenticated user profile (Module 4 starts at StaffDashboardScreen)
   final authService = AuthService();
-  await authService.signInDemoRole('doctor');
+  await authService.loadCurrentStaffProfile();
 
   runApp(MediQApp(authService: authService));
 }
