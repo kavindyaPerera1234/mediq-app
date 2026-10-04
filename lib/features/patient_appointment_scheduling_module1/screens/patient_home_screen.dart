@@ -96,7 +96,7 @@ class PatientHomeScreen extends StatelessWidget {
                         final appointments = snapshot.data ?? [];
                         final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
                         final activeAppointments = appointments
-                            .where((a) => a.status == 'confirmed' && a.appointmentDate.compareTo(todayStr) >= 0)
+                            .where((a) => (a.status == 'confirmed' || a.status == 'rescheduled' || a.status == 'waiting') && a.appointmentDate.compareTo(todayStr) >= 0)
                             .toList();
 
                         if (activeAppointments.isNotEmpty) {

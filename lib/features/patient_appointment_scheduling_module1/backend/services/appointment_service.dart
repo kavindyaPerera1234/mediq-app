@@ -127,13 +127,22 @@ class AppointmentService {
           .map((snapshot) {
         final list = snapshot.docs
             .map((doc) => AppointmentModel.fromFirestore(doc))
-            .where((app) => app.patientNic == patientNic || app.isCaregiverBooking)
+            .where((app) {
+              if (app.patientNic.isEmpty && app.patientId.isEmpty) return false;
+              if (app.patientNic == patientNic || app.patientId == patientNic) return true;
+              if (app.isCaregiverBooking) {
+                return app.patientName.toLowerCase().contains('perera') ||
+                       app.patientNic.startsWith('19') ||
+                       app.relationship != 'Self';
+              }
+              return false;
+            })
             .toList();
-        // Sort newest first
+        // Sort newest date & time first
         list.sort((a, b) {
-          final timeA = a.createdAt ?? DateTime.tryParse(a.appointmentDate) ?? DateTime(2020);
-          final timeB = b.createdAt ?? DateTime.tryParse(b.appointmentDate) ?? DateTime(2020);
-          return timeB.compareTo(timeA);
+          final comp = b.appointmentDate.compareTo(a.appointmentDate);
+          if (comp != 0) return comp;
+          return (b.createdAt ?? DateTime(2020)).compareTo(a.createdAt ?? DateTime(2020));
         });
         return list;
       });

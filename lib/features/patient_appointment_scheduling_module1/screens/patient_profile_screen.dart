@@ -1242,6 +1242,65 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
     );
   }
 
+  Widget _buildAppointmentStatusBadge(AppointmentModel app, bool isUpcoming) {
+    Color bg;
+    Color fg;
+    String label;
+
+    final status = app.status.toLowerCase().trim();
+    if (status == 'confirmed') {
+      if (isUpcoming) {
+        bg = AppColors.statusGreen.withValues(alpha: 0.12);
+        fg = AppColors.statusGreen;
+        label = 'CONFIRMED';
+      } else {
+        bg = Colors.blueGrey.withValues(alpha: 0.12);
+        fg = Colors.blueGrey;
+        label = 'COMPLETED';
+      }
+    } else if (status == 'rescheduled') {
+      bg = AppColors.statusOrange.withValues(alpha: 0.15);
+      fg = AppColors.statusOrange;
+      label = 'RESCHEDULED';
+    } else if (status == 'waiting') {
+      bg = AppColors.statusGreen.withValues(alpha: 0.12);
+      fg = AppColors.statusGreen;
+      label = 'WAITING';
+    } else if (status == 'called') {
+      bg = Colors.blue.withValues(alpha: 0.12);
+      fg = Colors.blue;
+      label = 'CALLED';
+    } else if (status == 'cancelled') {
+      bg = AppColors.error.withValues(alpha: 0.12);
+      fg = AppColors.error;
+      label = 'CANCELLED';
+    } else if (status == 'missed') {
+      bg = Colors.deepOrange.withValues(alpha: 0.12);
+      fg = Colors.deepOrange;
+      label = 'MISSED';
+    } else {
+      bg = Colors.blueGrey.withValues(alpha: 0.12);
+      fg = Colors.blueGrey;
+      label = 'COMPLETED';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: fg,
+        ),
+      ),
+    );
+  }
+
   // Live StreamBuilder for My Booked Appointments
   Widget _buildAppointmentsSection() {
     return Container(
@@ -1282,13 +1341,15 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
               final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
               final upcomingList = list.where((app) {
-                if (app.status == 'cancelled') return false;
-                return app.appointmentDate.compareTo(todayStr) >= 0;
+                final isFutureOrToday = app.appointmentDate.compareTo(todayStr) >= 0;
+                final isActiveStatus = app.status == 'confirmed' || app.status == 'rescheduled' || app.status == 'waiting';
+                return isFutureOrToday && isActiveStatus;
               }).toList();
 
               final pastList = list.where((app) {
-                if (app.status == 'cancelled') return true;
-                return app.appointmentDate.compareTo(todayStr) < 0;
+                final isPastDate = app.appointmentDate.compareTo(todayStr) < 0;
+                final isClosedStatus = app.status == 'completed' || app.status == 'cancelled' || app.status == 'missed' || app.status == 'called';
+                return isPastDate || isClosedStatus;
               }).toList();
 
               final displayedList = _appointmentFilter == 'upcoming' ? upcomingList : pastList;
@@ -1381,8 +1442,8 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     )
                   else
                     ...displayedList.map((app) {
-                      final isConfirmed = app.status == 'confirmed';
-                      final isUpcoming = isConfirmed && app.appointmentDate.compareTo(todayStr) >= 0;
+                      final isUpcoming = (app.status == 'confirmed' || app.status == 'rescheduled' || app.status == 'waiting') &&
+                          app.appointmentDate.compareTo(todayStr) >= 0;
 
                       return Container(
                         margin: const EdgeInsets.only(bottom: 10),
@@ -1431,29 +1492,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                                     ),
                                     Row(
                                       children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                          decoration: BoxDecoration(
-                                            color: isUpcoming
-                                                ? AppColors.statusGreen.withValues(alpha: 0.12)
-                                                : (app.status == 'cancelled'
-                                                    ? AppColors.error.withValues(alpha: 0.12)
-                                                    : Colors.blueGrey.withValues(alpha: 0.12)),
-                                            borderRadius: BorderRadius.circular(6),
-                                          ),
-                                          child: Text(
-                                            isUpcoming
-                                                ? 'ACTIVE'
-                                                : (app.status == 'cancelled' ? 'CANCELLED' : 'COMPLETED'),
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
-                                              color: isUpcoming
-                                                  ? AppColors.statusGreen
-                                                  : (app.status == 'cancelled' ? AppColors.error : Colors.blueGrey),
-                                            ),
-                                          ),
-                                        ),
+                                        _buildAppointmentStatusBadge(app, isUpcoming),
                                         const SizedBox(width: 4),
                                         Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.bodyText),
                                       ],
