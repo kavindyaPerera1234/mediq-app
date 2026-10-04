@@ -33,6 +33,7 @@ class MediQApp extends StatelessWidget {
         AppAccessibility.isHighContrastMode,
         AppAccessibility.isSimplifiedNav,
         AppAccessibility.isVoiceGuidance,
+        AppAccessibility.currentLanguage,
       ]),
       builder: (context, _) {
         final isLargeText = AppAccessibility.isLargeTextMode.value;

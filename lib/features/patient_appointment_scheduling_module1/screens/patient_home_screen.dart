@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_accessibility.dart';
+import '../../../core/constants/app_translations.dart';
 import '../backend/backend.dart';
 import 'senior_mode_settings_screen.dart';
 
@@ -18,9 +19,14 @@ class PatientHomeScreen extends StatelessWidget {
     const patientNic = '200164801234';
     final appointmentService = AppointmentService();
 
-    return ValueListenableBuilder<bool>(
-      valueListenable: AppAccessibility.isHighContrastMode,
-      builder: (context, isDark, _) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([
+        AppAccessibility.isHighContrastMode,
+        AppAccessibility.currentLanguage,
+      ]),
+      builder: (context, _) {
+        final isDark = AppAccessibility.isHighContrastMode.value;
+
         return Scaffold(
           backgroundColor: AppColors.pageBg,
           appBar: AppBar(
@@ -55,7 +61,7 @@ class PatientHomeScreen extends StatelessWidget {
             actions: [
               IconButton(
                 icon: const Icon(Icons.accessibility_new_rounded, color: Colors.white),
-                tooltip: 'Senior & Accessibility Options',
+                tooltip: AppTranslations.tr('accessibility'),
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -271,7 +277,7 @@ class PatientHomeScreen extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
-                child: const Text('View Pass', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                child: Text(AppTranslations.tr('viewTokenPass'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -324,7 +330,7 @@ class PatientHomeScreen extends StatelessWidget {
               elevation: 0,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            child: const Text('Book Now', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+            child: Text(AppTranslations.tr('bookNewOpd'), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -341,28 +347,28 @@ class PatientHomeScreen extends StatelessWidget {
       childAspectRatio: 1.28,
       children: [
         _buildActionCard(
-          title: 'Book OPD Slot',
+          title: AppTranslations.tr('bookNewOpd'),
           subtitle: 'Choose hospital & time',
           icon: Icons.calendar_month_rounded,
           color: AppColors.accentColor,
           onTap: () => onNavigateTab(1),
         ),
         _buildActionCard(
-          title: 'Live Queue',
+          title: AppTranslations.tr('trackLiveQueue'),
           subtitle: 'Real-time room tracking',
           icon: Icons.format_list_numbered_rounded,
           color: AppColors.statusGreen,
           onTap: () => onNavigateTab(2),
         ),
         _buildActionCard(
-          title: 'SMS Alerts',
+          title: AppTranslations.tr('navAlerts'),
           subtitle: 'Token notifications',
           icon: Icons.sms_outlined,
           color: AppColors.statusOrange,
           onTap: () => onNavigateTab(3),
         ),
         _buildActionCard(
-          title: 'My Profile & Dependents',
+          title: AppTranslations.tr('patientDependents'),
           subtitle: 'Caregiver management',
           icon: Icons.person_pin_rounded,
           color: Colors.purple.shade400,
@@ -489,7 +495,7 @@ class PatientHomeScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Senior & Accessibility Mode',
+                  AppTranslations.tr('accessibility'),
                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.headingText),
                 ),
                 Text(

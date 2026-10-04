@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_accessibility.dart';
+import '../../../core/constants/app_translations.dart';
 import '../../../core/services/voice_guidance_service.dart';
 import '../backend/backend.dart';
 
@@ -94,94 +95,104 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = _highContrastMode;
+    return AnimatedBuilder(
+      animation: Listenable.merge([
+        AppAccessibility.isHighContrastMode,
+        AppAccessibility.currentLanguage,
+      ]),
+      builder: (context, _) {
+        final isDark = _highContrastMode;
 
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0B132B) : AppColors.background,
-      appBar: AppBar(
-        title: const Text(
-          'Accessibility & Senior Mode',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        backgroundColor: isDark ? const Color(0xFF1C2541) : AppColors.primary,
-        foregroundColor: Colors.white,
-        centerTitle: true,
-        elevation: isDark ? 1 : 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 1. Header Title & Subtitle
-                Text(
-                  'Accessibility Settings',
-                  style: GoogleFonts.inter(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Senior & Accessibility options apply instantly across the whole application',
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    color: isDark ? const Color(0xFF94A3B8) : AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 20),
+        return Scaffold(
+          backgroundColor: isDark ? const Color(0xFF0B132B) : AppColors.background,
+          appBar: AppBar(
+            title: Text(
+              AppTranslations.tr('accessibility'),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+            backgroundColor: isDark ? const Color(0xFF1C2541) : AppColors.primary,
+            foregroundColor: Colors.white,
+            centerTitle: true,
+            elevation: isDark ? 1 : 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
+          body: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 1. Header Title & Subtitle
+                    Text(
+                      AppTranslations.tr('accessibility'),
+                      style: GoogleFonts.inter(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Senior & Accessibility options apply instantly across the whole application',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: isDark ? const Color(0xFF94A3B8) : AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
 
-                // 2. Toggle 1: Large Text Mode
-                _buildToggleCard(
-                  title: 'Large Text Mode',
-                  subtitle: 'Enlarges all labels, tokens & hospital text',
-                  icon: Icons.text_fields_outlined,
-                  isActive: _largeTextMode,
-                  onChanged: (val) => _updateSetting(largeText: val),
-                  isDark: isDark,
-                ),
-                const SizedBox(height: 12),
+                    // 2. Trilingual Language Selector Card
+                    _buildLanguageSelector(isDark),
+                    const SizedBox(height: 16),
 
-                // 3. Toggle 2: High Contrast Mode
-                _buildToggleCard(
-                  title: 'High Contrast Mode',
-                  subtitle: 'Enhanced contrast with soft dark slate theme',
-                  icon: Icons.contrast_outlined,
-                  isActive: _highContrastMode,
-                  onChanged: (val) => _updateSetting(highContrast: val),
-                  isDark: isDark,
-                ),
-                const SizedBox(height: 12),
+                    // 3. Toggle 1: Large Text Mode
+                    _buildToggleCard(
+                      title: AppTranslations.tr('largeText'),
+                      subtitle: AppTranslations.tr('largeTextDesc'),
+                      icon: Icons.text_fields_outlined,
+                      isActive: _largeTextMode,
+                      onChanged: (val) => _updateSetting(largeText: val),
+                      isDark: isDark,
+                    ),
+                    const SizedBox(height: 12),
 
-                // 4. Toggle 3: Simplified Navigation
-                _buildToggleCard(
-                  title: 'Simplified Navigation',
-                  subtitle: 'Converts bottom navigation into 3 large senior buttons',
-                  icon: Icons.grid_view_outlined,
-                  isActive: _simplifiedNav,
-                  onChanged: (val) => _updateSetting(simplified: val),
-                  isDark: isDark,
-                ),
-                const SizedBox(height: 12),
+                    // 4. Toggle 2: High Contrast Mode
+                    _buildToggleCard(
+                      title: AppTranslations.tr('highContrast'),
+                      subtitle: AppTranslations.tr('highContrastDesc'),
+                      icon: Icons.contrast_outlined,
+                      isActive: _highContrastMode,
+                      onChanged: (val) => _updateSetting(highContrast: val),
+                      isDark: isDark,
+                    ),
+                    const SizedBox(height: 12),
 
-                // 5. Toggle 4: Voice Guidance
-                _buildToggleCard(
-                  title: 'Voice Guidance',
-                  subtitle: 'Announces booked tokens & directions aloud with speech',
-                  icon: Icons.volume_up_outlined,
-                  isActive: _voiceGuidance,
-                  onChanged: (val) => _updateSetting(voice: val),
-                  isDark: isDark,
-                ),
-                const SizedBox(height: 20),
+                    // 5. Toggle 3: Simplified Navigation
+                    _buildToggleCard(
+                      title: AppTranslations.tr('simplifiedNav'),
+                      subtitle: AppTranslations.tr('simplifiedNavDesc'),
+                      icon: Icons.grid_view_outlined,
+                      isActive: _simplifiedNav,
+                      onChanged: (val) => _updateSetting(simplified: val),
+                      isDark: isDark,
+                    ),
+                    const SizedBox(height: 12),
+
+                    // 6. Toggle 4: Voice Guidance
+                    _buildToggleCard(
+                      title: AppTranslations.tr('voiceGuidance'),
+                      subtitle: AppTranslations.tr('voiceGuidanceDesc'),
+                      icon: Icons.volume_up_outlined,
+                      isActive: _voiceGuidance,
+                      onChanged: (val) => _updateSetting(voice: val),
+                      isDark: isDark,
+                    ),
+                    const SizedBox(height: 20),
 
                 // 6. Live Preview Comparison Box
                 Container(
@@ -307,6 +318,142 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
             ),
           ),
         ),
+      ),
+    );
+  },
+);
+  }
+
+  Widget _buildLanguageSelector(bool isDark) {
+    final currentLang = AppAccessibility.currentLanguage.value;
+    final options = [
+      {'code': 'en', 'label': 'English', 'flag': '🇬🇧'},
+      {'code': 'si', 'label': 'සිංහල', 'flag': '🇱🇰'},
+      {'code': 'ta', 'label': 'தமிழ்', 'flag': '🇱🇰'},
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1C2541) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? const Color(0xFF38BDF8) : AppColors.primaryLight,
+          width: 1.5,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF243356) : AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.language_rounded,
+                  color: isDark ? const Color(0xFF38BDF8) : AppColors.primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AppTranslations.tr('language'),
+                      style: GoogleFonts.inter(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : AppColors.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      AppTranslations.tr('selectLanguage'),
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: isDark ? const Color(0xFF94A3B8) : AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: options.map((opt) {
+              final isSelected = currentLang == opt['code'];
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                  child: InkWell(
+                    onTap: () {
+                      AppAccessibility.setLanguage(opt['code']!);
+                      if (opt['code'] == 'si') {
+                        VoiceGuidanceService.speak('භාෂාව සිංහල ලෙස වෙනස් කරන ලදී', context: context);
+                      } else if (opt['code'] == 'ta') {
+                        VoiceGuidanceService.speak('மொழி தமிழில் மாற்றப்பட்டது', context: context);
+                      } else {
+                        VoiceGuidanceService.speak('Language switched to English', context: context);
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? (isDark ? const Color(0xFF38BDF8) : AppColors.primary)
+                            : (isDark ? const Color(0xFF0B132B) : const Color(0xFFF1F5F9)),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isSelected
+                              ? (isDark ? const Color(0xFF38BDF8) : AppColors.primary)
+                              : (isDark ? const Color(0xFF3A506B) : AppColors.border),
+                          width: isSelected ? 2 : 1,
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            opt['flag']!,
+                            style: const TextStyle(fontSize: 18),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            opt['label']!,
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                              color: isSelected
+                                  ? Colors.white
+                                  : (isDark ? const Color(0xFF94A3B8) : AppColors.textPrimary),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
       ),
     );
   }

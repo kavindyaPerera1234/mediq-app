@@ -14,6 +14,16 @@ class AppAccessibility {
   /// Controls spoken voice announcements across the app
   static final ValueNotifier<bool> isVoiceGuidance = ValueNotifier<bool>(false);
 
+  /// Controls active application language ('en' = English, 'si' = Sinhala, 'ta' = Tamil)
+  static final ValueNotifier<String> currentLanguage = ValueNotifier<String>('en');
+
+  /// Updates active language globally across the entire app
+  static void setLanguage(String lang) {
+    if (['en', 'si', 'ta'].contains(lang) && currentLanguage.value != lang) {
+      currentLanguage.value = lang;
+    }
+  }
+
   /// Updates large text mode globally
   static void setLargeTextMode(bool enabled) {
     if (isLargeTextMode.value != enabled) {

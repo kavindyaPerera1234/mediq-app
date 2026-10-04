@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_accessibility.dart';
+import '../constants/app_translations.dart';
 
 class PatientBottomNavBar extends StatelessWidget {
   final int currentIndex;
@@ -19,6 +20,7 @@ class PatientBottomNavBar extends StatelessWidget {
       animation: Listenable.merge([
         AppAccessibility.isSimplifiedNav,
         AppAccessibility.isHighContrastMode,
+        AppAccessibility.currentLanguage,
       ]),
       builder: (context, _) {
         final isSimplified = AppAccessibility.isSimplifiedNav.value;
@@ -53,7 +55,7 @@ class PatientBottomNavBar extends StatelessWidget {
                       context: context,
                       index: 0,
                       icon: Icons.home_rounded,
-                      label: 'Home',
+                      label: AppTranslations.tr('navHome'),
                       isSelected: currentIndex == 0,
                       isDark: isDark,
                     ),
@@ -61,7 +63,7 @@ class PatientBottomNavBar extends StatelessWidget {
                       context: context,
                       index: 1,
                       icon: Icons.calendar_month_rounded,
-                      label: 'Book OPD',
+                      label: AppTranslations.tr('navAppointments'),
                       isSelected: currentIndex == 1,
                       isDark: isDark,
                     ),
@@ -69,7 +71,7 @@ class PatientBottomNavBar extends StatelessWidget {
                       context: context,
                       index: 4,
                       icon: Icons.person_rounded,
-                      label: 'Profile',
+                      label: AppTranslations.tr('navProfile'),
                       isSelected: currentIndex == 4,
                       isDark: isDark,
                     ),
@@ -100,7 +102,7 @@ class PatientBottomNavBar extends StatelessWidget {
                     index: 0,
                     icon: Icons.home_outlined,
                     activeIcon: Icons.home,
-                    label: 'Home',
+                    label: AppTranslations.tr('navHome'),
                     isDark: isDark,
                   ),
 
@@ -110,7 +112,7 @@ class PatientBottomNavBar extends StatelessWidget {
                     index: 1,
                     icon: Icons.calendar_today_outlined,
                     activeIcon: Icons.calendar_today,
-                    label: 'Appointments',
+                    label: AppTranslations.tr('navAppointments'),
                     isDark: isDark,
                   ),
 
@@ -120,7 +122,7 @@ class PatientBottomNavBar extends StatelessWidget {
                     index: 2,
                     icon: Icons.format_list_bulleted_outlined,
                     activeIcon: Icons.format_list_bulleted,
-                    label: 'Queue',
+                    label: AppTranslations.tr('navQueue'),
                     isDark: isDark,
                   ),
 
@@ -130,7 +132,7 @@ class PatientBottomNavBar extends StatelessWidget {
                     index: 3,
                     icon: Icons.notifications_none_outlined,
                     activeIcon: Icons.notifications,
-                    label: 'Alerts',
+                    label: AppTranslations.tr('navAlerts'),
                     isDark: isDark,
                   ),
 
@@ -138,9 +140,9 @@ class PatientBottomNavBar extends StatelessWidget {
                   _buildNavItem(
                     context: context,
                     index: 4,
-                    icon: Icons.person_outline,
-                    activeIcon: Icons.person,
-                    label: 'Profile',
+                    icon: Icons.person_outline_rounded,
+                    activeIcon: Icons.person_rounded,
+                    label: AppTranslations.tr('navProfile'),
                     isDark: isDark,
                   ),
                 ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_accessibility.dart';
+import '../../../core/constants/app_translations.dart';
 import '../../../core/services/voice_guidance_service.dart';
 import '../backend/backend.dart';
 import 'senior_mode_settings_screen.dart';
@@ -623,9 +624,14 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: AppAccessibility.isHighContrastMode,
-      builder: (context, isDark, _) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([
+        AppAccessibility.isHighContrastMode,
+        AppAccessibility.currentLanguage,
+      ]),
+      builder: (context, _) {
+        final isDark = AppAccessibility.isHighContrastMode.value;
+
         if (_isLoading) {
           return Scaffold(
             backgroundColor: AppColors.pageBg,
@@ -636,9 +642,9 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
         return Scaffold(
           backgroundColor: AppColors.pageBg,
           appBar: AppBar(
-            title: const Text(
-              'Patient Profile',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            title: Text(
+              AppTranslations.tr('patientProfile'),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
             backgroundColor: AppColors.appBarBg,
             foregroundColor: Colors.white,
@@ -647,7 +653,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
             actions: [
               IconButton(
                 icon: const Icon(Icons.settings_outlined),
-                tooltip: 'Settings & Accessibility',
+                tooltip: AppTranslations.tr('accessibility'),
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -657,7 +663,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
               ),
               IconButton(
                 icon: const Icon(Icons.edit_outlined),
-                tooltip: 'Edit Profile',
+                tooltip: AppTranslations.tr('editProfile'),
                 onPressed: _showEditProfileDialog,
               ),
             ],
@@ -674,6 +680,10 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     _buildProfileHeaderCard(),
                     const SizedBox(height: 16),
 
+                    // 1.5 Quick Trilingual Language Selector Card
+                    _buildLanguageSelectorCard(isDark),
+                    const SizedBox(height: 16),
+
                     // 2. Dependents / Caregiver Patients (Live Stream)
                     _buildCaregiversSection(),
                     const SizedBox(height: 16),
@@ -688,6 +698,94 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildLanguageSelectorCard(bool isDark) {
+    final currentLang = AppAccessibility.currentLanguage.value;
+    final options = [
+      {'code': 'en', 'label': 'English', 'flag': '🇬🇧'},
+      {'code': 'si', 'label': 'සිංහල', 'flag': '🇱🇰'},
+      {'code': 'ta', 'label': 'தமிழ்', 'flag': '🇱🇰'},
+    ];
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.cardSurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.language_rounded, color: AppColors.accentColor, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                AppTranslations.tr('language'),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.headingText),
+              ),
+              const Spacer(),
+              Text(
+                AppTranslations.tr('selectLanguage'),
+                style: TextStyle(fontSize: 11, color: AppColors.bodyText),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: options.map((opt) {
+              final isSelected = currentLang == opt['code'];
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                  child: InkWell(
+                    onTap: () {
+                      AppAccessibility.setLanguage(opt['code']!);
+                      if (opt['code'] == 'si') {
+                        VoiceGuidanceService.speak('භාෂාව සිංහල ලෙස වෙනස් කරන ලදී', context: context);
+                      } else if (opt['code'] == 'ta') {
+                        VoiceGuidanceService.speak('மொழி தமிழில் மாற்றப்பட்டது', context: context);
+                      } else {
+                        VoiceGuidanceService.speak('Language switched to English', context: context);
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isSelected ? AppColors.accentColor : AppColors.innerCardBg,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isSelected ? AppColors.accentColor : AppColors.cardBorder,
+                          width: isSelected ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(opt['flag']!, style: const TextStyle(fontSize: 14)),
+                          const SizedBox(width: 6),
+                          Text(
+                            opt['label']!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                              color: isSelected ? Colors.white : AppColors.headingText,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
     );
   }
 
@@ -921,14 +1019,14 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                   Icon(Icons.family_restroom_rounded, color: AppColors.accentColor, size: 20),
                   const SizedBox(width: 8),
                   Text(
-                    'Family Dependents',
+                    AppTranslations.tr('patientDependents'),
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.headingText),
                   ),
                 ],
               ),
               TextButton.icon(
                 icon: Icon(Icons.add_rounded, size: 16, color: AppColors.accentColor),
-                label: Text('Add Member', style: TextStyle(fontSize: 12, color: AppColors.accentColor)),
+                label: Text(AppTranslations.tr('addDependent'), style: TextStyle(fontSize: 12, color: AppColors.accentColor)),
                 onPressed: _showAddCaregiverDialog,
               ),
             ],
@@ -1141,7 +1239,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                               ),
                               child: Center(
                                 child: Text(
-                                  'Upcoming Active (${upcomingList.length})',
+                                  '${AppTranslations.tr('upcomingAppointments')} (${upcomingList.length})',
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
@@ -1167,7 +1265,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                               ),
                               child: Center(
                                 child: Text(
-                                  'Past History (${pastList.length})',
+                                  '${AppTranslations.tr('pastAppointments')} (${pastList.length})',
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
