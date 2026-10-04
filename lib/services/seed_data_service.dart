@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../core/constants/app_constants.dart';
 
 class SeedDataService {
@@ -175,8 +176,59 @@ class SeedDataService {
         await _db.collection(AppConstants.queueEntriesCollection).doc('QE-${p['id']}').set(entryMap);
       }
 
+      // 6. Initial Sample Queue Event (so queue_events collection appears in Firestore)
+      await _db.collection(AppConstants.queueEventsCollection).doc('EVT-pat-018').set({
+        'eventId': 'EVT-pat-018',
+        'queueSessionId': dynamicSessionId,
+        'queueEntryId': 'QE-pat-018',
+        'appointmentId': 'APT-pat-018',
+        'performedBy': 'doc-silva-uid',
+        'actionType': 'completed',
+        'eventType': 'completed',
+        'previousStatus': 'called',
+        'newStatus': 'completed',
+        'reason': 'Routine OPD Consultation Completed',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      // 7. Initial Sample Consultation (so consultations collection appears in Firestore)
+      await _db.collection(AppConstants.consultationsCollection).doc('CNS-pat-018').set({
+        'consultationId': 'CNS-pat-018',
+        'appointmentId': 'APT-pat-018',
+        'queueEntryId': 'QE-pat-018',
+        'patientId': 'pat-018',
+        'staffId': 'doc-silva-uid',
+        'doctorId': 'doc-silva-uid',
+        'hospitalId': hospitalId,
+        'departmentId': departmentId,
+        'notes': 'Routine OPD Examination completed. Patient prescribed standard regimen.',
+        'status': 'completed',
+        'startedAt': FieldValue.serverTimestamp(),
+        'completedAt': FieldValue.serverTimestamp(),
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // 8. Initial Sample Delay Update (so delay_updates collection appears in Firestore)
+      await _db.collection(AppConstants.delayUpdatesCollection).doc('DLY-001').set({
+        'delayUpdateId': 'DLY-001',
+        'queueSessionId': dynamicSessionId,
+        'hospitalId': hospitalId,
+        'departmentId': departmentId,
+        'reason': 'OPD Morning Setup',
+        'delayReason': 'OPD Morning Setup',
+        'delayMinutes': 0,
+        'additionalMinutes': 0,
+        'createdBy': 'doc-silva-uid',
+        'performedBy': 'doc-silva-uid',
+        'isActive': false,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      debugPrint('Cloud Firestore: All 8 MediQ Module 4 collections successfully created and populated.');
       return true;
     } catch (e) {
+      debugPrint('Cloud Firestore Seeding Error: $e');
       return false;
     }
   }
