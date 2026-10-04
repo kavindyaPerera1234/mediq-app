@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_accessibility.dart';
 import '../backend/backend.dart';
@@ -55,35 +56,36 @@ class TimeSlotSelectionScreen extends StatefulWidget {
 
 class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
   String _selectedSlotId = 'slot_1';
+  Map<String, int> _realBookedCounts = {};
 
-  final List<OpdTimeSlot> _slots = const [
+  final List<OpdTimeSlot> _baseSlots = const [
     // Morning Slots
     OpdTimeSlot(
       id: 'slot_1',
       displayTime: '08:00 - 09:00 AM',
       session: 'morning',
-      bookedCount: 18,
+      bookedCount: 0,
       maxCapacity: 25,
     ),
     OpdTimeSlot(
       id: 'slot_2',
       displayTime: '09:00 - 10:00 AM',
       session: 'morning',
-      bookedCount: 25,
+      bookedCount: 0,
       maxCapacity: 25,
     ),
     OpdTimeSlot(
       id: 'slot_3',
       displayTime: '10:00 - 11:00 AM',
       session: 'morning',
-      bookedCount: 14,
+      bookedCount: 0,
       maxCapacity: 25,
     ),
     OpdTimeSlot(
       id: 'slot_4',
       displayTime: '11:00 - 12:00 PM',
       session: 'morning',
-      bookedCount: 21,
+      bookedCount: 0,
       maxCapacity: 25,
     ),
 
@@ -92,17 +94,67 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
       id: 'slot_5',
       displayTime: '12:00 - 01:00 PM',
       session: 'afternoon',
-      bookedCount: 8,
+      bookedCount: 0,
       maxCapacity: 25,
     ),
     OpdTimeSlot(
       id: 'slot_6',
       displayTime: '01:00 - 02:00 PM',
       session: 'afternoon',
-      bookedCount: 3,
+      bookedCount: 0,
       maxCapacity: 25,
     ),
   ];
+
+  List<OpdTimeSlot> get _slots {
+    return _baseSlots.map((base) {
+      final count = _realBookedCounts[base.displayTime] ?? 0;
+      return OpdTimeSlot(
+        id: base.id,
+        displayTime: base.displayTime,
+        session: base.session,
+        bookedCount: count,
+        maxCapacity: base.maxCapacity,
+        isClosed: base.isClosed,
+      );
+    }).toList();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchRealSlotBookings();
+  }
+
+  Future<void> _fetchRealSlotBookings() async {
+    try {
+      final formattedDate = DateFormat('yyyy-MM-dd').format(widget.selectedDate);
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('appointments')
+          .where('departmentId', isEqualTo: widget.clinic.id)
+          .where('appointmentDate', isEqualTo: formattedDate)
+          .get()
+          .timeout(const Duration(seconds: 4));
+
+      final Map<String, int> counts = {};
+      for (final doc in querySnapshot.docs) {
+        final data = doc.data();
+        if (data['status'] == 'cancelled') continue;
+        final slotTime = data['timeSlot'] as String? ?? '';
+        if (slotTime.isNotEmpty) {
+          counts[slotTime] = (counts[slotTime] ?? 0) + 1;
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _realBookedCounts = counts;
+        });
+      }
+    } catch (e) {
+      debugPrint('TimeSlotSelectionScreen: fetchRealSlotBookings notice: $e');
+    }
+  }
 
   OpdTimeSlot get _currentSelectedSlot {
     return _slots.firstWhere(
