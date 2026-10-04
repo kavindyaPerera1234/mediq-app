@@ -54,13 +54,17 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
       }
     }
 
+    final activeProfile = ProfileService.activeProfileNotifier.value;
+    final selfName = activeProfile.fullName.isNotEmpty ? activeProfile.fullName : 'Sandeepani Perera';
+    final selfNic = activeProfile.nic.isNotEmpty ? activeProfile.nic : '200164801234';
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => HospitalSelectionScreen(
           isCaregiverBooking: _bookingMode == 'someone_else',
-          patientName: _bookingMode == 'someone_else' ? _nameController.text.trim() : 'Sandeepani Perera',
-          patientNic: _bookingMode == 'someone_else' ? _nicController.text.trim() : '200164801234',
+          patientName: _bookingMode == 'someone_else' ? _nameController.text.trim() : selfName,
+          patientNic: _bookingMode == 'someone_else' ? _nicController.text.trim() : selfNic,
           relationship: _bookingMode == 'someone_else' ? (_selectedRelationship ?? 'Other') : 'Self',
           priority: _bookingMode == 'someone_else' ? _selectedPriority : 'normal',
         ),
@@ -436,11 +440,24 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
             ],
           ),
           Divider(height: 20, color: AppColors.cardBorder),
-          _buildInfoRow('Full Name:', 'Sandeepani Perera'),
-          const SizedBox(height: 10),
-          _buildInfoRow('National ID (NIC):', '200164801234'),
-          const SizedBox(height: 10),
-          _buildInfoRow('Mobile Phone:', '+94 77 123 4567'),
+          ValueListenableBuilder<PatientProfileModel>(
+            valueListenable: ProfileService.activeProfileNotifier,
+            builder: (context, activeProfile, _) {
+              final selfName = activeProfile.fullName.isNotEmpty ? activeProfile.fullName : 'Sandeepani Perera';
+              final selfNic = activeProfile.nic.isNotEmpty ? activeProfile.nic : '200164801234';
+              final selfPhone = activeProfile.phone.isNotEmpty ? activeProfile.phone : '+94 77 123 4567';
+
+              return Column(
+                children: [
+                  _buildInfoRow('Full Name:', selfName),
+                  const SizedBox(height: 10),
+                  _buildInfoRow('National ID (NIC):', selfNic),
+                  const SizedBox(height: 10),
+                  _buildInfoRow('Mobile Phone:', selfPhone),
+                ],
+              );
+            },
+          ),
           const SizedBox(height: 14),
           Container(
             padding: const EdgeInsets.all(12),

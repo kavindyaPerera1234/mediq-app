@@ -22,13 +22,14 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
   late PatientProfileModel _profile;
   bool _isLoading = true;
 
-  final String _currentUserId = 'user_sandeepani_001';
-  final String _currentPatientNic = '200164801234';
+  String get _currentUserId => _profile.patientId;
+  String get _currentPatientNic => _profile.nic;
   String _appointmentFilter = 'upcoming'; // 'upcoming' or 'past'
 
   @override
   void initState() {
     super.initState();
+    _profile = ProfileService.activeProfileNotifier.value;
     _loadProfile();
   }
 
@@ -666,6 +667,11 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                 tooltip: AppTranslations.tr('editProfile'),
                 onPressed: _showEditProfileDialog,
               ),
+              IconButton(
+                icon: const Icon(Icons.logout_rounded),
+                tooltip: 'Logout',
+                onPressed: () => _confirmLogout(context),
+              ),
             ],
           ),
           body: Center(
@@ -690,6 +696,10 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
 
                     // 3. My Booked Appointments History (Live Stream)
                     _buildAppointmentsSection(),
+                    const SizedBox(height: 20),
+
+                    // 4. Logout Section
+                    _buildLogoutCard(context),
                     const SizedBox(height: 24),
                   ],
                 ),
@@ -698,6 +708,78 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
           ),
         );
       },
+    );
+  }
+
+  Future<void> _confirmLogout(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Log Out'),
+        content: const Text('Are you sure you want to sign out of MediQ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.statusRed,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Log Out'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && context.mounted) {
+      await _profileService.signOut();
+      if (!context.mounted) return;
+      setState(() {
+        _profile = ProfileService.activeProfileNotifier.value;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Successfully signed out of MediQ.'),
+          backgroundColor: AppColors.statusGreen,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Widget _buildLogoutCard(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cardSurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: Column(
+        children: [
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.statusRed,
+                side: BorderSide(color: AppColors.statusRed.withValues(alpha: 0.5)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              icon: const Icon(Icons.logout_rounded, color: AppColors.statusRed),
+              label: const Text(
+                'Log Out of MediQ',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              onPressed: () => _confirmLogout(context),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

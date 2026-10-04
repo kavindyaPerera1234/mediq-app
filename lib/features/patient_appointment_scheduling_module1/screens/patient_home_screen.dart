@@ -16,16 +16,17 @@ class PatientHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const patientNic = '200164801234';
-    final appointmentService = AppointmentService();
-
     return AnimatedBuilder(
       animation: Listenable.merge([
         AppAccessibility.isHighContrastMode,
         AppAccessibility.currentLanguage,
+        ProfileService.activeProfileNotifier,
       ]),
       builder: (context, _) {
         final isDark = AppAccessibility.isHighContrastMode.value;
+        final profile = ProfileService.activeProfileNotifier.value;
+        final patientNic = profile.nic;
+        final appointmentService = AppointmentService();
 
         return Scaffold(
           backgroundColor: AppColors.pageBg,
@@ -68,6 +69,11 @@ class PatientHomeScreen extends StatelessWidget {
                     MaterialPageRoute(builder: (context) => const SeniorModeSettingsScreen()),
                   );
                 },
+              ),
+              IconButton(
+                icon: const Icon(Icons.logout_rounded, color: Colors.white),
+                tooltip: 'Logout',
+                onPressed: () => _confirmLogout(context),
               ),
             ],
           ),
@@ -133,7 +139,49 @@ class PatientHomeScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _confirmLogout(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Log Out'),
+        content: const Text('Are you sure you want to sign out of MediQ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.statusRed,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Log Out'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && context.mounted) {
+      await ProfileService().signOut();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Successfully signed out of MediQ.'),
+          backgroundColor: AppColors.statusGreen,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
   Widget _buildWelcomeHeader() {
+    final profile = ProfileService.activeProfileNotifier.value;
+    final fullName = profile.fullName;
+    final firstName = fullName.trim().split(' ').first;
+    final initial = firstName.isNotEmpty ? firstName[0].toUpperCase() : 'S';
+    final patientNic = profile.nic;
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -153,7 +201,7 @@ class PatientHomeScreen extends StatelessWidget {
           CircleAvatar(
             radius: 26,
             backgroundColor: AppColors.chipBg,
-            child: Text('S', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.accentColor)),
+            child: Text(initial, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.accentColor)),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -161,12 +209,12 @@ class PatientHomeScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Ayubowan, Sandeepani 🌿',
+                  'Ayubowan, $firstName 🌿',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.headingText),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'NIC: 200164801234 • Blood: B+',
+                  'NIC: $patientNic • Blood: ${profile.bloodGroup}',
                   style: TextStyle(fontSize: 12, color: AppColors.bodyText),
                 ),
               ],

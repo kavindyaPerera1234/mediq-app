@@ -10,21 +10,33 @@ class ProfileService {
 
   CollectionReference get _profilesRef => _firestore.collection('patient_profiles');
 
+  /// Reactive active profile notifier accessible across Module 1 screens
+  static final ValueNotifier<PatientProfileModel> activeProfileNotifier =
+      ValueNotifier<PatientProfileModel>(PatientProfileModel.defaultProfile());
+
+  /// Sign out current patient and reset active profile
+  Future<void> signOut() async {
+    activeProfileNotifier.value = PatientProfileModel.defaultProfile();
+  }
+
   /// Fetch profile from Firestore with local fallback
   Future<PatientProfileModel> getPatientProfile(String patientNic) async {
     try {
       final doc = await _profilesRef.doc(patientNic).get().timeout(const Duration(seconds: 3));
       if (doc.exists) {
-        return PatientProfileModel.fromFirestore(doc);
+        final profile = PatientProfileModel.fromFirestore(doc);
+        activeProfileNotifier.value = profile;
+        return profile;
       }
     } catch (e) {
       debugPrint('ProfileService: getPatientProfile fallback: $e');
     }
-    return PatientProfileModel.defaultProfile();
+    return activeProfileNotifier.value;
   }
 
   /// Update or save patient profile
   Future<bool> savePatientProfile(PatientProfileModel profile) async {
+    activeProfileNotifier.value = profile;
     try {
       await _profilesRef
           .doc(profile.nic)
