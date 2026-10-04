@@ -25,6 +25,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
   String get _currentUserId => _profile.patientId;
   String get _currentPatientNic => _profile.nic;
   String _appointmentFilter = 'upcoming'; // 'upcoming' or 'past'
+  int _selectedProfileTab = 0; // 0: Appointments, 1: Family Dependents, 2: Settings & Preferences
 
   @override
   void initState() {
@@ -682,25 +683,27 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 1. Patient Profile Card
+                    // 1. Patient Profile Header Card
                     _buildProfileHeaderCard(),
                     const SizedBox(height: 16),
 
-                    // 1.5 Quick Trilingual Language Selector Card
-                    _buildLanguageSelectorCard(isDark),
+                    // 2. Clean Segmented Navigation Tabs
+                    _buildProfileTabBar(),
                     const SizedBox(height: 16),
 
-                    // 2. Dependents / Caregiver Patients (Live Stream)
-                    _buildCaregiversSection(),
-                    const SizedBox(height: 16),
-
-                    // 3. My Booked Appointments History (Live Stream)
-                    _buildAppointmentsSection(),
-                    const SizedBox(height: 20),
-
-                    // 4. Logout Section
-                    _buildLogoutCard(context),
-                    const SizedBox(height: 24),
+                    // 3. Dynamic Clean Tab Content
+                    if (_selectedProfileTab == 0)
+                      _buildAppointmentsSection()
+                    else if (_selectedProfileTab == 1)
+                      _buildCaregiversSection()
+                    else ...[
+                      _buildLanguageSelectorCard(isDark),
+                      const SizedBox(height: 14),
+                      _buildSeniorModeBannerTile(),
+                      const SizedBox(height: 16),
+                      _buildLogoutCard(context),
+                    ],
+                    const SizedBox(height: 30),
                   ],
                 ),
               ),
@@ -871,6 +874,122 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
     );
   }
 
+  Widget _buildProfileTabBar() {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppColors.innerCardBg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: Row(
+        children: [
+          _buildTabItem(0, AppTranslations.tr('navAppointments'), Icons.confirmation_number_outlined),
+          _buildTabItem(1, AppTranslations.tr('patientDependents'), Icons.family_restroom_rounded),
+          _buildTabItem(2, 'Settings', Icons.tune_rounded),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabItem(int index, String title, IconData icon) {
+    final isSelected = _selectedProfileTab == index;
+    return Expanded(
+      child: InkWell(
+        onTap: () => setState(() => _selectedProfileTab = index),
+        borderRadius: BorderRadius.circular(10),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(vertical: 9),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.accentColor : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: AppColors.accentColor.withValues(alpha: 0.25),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 15,
+                color: isSelected ? Colors.white : AppColors.bodyText,
+              ),
+              const SizedBox(width: 5),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                  color: isSelected ? Colors.white : AppColors.bodyText,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSeniorModeBannerTile() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cardSurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const SeniorModeSettingsScreen()),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.statusOrange.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.accessibility_new_rounded, color: AppColors.statusOrange, size: 22),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    AppTranslations.tr('accessibility'),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.headingText),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'High Contrast, Large Text, Trilingual & Voice Guidance',
+                    style: TextStyle(fontSize: 11, color: AppColors.bodyText),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: AppColors.bodyText, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildProfileHeaderCard() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -888,7 +1007,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
       ),
       child: Column(
         children: [
-          // Top bar inside profile card with Settings & Senior Mode button
+          // Top bar inside profile card with Verified badge & Edit Profile button
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -910,14 +1029,9 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                   ],
                 ),
               ),
-              // Prominent Settings Button at Top of Profile
+              // Clean Edit Profile Button
               InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const SeniorModeSettingsScreen()),
-                  );
-                },
+                onTap: _showEditProfileDialog,
                 borderRadius: BorderRadius.circular(20),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -929,11 +1043,11 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.settings_outlined, size: 16, color: AppColors.accentColor),
+                      Icon(Icons.edit_outlined, size: 14, color: AppColors.accentColor),
                       const SizedBox(width: 5),
                       Text(
-                        'Settings',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.accentColor),
+                        AppTranslations.tr('editProfile'),
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.accentColor),
                       ),
                     ],
                   ),
