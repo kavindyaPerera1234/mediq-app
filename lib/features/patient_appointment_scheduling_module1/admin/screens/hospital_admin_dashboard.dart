@@ -82,7 +82,7 @@ class HospitalAdminDashboard extends StatelessWidget {
                                   ),
                                 ),
                                 Text(
-                                  'Module 1: Hospital & OPD Slot Configuration',
+                                  'Hospital & OPD Slot Configuration',
                                   style: TextStyle(color: Colors.white70, fontSize: 12),
                                 ),
                               ],

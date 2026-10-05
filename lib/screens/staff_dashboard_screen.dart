@@ -101,7 +101,7 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'MODULE 4 — ALL 14 SCREENS',
+                    'CLINICAL STAFF INTERFACES',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,

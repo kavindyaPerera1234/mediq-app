@@ -106,7 +106,12 @@ class AdminDashboardScreen extends StatelessWidget {
                 StreamBuilder<QuerySnapshot>(
                   stream: firestore.collection(AppConstants.queueSessionsCollection).snapshots(),
                   builder: (context, snap) {
-                    final count = snap.hasData ? snap.data!.docs.length.toString() : '...';
+                    final count = snap.hasData
+                        ? snap.data!.docs.where((d) {
+                            final data = d.data() as Map<String, dynamic>?;
+                            return data?['status'] == 'active';
+                          }).length.toString()
+                        : '...';
                     return _dashboardCard(
                       icon: Icons.queue_outlined,
                       title: 'Active OPD Queues',
@@ -115,11 +120,17 @@ class AdminDashboardScreen extends StatelessWidget {
                   },
                 ),
 
-                // 4. Queue Entries
+                // 4. Active Queue Tokens
                 StreamBuilder<QuerySnapshot>(
                   stream: firestore.collection(AppConstants.queueEntriesCollection).snapshots(),
                   builder: (context, snap) {
-                    final count = snap.hasData ? snap.data!.docs.length.toString() : '...';
+                    final count = snap.hasData
+                        ? snap.data!.docs.where((d) {
+                            final data = d.data() as Map<String, dynamic>?;
+                            final st = data?['status'];
+                            return st == 'waiting' || st == 'called' || st == 'serving';
+                          }).length.toString()
+                        : '...';
                     return _dashboardCard(
                       icon: Icons.check_circle_outline_rounded,
                       title: 'Active Tokens',
@@ -133,7 +144,7 @@ class AdminDashboardScreen extends StatelessWidget {
             const SizedBox(height: 28),
 
             Text(
-              'Integrated Modules Management',
+              'Hospital Services Management',
               style: GoogleFonts.inter(
                 fontSize: 20,
                 fontWeight: FontWeight.w800,
@@ -142,12 +153,11 @@ class AdminDashboardScreen extends StatelessWidget {
             ),
             const SizedBox(height: 14),
 
-            // Card 1: Member 1 - Appointment & Hospital Scheduling
-            // Card 1: Member 1 - Hospital & OPD Scheduling
+            // Card 1: Hospital & OPD Scheduling
             _managementCard(
               icon: Icons.local_hospital_outlined,
               title: S.adminAppointmentsTitle,
-              subtitle: 'Manage hospitals, OPD rooms, and 25-patient slot capping (Module 1)',
+              subtitle: 'Manage hospitals, OPD rooms, and slot allocations',
               color: AppColors.primary,
               onTap: () {
                 Navigator.push(
@@ -157,11 +167,11 @@ class AdminDashboardScreen extends StatelessWidget {
               },
             ),
 
-            // Card 2: Member 2 - Token & Notifications
+            // Card 2: Notifications & SMS
             _managementCard(
               icon: Icons.notifications_none_rounded,
               title: S.adminTokensTitle,
-              subtitle: 'Configure delay alerts, SMS gateways, and reminder rules (Module 2)',
+              subtitle: 'Configure delay alerts, SMS gateways, and reminder rules',
               color: Colors.amber.shade800,
               onTap: () {
                 Navigator.push(
@@ -171,11 +181,11 @@ class AdminDashboardScreen extends StatelessWidget {
               },
             ),
 
-            // Card 3: Member 3 (Yours!) - Users & Account Access
+            // Card 3: User Access & Accounts
             _managementCard(
               icon: Icons.manage_accounts_outlined,
               title: S.adminUsersTitle,
-              subtitle: 'Manage user profiles, patient accounts, roles, and deactivations (Module 3)',
+              subtitle: 'Manage user profiles, patient accounts, and role permissions',
               color: Colors.purple,
               onTap: () {
                 Navigator.push(
@@ -185,11 +195,11 @@ class AdminDashboardScreen extends StatelessWidget {
               },
             ),
 
-            // Card 4: Member 3 (Yours!) - Live Queue Monitor & Controls
+            // Card 4: Live Queue Monitor & Controls
             _managementCard(
               icon: Icons.queue_play_next_rounded,
               title: S.adminStaffQueuesTitle,
-              subtitle: 'Real-time OPD queue monitor, clinic tokens, and delay alerts (Module 3)',
+              subtitle: 'Live OPD queue monitor, token tracking, and delay alerts',
               color: const Color(0xFF0284C7),
               onTap: () {
                 Navigator.push(
@@ -199,11 +209,11 @@ class AdminDashboardScreen extends StatelessWidget {
               },
             ),
 
-            // Card 5: Member 4 - Doctor Consultation & Clinical Portal
+            // Card 5: Doctor Consultation & Clinical Portal
             _managementCard(
               icon: Icons.medical_services_outlined,
               title: 'Doctor Consultation & Clinical Operations',
-              subtitle: 'Doctor clinical console, consultation notes, and room operations (Module 4)',
+              subtitle: 'Clinical console, consultation notes, and examination rooms',
               color: Colors.teal,
               onTap: () {
                 Navigator.push(
@@ -213,49 +223,7 @@ class AdminDashboardScreen extends StatelessWidget {
               },
             ),
 
-            const SizedBox(height: 28),
-
-            Text(
-              'System Status',
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 14),
-
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.statusGreen.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: AppColors.statusGreen.withValues(alpha: 0.30),
-                ),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.check_circle_rounded,
-                    color: AppColors.statusGreen,
-                    size: 28,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'All 4 OPD Modules Synchronized with Cloud Firestore (mediq-opd).',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            const SizedBox(height: 24),
           ],
         ),
       ),

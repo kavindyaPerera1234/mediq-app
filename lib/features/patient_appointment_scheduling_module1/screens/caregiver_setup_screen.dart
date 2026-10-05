@@ -86,7 +86,7 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
             actions: [
               IconButton(
                 icon: const Icon(Icons.admin_panel_settings_outlined),
-                tooltip: 'Module 1 Hospital Admin Console',
+                tooltip: 'Hospital Admin Console',
                 onPressed: () {
                   Navigator.push(
                     context,
