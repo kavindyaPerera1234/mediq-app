@@ -5,6 +5,9 @@ import '../../../core/constants/app_accessibility.dart';
 import '../../../core/services/voice_guidance_service.dart';
 import '../backend/backend.dart';
 import 'senior_mode_settings_screen.dart';
+import '../../../core/localization/app_strings.dart';
+import '../../auth_live_queue_module3/services/auth_service.dart';
+import '../../auth_live_queue_module3/screens/auth/welcome_entry_screen.dart';
 
 class PatientProfileScreen extends StatefulWidget {
   const PatientProfileScreen({super.key});
@@ -660,6 +663,11 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                 tooltip: 'Edit Profile',
                 onPressed: _showEditProfileDialog,
               ),
+              IconButton(
+                icon: const Icon(Icons.logout_rounded),
+                tooltip: S.btnLogout,
+                onPressed: _confirmLogout,
+              ),
             ],
           ),
           body: Center(
@@ -681,6 +689,10 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     // 3. My Booked Appointments History (Live Stream)
                     _buildAppointmentsSection(),
                     const SizedBox(height: 24),
+
+                    // 4. Log Out Button
+                    _buildLogoutSection(isDark),
+                    const SizedBox(height: 16),
                   ],
                 ),
               ),
@@ -1559,6 +1571,92 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
           ],
         );
       },
+    );
+  }
+
+  void _confirmLogout() {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(Icons.logout_rounded, color: AppColors.error),
+              const SizedBox(width: 8),
+              Text(
+                S.btnLogout,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          content: const Text(
+            'Are you sure you want to log out of your MediQ account?',
+            style: TextStyle(fontSize: 13, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: Text(S.btnCancel),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.error,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () async {
+                Navigator.pop(dialogCtx);
+                await AuthService().logout();
+                if (!mounted) return;
+                Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => const WelcomeEntryScreen()),
+                  (route) => false,
+                );
+              },
+              child: Text(S.btnLogout, style: const TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildLogoutSection(bool isDark) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : AppColors.cardBorder,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: _confirmLogout,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.logout_rounded, color: AppColors.error, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  S.btnLogout,
+                  style: const TextStyle(
+                    color: AppColors.error,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
