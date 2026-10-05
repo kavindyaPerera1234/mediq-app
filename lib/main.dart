@@ -5,6 +5,7 @@ import 'firebase_options.dart';
 import 'core/constants/app_colors.dart';
 import 'core/constants/app_accessibility.dart';
 import 'features/auth_live_queue_module3/screens/auth/splash_screen.dart';
+import 'core/localization/app_language.dart';
 import 'services/seed_data_service.dart';
 
 void main() async {
@@ -40,6 +41,7 @@ class MediQApp extends StatelessWidget {
         AppAccessibility.isHighContrastMode,
         AppAccessibility.isSimplifiedNav,
         AppAccessibility.isVoiceGuidance,
+        AppLanguage.currentLanguage,
       ]),
       builder: (context, _) {
         final isLargeText = AppAccessibility.isLargeTextMode.value;

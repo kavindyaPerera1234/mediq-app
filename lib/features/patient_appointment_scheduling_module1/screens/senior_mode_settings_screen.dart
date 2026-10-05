@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_accessibility.dart';
 import '../../../core/services/voice_guidance_service.dart';
+import '../../../core/localization/app_language.dart';
 import '../backend/backend.dart';
 
 class SeniorModeSettingsScreen extends StatefulWidget {
@@ -138,6 +139,85 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
+
+                // 1. Language Selector Card (English, Simple Sinhala, Tamil)
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1C2541) : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: isDark ? const Color(0xFF3A506B) : AppColors.border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.language_rounded, color: isDark ? const Color(0xFF38BDF8) : AppColors.primary, size: 22),
+                          const SizedBox(width: 10),
+                          Text(
+                            AppLanguage.isSinhala ? 'භාෂාව තෝරන්න' : (AppLanguage.isTamil ? 'மொழியை தேர்வு செய்' : 'Select Language'),
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                setState(() => AppLanguage.setEnglish());
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppLanguage.isEnglish ? AppColors.primary : (isDark ? const Color(0xFF243356) : AppColors.surface),
+                                foregroundColor: AppLanguage.isEnglish ? Colors.white : (isDark ? Colors.white70 : AppColors.textPrimary),
+                                elevation: AppLanguage.isEnglish ? 2 : 0,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              child: const Text('English', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                setState(() => AppLanguage.setSinhala());
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppLanguage.isSinhala ? AppColors.primary : (isDark ? const Color(0xFF243356) : AppColors.surface),
+                                foregroundColor: AppLanguage.isSinhala ? Colors.white : (isDark ? Colors.white70 : AppColors.textPrimary),
+                                elevation: AppLanguage.isSinhala ? 2 : 0,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              child: const Text('සිංහල', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                setState(() => AppLanguage.setTamil());
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppLanguage.isTamil ? AppColors.primary : (isDark ? const Color(0xFF243356) : AppColors.surface),
+                                foregroundColor: AppLanguage.isTamil ? Colors.white : (isDark ? Colors.white70 : AppColors.textPrimary),
+                                elevation: AppLanguage.isTamil ? 2 : 0,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              child: const Text('தமிழ்', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
 
                 // 2. Toggle 1: Large Text Mode
                 _buildToggleCard(
