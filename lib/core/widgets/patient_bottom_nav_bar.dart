@@ -15,22 +15,31 @@ class PatientBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: AppAccessibility.isSimplifiedNav,
-      builder: (context, isSimplified, _) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([
+        AppAccessibility.isSimplifiedNav,
+        AppAccessibility.isHighContrastMode,
+      ]),
+      builder: (context, _) {
+        final isSimplified = AppAccessibility.isSimplifiedNav.value;
+        final isDark = AppAccessibility.isHighContrastMode.value;
+
+        final navBg = isDark ? const Color(0xFF1C2541) : Colors.white;
+        final borderColor = isDark ? const Color(0xFF3A506B) : AppColors.border;
+
         if (isSimplified) {
           // Senior Simplified 3-Tab Large Navigation
           return Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: navBg,
               border: Border(
-                top: BorderSide(color: AppColors.border, width: 2),
+                top: BorderSide(color: borderColor, width: 2),
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black12,
+                  color: isDark ? Colors.black45 : Colors.black12,
                   blurRadius: 8,
-                  offset: Offset(0, -2),
+                  offset: const Offset(0, -2),
                 ),
               ],
             ),
@@ -46,6 +55,7 @@ class PatientBottomNavBar extends StatelessWidget {
                       icon: Icons.home_rounded,
                       label: 'Home',
                       isSelected: currentIndex == 0,
+                      isDark: isDark,
                     ),
                     _buildSimplifiedItem(
                       context: context,
@@ -53,6 +63,7 @@ class PatientBottomNavBar extends StatelessWidget {
                       icon: Icons.calendar_month_rounded,
                       label: 'Book OPD',
                       isSelected: currentIndex == 1,
+                      isDark: isDark,
                     ),
                     _buildSimplifiedItem(
                       context: context,
@@ -60,6 +71,7 @@ class PatientBottomNavBar extends StatelessWidget {
                       icon: Icons.person_rounded,
                       label: 'Profile',
                       isSelected: currentIndex == 4,
+                      isDark: isDark,
                     ),
                   ],
                 ),
@@ -70,10 +82,10 @@ class PatientBottomNavBar extends StatelessWidget {
 
         // Standard 5-Tab Navigation
         return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
+          decoration: BoxDecoration(
+            color: navBg,
             border: Border(
-              top: BorderSide(color: AppColors.border, width: 1),
+              top: BorderSide(color: borderColor, width: 1),
             ),
           ),
           child: SafeArea(
@@ -89,6 +101,7 @@ class PatientBottomNavBar extends StatelessWidget {
                     icon: Icons.home_outlined,
                     activeIcon: Icons.home,
                     label: 'Home',
+                    isDark: isDark,
                   ),
 
                   // Tab 1: Appointments (Member 1 - You!)
@@ -98,6 +111,7 @@ class PatientBottomNavBar extends StatelessWidget {
                     icon: Icons.calendar_today_outlined,
                     activeIcon: Icons.calendar_today,
                     label: 'Appointments',
+                    isDark: isDark,
                   ),
 
                   // Tab 2: Queue (Member 3)
@@ -107,6 +121,7 @@ class PatientBottomNavBar extends StatelessWidget {
                     icon: Icons.format_list_bulleted_outlined,
                     activeIcon: Icons.format_list_bulleted,
                     label: 'Queue',
+                    isDark: isDark,
                   ),
 
                   // Tab 3: Alerts / Notifications (Member 2)
@@ -116,6 +131,7 @@ class PatientBottomNavBar extends StatelessWidget {
                     icon: Icons.notifications_none_outlined,
                     activeIcon: Icons.notifications,
                     label: 'Alerts',
+                    isDark: isDark,
                   ),
 
                   // Tab 4: Profile (Member 3 & Senior Mode)
@@ -125,6 +141,7 @@ class PatientBottomNavBar extends StatelessWidget {
                     icon: Icons.person_outline,
                     activeIcon: Icons.person,
                     label: 'Profile',
+                    isDark: isDark,
                   ),
                 ],
               ),
@@ -141,7 +158,12 @@ class PatientBottomNavBar extends StatelessWidget {
     required IconData icon,
     required String label,
     required bool isSelected,
+    required bool isDark,
   }) {
+    final activeColor = isDark ? const Color(0xFF38BDF8) : AppColors.primary;
+    final inactiveColor = isDark ? const Color(0xFF94A3B8) : AppColors.textSecondary;
+    final activeBg = isDark ? const Color(0xFF243356) : AppColors.primaryLight;
+
     return GestureDetector(
       onTap: () {
         if (onTabSelected != null) {
@@ -152,10 +174,10 @@ class PatientBottomNavBar extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryLight : Colors.transparent,
+          color: isSelected ? activeBg : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
           border: isSelected
-              ? Border.all(color: AppColors.primary, width: 1.5)
+              ? Border.all(color: activeColor, width: 1.5)
               : null,
         ),
         child: Column(
@@ -163,7 +185,7 @@ class PatientBottomNavBar extends StatelessWidget {
           children: [
             Icon(
               icon,
-              color: isSelected ? AppColors.primary : AppColors.textSecondary,
+              color: isSelected ? activeColor : inactiveColor,
               size: 28,
             ),
             const SizedBox(height: 4),
@@ -172,7 +194,7 @@ class PatientBottomNavBar extends StatelessWidget {
               style: GoogleFonts.inter(
                 fontSize: 13,
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                color: isSelected ? activeColor : inactiveColor,
               ),
             ),
           ],
@@ -187,8 +209,11 @@ class PatientBottomNavBar extends StatelessWidget {
     required IconData icon,
     required IconData activeIcon,
     required String label,
+    required bool isDark,
   }) {
     final isSelected = currentIndex == index;
+    final activeColor = isDark ? const Color(0xFF38BDF8) : AppColors.primary;
+    final inactiveColor = isDark ? const Color(0xFF94A3B8) : AppColors.textSecondary;
 
     return GestureDetector(
       onTap: () {
@@ -221,7 +246,7 @@ class PatientBottomNavBar extends StatelessWidget {
         children: [
           Icon(
             isSelected ? activeIcon : icon,
-            color: isSelected ? AppColors.primary : AppColors.textSecondary,
+            color: isSelected ? activeColor : inactiveColor,
             size: 22,
           ),
           const SizedBox(height: 4),
@@ -230,7 +255,7 @@ class PatientBottomNavBar extends StatelessWidget {
             style: GoogleFonts.inter(
               fontSize: 11,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-              color: isSelected ? AppColors.primary : AppColors.textSecondary,
+              color: isSelected ? activeColor : inactiveColor,
             ),
           ),
         ],

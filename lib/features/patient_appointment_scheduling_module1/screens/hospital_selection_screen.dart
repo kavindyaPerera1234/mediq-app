@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_accessibility.dart';
 import '../backend/backend.dart';
 import 'clinic_selection_screen.dart';
 
@@ -57,83 +58,88 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text(
-          'Select Government Hospital',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.surface,
-        centerTitle: true,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
-          child: Column(
-            children: [
-              // Segmented 5-Step Stepper (Step 2 of 5)
-              _buildSegmentedStepper(),
-
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Patient Context Badge
-                      _buildPatientContextBadge(),
-
-                      const SizedBox(height: 12),
-
-                      const Text(
-                        'Choose OPD Hospital',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textDark,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Select the closest national or teaching hospital for consultation.',
-                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.3),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Search Bar with Clean Fill
-                      _buildSearchBar(),
-
-                      const SizedBox(height: 16),
-
-                      // Hospitals List
-                      Expanded(
-                        child: _filteredHospitals.isEmpty
-                            ? _buildEmptyState()
-                            : ListView.separated(
-                                padding: const EdgeInsets.only(bottom: 24),
-                                itemCount: _filteredHospitals.length,
-                                separatorBuilder: (context, index) => const SizedBox(height: 12),
-                                itemBuilder: (context, index) {
-                                  final hospital = _filteredHospitals[index];
-                                  return _buildHospitalCard(hospital);
-                                },
-                              ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+    return ValueListenableBuilder<bool>(
+      valueListenable: AppAccessibility.isHighContrastMode,
+      builder: (context, isDark, _) {
+        return Scaffold(
+          backgroundColor: AppColors.pageBg,
+          appBar: AppBar(
+            title: const Text(
+              'Select Government Hospital',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+            backgroundColor: AppColors.appBarBg,
+            foregroundColor: Colors.white,
+            centerTitle: true,
+            elevation: isDark ? 1 : 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_rounded),
+              onPressed: () => Navigator.pop(context),
+            ),
           ),
-        ),
-      ),
+          body: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: Column(
+                children: [
+                  // Segmented 5-Step Stepper (Step 2 of 5)
+                  _buildSegmentedStepper(),
+
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Patient Context Badge
+                          _buildPatientContextBadge(),
+
+                          const SizedBox(height: 12),
+
+                          Text(
+                            'Choose OPD Hospital',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.headingText,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Select the closest national or teaching hospital for consultation.',
+                            style: TextStyle(fontSize: 13, color: AppColors.bodyText, height: 1.3),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Search Bar with Clean Fill
+                          _buildSearchBar(),
+
+                          const SizedBox(height: 16),
+
+                          // Hospitals List
+                          Expanded(
+                            child: _filteredHospitals.isEmpty
+                                ? _buildEmptyState()
+                                : ListView.separated(
+                                    padding: const EdgeInsets.only(bottom: 24),
+                                    itemCount: _filteredHospitals.length,
+                                    separatorBuilder: (context, index) => const SizedBox(height: 12),
+                                    itemBuilder: (context, index) {
+                                      final hospital = _filteredHospitals[index];
+                                      return _buildHospitalCard(hospital);
+                                    },
+                                  ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -141,22 +147,22 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
   Widget _buildSegmentedStepper() {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
+      decoration: BoxDecoration(
+        color: AppColors.cardSurface,
+        border: Border(bottom: BorderSide(color: AppColors.cardBorder, width: 1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
+            children: [
               Text(
                 'Step 2 of 5: Hospital Selection',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
+                  color: AppColors.accentColor,
                 ),
               ),
               Text(
@@ -164,7 +170,7 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
-                  color: AppColors.textMuted,
+                  color: AppColors.bodyText,
                 ),
               ),
             ],
@@ -196,10 +202,10 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
         height: 6,
         decoration: BoxDecoration(
           color: isActive
-              ? AppColors.primary
+              ? AppColors.accentColor
               : isCompleted
                   ? AppColors.statusGreen
-                  : AppColors.border,
+                  : AppColors.cardBorder,
           borderRadius: BorderRadius.circular(3),
         ),
       ),
@@ -211,25 +217,25 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.primaryLight.withValues(alpha: 0.5),
+        color: AppColors.chipBg,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.cardBorder),
       ),
       child: Row(
         children: [
           Icon(
             widget.isCaregiverBooking ? Icons.family_restroom_rounded : Icons.person_rounded,
             size: 16,
-            color: AppColors.primary,
+            color: AppColors.accentColor,
           ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               'Booking for: ${widget.patientName} (${widget.relationship})',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: AppColors.primaryDark,
+                color: AppColors.headingText,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -262,12 +268,12 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
   Widget _buildSearchBar() {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.cardSurface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.cardBorder),
         boxShadow: [
           BoxShadow(
-            color: AppColors.textDark.withValues(alpha: 0.02),
+            color: AppColors.isDark ? Colors.black26 : AppColors.textDark.withValues(alpha: 0.02),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -276,14 +282,14 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
       child: TextField(
         controller: _searchController,
         onChanged: _filterHospitals,
-        style: const TextStyle(fontSize: 14, color: AppColors.textDark),
+        style: TextStyle(fontSize: 14, color: AppColors.headingText),
         decoration: InputDecoration(
           hintText: 'Search hospital name, city, or district...',
-          hintStyle: const TextStyle(fontSize: 13, color: AppColors.textMuted),
-          prefixIcon: const Icon(Icons.search_rounded, color: AppColors.textMuted, size: 20),
+          hintStyle: TextStyle(fontSize: 13, color: AppColors.bodyText),
+          prefixIcon: Icon(Icons.search_rounded, color: AppColors.bodyText, size: 20),
           suffixIcon: _searchController.text.isNotEmpty
               ? IconButton(
-                  icon: const Icon(Icons.close_rounded, size: 18, color: AppColors.textMuted),
+                  icon: Icon(Icons.close_rounded, size: 18, color: AppColors.bodyText),
                   onPressed: () {
                     _searchController.clear();
                     _filterHospitals('');
@@ -320,12 +326,12 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: AppColors.cardSurface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: AppColors.cardBorder),
           boxShadow: [
             BoxShadow(
-              color: AppColors.textDark.withValues(alpha: 0.03),
+              color: AppColors.isDark ? Colors.black26 : AppColors.textDark.withValues(alpha: 0.03),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -338,12 +344,12 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.primaryLight,
+                color: AppColors.chipBg,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.local_hospital_rounded,
-                color: AppColors.primary,
+                color: AppColors.accentColor,
                 size: 24,
               ),
             ),
@@ -356,21 +362,21 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
                 children: [
                   Text(
                     hospital.name,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.textDark,
+                      color: AppColors.headingText,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.location_on_outlined, size: 14, color: AppColors.textSecondary),
+                      Icon(Icons.location_on_outlined, size: 14, color: AppColors.bodyText),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           hospital.location,
-                          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                          style: TextStyle(fontSize: 12, color: AppColors.bodyText),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -408,16 +414,16 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                         decoration: BoxDecoration(
-                          color: AppColors.background,
+                          color: AppColors.innerCardBg,
                           borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: AppColors.border),
+                          border: Border.all(color: AppColors.cardBorder),
                         ),
                         child: Text(
                           '${hospital.clinics.length} Clinics',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 10.5,
                             fontWeight: FontWeight.w600,
-                            color: AppColors.textSecondary,
+                            color: AppColors.bodyText,
                           ),
                         ),
                       ),
@@ -429,11 +435,11 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
 
             const SizedBox(width: 10),
             // Forward Chevron Arrow
-            const Padding(
-              padding: EdgeInsets.only(top: 8.0),
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
               child: Icon(
                 Icons.arrow_forward_ios_rounded,
-                color: AppColors.textMuted,
+                color: AppColors.bodyText,
                 size: 15,
               ),
             ),
@@ -451,17 +457,17 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.search_off_rounded, size: 48, color: AppColors.textMuted.withValues(alpha: 0.6)),
+            Icon(Icons.search_off_rounded, size: 48, color: AppColors.bodyText.withValues(alpha: 0.6)),
             const SizedBox(height: 12),
-            const Text(
+            Text(
               'No Government Hospitals Found',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.headingText),
             ),
             const SizedBox(height: 6),
-            const Text(
+            Text(
               'Please try searching with another hospital name, city, or district.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.4),
+              style: TextStyle(fontSize: 12, color: AppColors.bodyText, height: 1.4),
             ),
           ],
         ),

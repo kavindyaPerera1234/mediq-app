@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'app_accessibility.dart';
 
 class AppColors {
   // Brand Medical Theme
@@ -59,6 +60,22 @@ class AppColors {
   static const Color slotFull = Color(0xFFFEE2E2);
 
   // Senior Mode High Contrast Colors
-  static const Color seniorHighContrastBg = Color(0xFF000000);
-  static const Color seniorHighContrastText = Color(0xFFFFFF00);
+  static const Color seniorHighContrastBg = Color(0xFF0B132B);
+  static const Color seniorHighContrastSurface = Color(0xFF1C2541);
+  static const Color seniorHighContrastBorder = Color(0xFF3A506B);
+  static const Color seniorHighContrastText = Color(0xFFFFFFFF);
+  static const Color seniorHighContrastAccent = Color(0xFF38BDF8);
+
+  // Dynamic Accessibility Helpers
+  static bool get isDark => AppAccessibility.isHighContrastMode.value;
+  static Color get pageBg => isDark ? seniorHighContrastBg : background;
+  static Color get cardSurface => isDark ? seniorHighContrastSurface : surface;
+  static Color get innerCardBg => isDark ? const Color(0xFF141E33) : background;
+  static Color get cardBorder => isDark ? seniorHighContrastBorder : border;
+  static Color get headingText => isDark ? seniorHighContrastText : textDark;
+  static Color get bodyText => isDark ? const Color(0xFFCBD5E1) : textSecondary;
+  static Color get accentColor => isDark ? seniorHighContrastAccent : primary;
+  static Color get chipBg => isDark ? const Color(0xFF243356) : chipBackground;
+  static Color get appBarBg => isDark ? seniorHighContrastSurface : primary;
+  static Color get navBg => isDark ? seniorHighContrastSurface : Colors.white;
 }
