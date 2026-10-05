@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/constants/app_colors.dart';
+import '../core/constants/app_constants.dart';
 import '../models/queue_session.dart';
 import '../models/queue_entry.dart';
 import '../services/auth_service.dart';
@@ -18,7 +19,7 @@ class QueueStatusOverviewScreen extends StatefulWidget {
   const QueueStatusOverviewScreen({
     super.key,
     required this.authService,
-    this.queueSessionId = 'QS-001',
+    this.queueSessionId = '',
   });
 
   @override
@@ -27,6 +28,10 @@ class QueueStatusOverviewScreen extends StatefulWidget {
 
 class _QueueStatusOverviewScreenState extends State<QueueStatusOverviewScreen> {
   final FirestoreService _firestoreService = FirestoreService();
+
+  String get effectiveSessionId => widget.queueSessionId.isNotEmpty
+      ? widget.queueSessionId
+      : AppConstants.defaultQueueSessionId();
 
   @override
   Widget build(BuildContext context) {
@@ -37,20 +42,20 @@ class _QueueStatusOverviewScreenState extends State<QueueStatusOverviewScreen> {
       ),
       body: SafeArea(
         child: StreamBuilder<QueueSession?>(
-          stream: _firestoreService.streamQueueSession(widget.queueSessionId),
+          stream: _firestoreService.streamQueueSession(effectiveSessionId),
           builder: (context, sessionSnapshot) {
             final session = sessionSnapshot.data ??
                 QueueSession(
-                  queueSessionId: widget.queueSessionId,
-                  hospitalId: 'HOSP-001',
-                  departmentId: 'DEPT-001',
-                  date: '2026-09-24',
+                  queueSessionId: effectiveSessionId,
+                  hospitalId: 'nhsl',
+                  departmentId: 'gen_med',
+                  date: DateTime.now().toString().split(' ')[0],
                   status: 'active',
                   currentTokenNumber: 'A-019',
                 );
 
             return StreamBuilder<List<QueueEntry>>(
-              stream: _firestoreService.streamQueueEntries(widget.queueSessionId),
+              stream: _firestoreService.streamQueueEntries(effectiveSessionId),
               builder: (context, entriesSnapshot) {
                 if (entriesSnapshot.connectionState == ConnectionState.waiting && !entriesSnapshot.hasData) {
                   return const LoadingWidget(message: 'Loading Queue Overview...');

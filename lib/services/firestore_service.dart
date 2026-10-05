@@ -159,7 +159,7 @@ class FirestoreService {
   QueueEntry _getMockQueueEntry(String queueEntryId) {
     return QueueEntry(
       queueEntryId: queueEntryId,
-      queueSessionId: 'QS-001',
+      queueSessionId: AppConstants.defaultQueueSessionId(),
       appointmentId: 'APT-021',
       patientId: 'pat-021',
       tokenNumber: 'A-021',

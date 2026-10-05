@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../core/constants/app_constants.dart';
 
 class SeedDataService {
@@ -8,19 +9,22 @@ class SeedDataService {
     try {
       final now = DateTime.now();
       final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+      const hospitalId = 'nhsl';
+      const departmentId = 'gen_med';
+      final dynamicSessionId = '${hospitalId}_${departmentId}_$dateStr';
 
       // 1. Hospitals & Departments
-      await _db.collection(AppConstants.hospitalsCollection).doc('HOSP-001').set({
-        'hospitalId': 'HOSP-001',
+      await _db.collection(AppConstants.hospitalsCollection).doc(hospitalId).set({
+        'hospitalId': hospitalId,
         'name': 'National Hospital of Sri Lanka',
         'location': 'Colombo',
         'isActive': true,
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      await _db.collection(AppConstants.departmentsCollection).doc('DEPT-001').set({
-        'departmentId': 'DEPT-001',
-        'hospitalId': 'HOSP-001',
+      await _db.collection(AppConstants.departmentsCollection).doc(departmentId).set({
+        'departmentId': departmentId,
+        'hospitalId': hospitalId,
         'name': 'General Medicine OPD',
         'code': 'GEN-MED',
         'isActive': true,
@@ -79,15 +83,15 @@ class SeedDataService {
           'userId': staff['uid'],
           'staffId': staff['staffId'],
           'role': staff['role'],
-          'hospitalId': 'HOSP-001',
-          'departmentId': 'DEPT-001',
+          'hospitalId': hospitalId,
+          'departmentId': departmentId,
           'employeeNumber': staff['employeeNumber'],
           'isActive': true,
           'createdAt': FieldValue.serverTimestamp(),
         });
       }
 
-      // 3. Patient Users
+      // 3. Patient Users & Appointments
       final patients = [
         {'id': 'pat-018', 'name': 'Nimal Perera', 'phone': '0711111111', 'token': 'A-018', 'status': 'completed', 'priority': 'normal', 'pos': 1},
         {'id': 'pat-019', 'name': 'Nimali Wijesekera', 'phone': '0712222222', 'token': 'A-019', 'status': 'called', 'priority': 'normal', 'pos': 2},
@@ -111,50 +115,54 @@ class SeedDataService {
           'updatedAt': FieldValue.serverTimestamp(),
         });
 
-        // Create appointment doc
+        // Create appointment doc (shared with Module 1)
         await _db.collection(AppConstants.appointmentsCollection).doc('APT-${p['id']}').set({
           'appointmentId': 'APT-${p['id']}',
           'patientId': p['id'],
           'caregiverId': '',
           'caregiverPatientId': '',
-          'hospitalId': 'HOSP-001',
-          'departmentId': 'DEPT-001',
+          'hospitalId': hospitalId,
+          'departmentId': departmentId,
           'slotId': 'SLOT-001',
           'appointmentDate': dateStr,
           'startTime': '08:30 AM',
           'endTime': '12:30 PM',
-          'status': p['status'] == 'completed' ? 'completed' : 'booked',
+          'status': p['status'] == 'completed' ? 'completed' : (p['status'] == 'called' ? 'called' : 'booked'),
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         });
       }
 
-      // 4. Queue Session
-      const sessionId = 'QS-001';
-      await _db.collection(AppConstants.queueSessionsCollection).doc(sessionId).set({
-        'queueSessionId': sessionId,
-        'hospitalId': 'HOSP-001',
-        'departmentId': 'DEPT-001',
+      // 4. Queue Session (Write both dynamic ID and QS-001 doc for compatibility)
+      final sessionMap = {
+        'queueSessionId': dynamicSessionId,
+        'hospitalId': hospitalId,
+        'departmentId': departmentId,
         'date': dateStr,
         'status': 'active',
+        'currentToken': 'A-019',
         'currentTokenNumber': 'A-019',
+        'lastIssuedToken': 'A-025',
         'lastIssuedTokenNumber': 'A-025',
         'estimatedMinutesPerPatient': 10,
         'delayMinutes': 0,
         'delayReason': '',
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      };
+
+      await _db.collection(AppConstants.queueSessionsCollection).doc(dynamicSessionId).set(sessionMap);
+      await _db.collection(AppConstants.queueSessionsCollection).doc('QS-001').set({...sessionMap, 'queueSessionId': 'QS-001'});
 
       // 5. Queue Entries
       for (var p in patients) {
-        await _db.collection(AppConstants.queueEntriesCollection).doc('QE-${p['id']}').set({
-          'queueSessionId': sessionId,
+        final entryMap = {
+          'queueSessionId': dynamicSessionId,
           'appointmentId': 'APT-${p['id']}',
           'patientId': p['id'],
           'patientName': p['name'],
-          'tokenNumber': p['token'],
           'tokenCode': p['token'],
+          'tokenNumber': p['token'],
           'status': p['status'],
           'queuePosition': p['pos'],
           'estimatedWaitMinutes': ((p['pos'] as int) - 1) * 10,
@@ -163,13 +171,64 @@ class SeedDataService {
           'completedAt': p['status'] == 'completed' ? FieldValue.serverTimestamp() : null,
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
-        });
+        };
+
+        await _db.collection(AppConstants.queueEntriesCollection).doc('QE-${p['id']}').set(entryMap);
       }
 
-      print('Demo data seeded successfully into Cloud Firestore.');
+      // 6. Initial Sample Queue Event (so queue_events collection appears in Firestore)
+      await _db.collection(AppConstants.queueEventsCollection).doc('EVT-pat-018').set({
+        'eventId': 'EVT-pat-018',
+        'queueSessionId': dynamicSessionId,
+        'queueEntryId': 'QE-pat-018',
+        'appointmentId': 'APT-pat-018',
+        'performedBy': 'doc-silva-uid',
+        'actionType': 'completed',
+        'eventType': 'completed',
+        'previousStatus': 'called',
+        'newStatus': 'completed',
+        'reason': 'Routine OPD Consultation Completed',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      // 7. Initial Sample Consultation (so consultations collection appears in Firestore)
+      await _db.collection(AppConstants.consultationsCollection).doc('CNS-pat-018').set({
+        'consultationId': 'CNS-pat-018',
+        'appointmentId': 'APT-pat-018',
+        'queueEntryId': 'QE-pat-018',
+        'patientId': 'pat-018',
+        'staffId': 'doc-silva-uid',
+        'doctorId': 'doc-silva-uid',
+        'hospitalId': hospitalId,
+        'departmentId': departmentId,
+        'notes': 'Routine OPD Examination completed. Patient prescribed standard regimen.',
+        'status': 'completed',
+        'startedAt': FieldValue.serverTimestamp(),
+        'completedAt': FieldValue.serverTimestamp(),
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // 8. Initial Sample Delay Update (so delay_updates collection appears in Firestore)
+      await _db.collection(AppConstants.delayUpdatesCollection).doc('DLY-001').set({
+        'delayUpdateId': 'DLY-001',
+        'queueSessionId': dynamicSessionId,
+        'hospitalId': hospitalId,
+        'departmentId': departmentId,
+        'reason': 'OPD Morning Setup',
+        'delayReason': 'OPD Morning Setup',
+        'delayMinutes': 0,
+        'additionalMinutes': 0,
+        'createdBy': 'doc-silva-uid',
+        'performedBy': 'doc-silva-uid',
+        'isActive': false,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      debugPrint('Cloud Firestore: All 8 MediQ Module 4 collections successfully created and populated.');
       return true;
     } catch (e) {
-      print('Error seeding demo data: $e');
+      debugPrint('Cloud Firestore Seeding Error: $e');
       return false;
     }
   }

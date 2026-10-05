@@ -49,4 +49,11 @@ class AppConstants {
   static const String roleNurse = 'nurse';
   static const String roleReceptionist = 'receptionist';
   static const String roleAdmin = 'admin';
+
+  /// Generates standard dynamic queue session ID format for Sri Lanka OPD
+  static String defaultQueueSessionId([String hospitalId = 'nhsl', String departmentId = 'gen_med']) {
+    final now = DateTime.now();
+    final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+    return '${hospitalId}_${departmentId}_$dateStr';
+  }
 }

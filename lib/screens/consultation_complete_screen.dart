@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/constants/app_colors.dart';
+import '../core/constants/app_constants.dart';
 import '../services/auth_service.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/status_badge.dart';
@@ -17,11 +18,15 @@ class ConsultationCompleteScreen extends StatelessWidget {
     required this.authService,
     required this.tokenNumber,
     required this.patientName,
-    this.queueSessionId = 'QS-001',
+    this.queueSessionId = '',
   });
 
   @override
   Widget build(BuildContext context) {
+    final effectiveSessionId = queueSessionId.isNotEmpty
+        ? queueSessionId
+        : AppConstants.defaultQueueSessionId();
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -112,7 +117,7 @@ class ConsultationCompleteScreen extends StatelessWidget {
                     MaterialPageRoute(
                       builder: (context) => CallNextPatientScreen(
                         authService: authService,
-                        queueSessionId: queueSessionId,
+                        queueSessionId: effectiveSessionId,
                       ),
                     ),
                   );
@@ -131,7 +136,7 @@ class ConsultationCompleteScreen extends StatelessWidget {
                     MaterialPageRoute(
                       builder: (context) => PatientQueueListScreen(
                         authService: authService,
-                        queueSessionId: queueSessionId,
+                        queueSessionId: effectiveSessionId,
                         initialTabIndex: 2,
                       ),
                     ),

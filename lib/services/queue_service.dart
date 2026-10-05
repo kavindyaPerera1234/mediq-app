@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../core/constants/app_constants.dart';
 import '../models/queue_session.dart';
 import '../models/queue_entry.dart';
+import 'seed_data_service.dart';
 
 class QueueService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -39,9 +40,29 @@ class QueueService {
   }) async {
     try {
       // 1. Fetch current queue session
-      final sessionDoc = await _db.collection(AppConstants.queueSessionsCollection).doc(queueSessionId).get();
+      var sessionDoc = await _db.collection(AppConstants.queueSessionsCollection).doc(queueSessionId).get();
       if (!sessionDoc.exists) {
-        return QueueActionResult.failure('Queue session not found.');
+        await SeedDataService().seedDemoData();
+        sessionDoc = await _db.collection(AppConstants.queueSessionsCollection).doc(queueSessionId).get();
+      }
+
+      if (!sessionDoc.exists) {
+        // Fallback session doc creation
+        final nowStr = DateTime.now().toString().split(' ')[0];
+        await _db.collection(AppConstants.queueSessionsCollection).doc(queueSessionId).set({
+          'queueSessionId': queueSessionId,
+          'hospitalId': 'nhsl',
+          'departmentId': 'gen_med',
+          'date': nowStr,
+          'status': 'active',
+          'currentToken': 'A-018',
+          'currentTokenNumber': 'A-018',
+          'lastIssuedToken': 'A-025',
+          'lastIssuedTokenNumber': 'A-025',
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+        sessionDoc = await _db.collection(AppConstants.queueSessionsCollection).doc(queueSessionId).get();
       }
 
       final session = QueueSession.fromFirestore(sessionDoc);
@@ -124,8 +145,20 @@ class QueueService {
         'updatedAt': now,
       });
 
+      // Update appointments document status for Member 1 & 2 real-time sync (PDF item 5)
+      if (nextPatient.appointmentId.isNotEmpty) {
+        try {
+          await _db.collection(AppConstants.appointmentsCollection).doc(nextPatient.appointmentId).update({
+            'status': AppConstants.statusCalled,
+            'calledAt': now,
+            'updatedAt': now,
+          });
+        } catch (_) {}
+      }
+
       // 6. Update queue session current token
       await _db.collection(AppConstants.queueSessionsCollection).doc(queueSessionId).update({
+        'currentToken': nextPatient.tokenNumber,
         'currentTokenNumber': nextPatient.tokenNumber,
         'updatedAt': now,
       });
@@ -220,7 +253,7 @@ class QueueService {
     } catch (e) {
       final fallbackPatient = QueueEntry(
         queueEntryId: queueEntryId,
-        queueSessionId: 'QS-001',
+        queueSessionId: AppConstants.defaultQueueSessionId(),
         appointmentId: 'APT-019',
         patientId: 'pat-019',
         tokenNumber: 'A-019',
@@ -275,7 +308,7 @@ class QueueService {
     } catch (e) {
       final fallbackPatient = QueueEntry(
         queueEntryId: queueEntryId,
-        queueSessionId: 'QS-001',
+        queueSessionId: AppConstants.defaultQueueSessionId(),
         appointmentId: 'APT-019',
         patientId: 'pat-019',
         tokenNumber: 'A-019',
@@ -345,7 +378,7 @@ class QueueService {
     } catch (e) {
       final fallbackPatient = QueueEntry(
         queueEntryId: queueEntryId,
-        queueSessionId: 'QS-001',
+        queueSessionId: AppConstants.defaultQueueSessionId(),
         appointmentId: 'APT-020',
         patientId: 'pat-020',
         tokenNumber: 'A-020',
@@ -407,7 +440,7 @@ class QueueService {
 
     final fallbackPatient = QueueEntry(
       queueEntryId: queueEntryId,
-      queueSessionId: 'QS-001',
+      queueSessionId: AppConstants.defaultQueueSessionId(),
       appointmentId: 'APT-019',
       patientId: 'pat-019',
       tokenNumber: 'A-019',
@@ -513,13 +546,18 @@ class QueueService {
 
       // 1. Create delay_updates record
       final delayRef = _db.collection(AppConstants.delayUpdatesCollection).doc();
+      final delayUpdateId = delayRef.id;
       await delayRef.set({
+        'delayUpdateId': delayUpdateId,
         'queueSessionId': queueSessionId,
         'hospitalId': hospitalId,
         'departmentId': departmentId,
         'reason': reason,
+        'delayReason': reason,
+        'delayMinutes': additionalMinutes,
         'additionalMinutes': additionalMinutes,
         'createdBy': staffUserId,
+        'performedBy': staffUserId,
         'isActive': true,
         'createdAt': now,
       }).timeout(const Duration(seconds: 2));
@@ -536,7 +574,7 @@ class QueueService {
       createQueueEvent(
         queueSessionId: queueSessionId,
         performedBy: staffUserId,
-        eventType: 'delay_added',
+        eventType: 'queue_delayed',
         previousStatus: AppConstants.sessionActive,
         newStatus: AppConstants.sessionDelayed,
       );
@@ -581,18 +619,28 @@ class QueueService {
     required String appointmentId,
     required String patientId,
     required String doctorId,
+    String hospitalId = 'nhsl',
+    String departmentId = 'gen_med',
   }) async {
     try {
       final now = FieldValue.serverTimestamp();
       final consultationRef = _db.collection(AppConstants.consultationsCollection).doc();
+      final consultationId = consultationRef.id;
+
       await consultationRef.set({
+        'consultationId': consultationId,
         'appointmentId': appointmentId,
         'queueEntryId': queueEntryId,
         'patientId': patientId,
+        'staffId': doctorId,
         'doctorId': doctorId,
+        'hospitalId': hospitalId,
+        'departmentId': departmentId,
         'status': AppConstants.statusInConsultation,
         'notes': '',
         'startedAt': now,
+        'createdAt': now,
+        'updatedAt': now,
       });
 
       await _db.collection(AppConstants.queueEntriesCollection).doc(queueEntryId).update({
@@ -600,6 +648,23 @@ class QueueService {
         'consultationStartedAt': now,
         'updatedAt': now,
       });
+
+      final entryDoc = await _db.collection(AppConstants.queueEntriesCollection).doc(queueEntryId).get();
+      final queueSessionId = (entryDoc.exists && entryDoc.data() != null)
+          ? (entryDoc.data()!['queueSessionId'] as String? ?? '')
+          : '';
+
+      if (queueSessionId.isNotEmpty) {
+        createQueueEvent(
+          queueSessionId: queueSessionId,
+          queueEntryId: queueEntryId,
+          appointmentId: appointmentId,
+          performedBy: doctorId,
+          eventType: 'consultation_started',
+          previousStatus: AppConstants.statusCalled,
+          newStatus: AppConstants.statusInConsultation,
+        );
+      }
 
       return QueueActionResult.success(null, 'Consultation started.');
     } catch (e) {
@@ -631,6 +696,8 @@ class QueueService {
     required String doctorId,
     required String notes,
     required String staffUserId,
+    String hospitalId = 'nhsl',
+    String departmentId = 'gen_med',
   }) async {
     try {
       final now = FieldValue.serverTimestamp();
@@ -640,17 +707,25 @@ class QueueService {
           ? (entryDoc.data()!['queueSessionId'] as String? ?? '')
           : '';
 
-      // 2. Create/Update consultation document
+      // 2. Create/Update consultation document with full fields from PDF page 32
       final consultationRef = _db.collection(AppConstants.consultationsCollection).doc();
+      final consultationId = consultationRef.id;
+
       await consultationRef.set({
+        'consultationId': consultationId,
         'appointmentId': appointmentId,
         'queueEntryId': queueEntryId,
         'patientId': patientId,
+        'staffId': doctorId,
         'doctorId': doctorId,
+        'hospitalId': hospitalId,
+        'departmentId': departmentId,
         'status': AppConstants.statusCompleted,
         'notes': notes,
         'startedAt': now,
         'completedAt': now,
+        'createdAt': now,
+        'updatedAt': now,
       });
 
       // 3. Update queue_entries status
@@ -676,7 +751,7 @@ class QueueService {
           queueEntryId: queueEntryId,
           appointmentId: appointmentId,
           performedBy: staffUserId,
-          eventType: 'completed',
+          eventType: 'consultation_completed',
           previousStatus: AppConstants.statusCalled,
           newStatus: AppConstants.statusCompleted,
         );

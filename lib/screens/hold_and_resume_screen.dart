@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/constants/app_colors.dart';
+import '../core/constants/app_constants.dart';
 import '../models/queue_entry.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
@@ -15,7 +16,7 @@ class HoldAndResumeScreen extends StatefulWidget {
   const HoldAndResumeScreen({
     super.key,
     required this.authService,
-    this.queueSessionId = 'QS-001',
+    this.queueSessionId = '',
   });
 
   @override
@@ -26,6 +27,10 @@ class _HoldAndResumeScreenState extends State<HoldAndResumeScreen> {
   final FirestoreService _firestoreService = FirestoreService();
   final QueueService _queueService = QueueService();
   String? _resumingId;
+
+  String get effectiveSessionId => widget.queueSessionId.isNotEmpty
+      ? widget.queueSessionId
+      : AppConstants.defaultQueueSessionId();
 
   Future<void> _handleResume(QueueEntry entry) async {
     setState(() {
@@ -61,7 +66,7 @@ class _HoldAndResumeScreenState extends State<HoldAndResumeScreen> {
       ),
       body: SafeArea(
         child: StreamBuilder<List<QueueEntry>>(
-          stream: _firestoreService.streamQueueEntries(widget.queueSessionId),
+          stream: _firestoreService.streamQueueEntries(effectiveSessionId),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
               return const LoadingWidget(message: 'Loading Patients on Hold...');

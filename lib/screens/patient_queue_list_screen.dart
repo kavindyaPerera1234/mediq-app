@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/constants/app_colors.dart';
+import '../core/constants/app_constants.dart';
 import '../models/queue_entry.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
@@ -20,7 +21,7 @@ class PatientQueueListScreen extends StatefulWidget {
   const PatientQueueListScreen({
     super.key,
     required this.authService,
-    this.queueSessionId = 'QS-001',
+    this.queueSessionId = '',
     this.initialTabIndex = 0,
   });
 
@@ -36,6 +37,10 @@ class _PatientQueueListScreenState extends State<PatientQueueListScreen>
   String _searchQuery = '';
   String _selectedPriority = 'All';
   int _currentBottomNavIndex = 1;
+
+  String get effectiveSessionId => widget.queueSessionId.isNotEmpty
+      ? widget.queueSessionId
+      : AppConstants.defaultQueueSessionId();
 
   @override
   void initState() {
@@ -82,7 +87,7 @@ class _PatientQueueListScreenState extends State<PatientQueueListScreen>
                 MaterialPageRoute(
                   builder: (context) => EmergencyPriorityScreen(
                     authService: widget.authService,
-                    queueSessionId: widget.queueSessionId,
+                    queueSessionId: effectiveSessionId,
                   ),
                 ),
               );
@@ -97,7 +102,7 @@ class _PatientQueueListScreenState extends State<PatientQueueListScreen>
                 MaterialPageRoute(
                   builder: (context) => HoldAndResumeScreen(
                     authService: widget.authService,
-                    queueSessionId: widget.queueSessionId,
+                    queueSessionId: effectiveSessionId,
                   ),
                 ),
               );
@@ -119,7 +124,7 @@ class _PatientQueueListScreenState extends State<PatientQueueListScreen>
       ),
       body: SafeArea(
         child: StreamBuilder<List<QueueEntry>>(
-          stream: _firestoreService.streamQueueEntries(widget.queueSessionId),
+          stream: _firestoreService.streamQueueEntries(effectiveSessionId),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
               return const LoadingWidget(message: 'Loading Today\'s Queue...');

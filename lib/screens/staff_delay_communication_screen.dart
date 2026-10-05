@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/constants/app_colors.dart';
+import '../core/constants/app_constants.dart';
 import '../services/auth_service.dart';
 import '../services/queue_service.dart';
 import '../widgets/primary_button.dart';
@@ -11,7 +12,7 @@ class StaffDelayCommunicationScreen extends StatefulWidget {
   const StaffDelayCommunicationScreen({
     super.key,
     required this.authService,
-    this.queueSessionId = 'QS-001',
+    this.queueSessionId = '',
   });
 
   @override
@@ -24,6 +25,10 @@ class _StaffDelayCommunicationScreenState extends State<StaffDelayCommunicationS
   final _minutesController = TextEditingController(text: '30');
   final QueueService _queueService = QueueService();
   bool _isLoading = false;
+
+  String get effectiveSessionId => widget.queueSessionId.isNotEmpty
+      ? widget.queueSessionId
+      : AppConstants.defaultQueueSessionId();
 
   @override
   void dispose() {
@@ -41,12 +46,12 @@ class _StaffDelayCommunicationScreenState extends State<StaffDelayCommunicationS
 
     final staffProfile = widget.authService.currentStaffProfile;
     final staffUserId = widget.authService.currentUserModel?.uid ?? 'staff-uid';
-    final hospitalId = staffProfile?.hospitalId ?? 'HOSP-001';
-    final departmentId = staffProfile?.departmentId ?? 'DEPT-001';
+    final hospitalId = staffProfile?.hospitalId ?? 'nhsl';
+    final departmentId = staffProfile?.departmentId ?? 'gen_med';
     final minutes = int.tryParse(_minutesController.text.trim()) ?? 30;
 
     final result = await _queueService.sendDelayUpdate(
-      queueSessionId: widget.queueSessionId,
+      queueSessionId: effectiveSessionId,
       hospitalId: hospitalId,
       departmentId: departmentId,
       reason: _reasonController.text.trim(),
