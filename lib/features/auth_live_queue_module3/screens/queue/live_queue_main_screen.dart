@@ -10,7 +10,6 @@ import 'queue_timeline_screen.dart';
 import 'estimated_waiting_time_screen.dart';
 import '../states/queue_delayed_screen.dart';
 import '../states/your_turn_fullscreen_screen.dart';
-import '../states/rejoin_queue_screen.dart';
 import '../states/queue_completed_screen.dart';
 
 class LiveQueueMainScreen extends StatefulWidget {
@@ -610,101 +609,6 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
                     },
                   ),
 
-                  const SizedBox(height: 28),
-
-                  // DEMO CONTROLLER TOOLBAR (For live evaluation / testing all Module 3 states)
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFCBD5E1)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.developer_mode_rounded, size: 20, color: AppColors.primary),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Test Live Queue States (Demo Bar)',
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            _buildStateButton(
-                              label: 'Waiting',
-                              color: AppColors.primary,
-                              onPressed: () => _queueService.setQueueStatus(PatientQueueStatus.waiting),
-                            ),
-                            _buildStateButton(
-                              label: 'Trigger Delay',
-                              color: const Color(0xFFD97706),
-                              onPressed: () {
-                                _queueService.toggleDelay(!session.isDelayed);
-                                if (!session.isDelayed) {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (context) => const QueueDelayedScreen()),
-                                  );
-                                }
-                              },
-                            ),
-                            _buildStateButton(
-                              label: 'Your Turn! 🔔',
-                              color: AppColors.success,
-                              onPressed: () {
-                                _queueService.setQueueStatus(PatientQueueStatus.called);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const YourTurnFullscreenScreen(),
-                                  ),
-                                );
-                              },
-                            ),
-                            _buildStateButton(
-                              label: 'Missed Turn',
-                              color: AppColors.error,
-                              onPressed: () {
-                                _queueService.setQueueStatus(PatientQueueStatus.missed);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const RejoinQueueScreen(),
-                                  ),
-                                );
-                              },
-                            ),
-                            _buildStateButton(
-                              label: 'Completed',
-                              color: const Color(0xFF475569),
-                              onPressed: () {
-                                _queueService.setQueueStatus(PatientQueueStatus.completed);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const QueueCompletedScreen(),
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-
                   const SizedBox(height: 16),
                 ],
               ),
@@ -769,24 +673,6 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildStateButton({
-    required String label,
-    required Color color,
-    required VoidCallback onPressed,
-  }) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700),
-      ),
-      child: Text(label),
     );
   }
 }
