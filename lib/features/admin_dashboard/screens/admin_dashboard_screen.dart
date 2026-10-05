@@ -8,7 +8,7 @@ import '../../../../core/localization/app_strings.dart';
 import '../../patient_appointment_scheduling_module1/admin/screens/hospital_admin_dashboard.dart';
 import '../../token_lifecycle_notification_module2/screens/notification_settings_screen.dart';
 import 'admin_user_management_screen.dart';
-import '../../../../screens/receptionist_queue_monitor_screen.dart';
+import 'admin_live_queue_console_screen.dart';
 import '../../../../screens/staff_dashboard_screen.dart';
 import '../../../../services/auth_service.dart' as m4_auth;
 
@@ -195,16 +195,16 @@ class AdminDashboardScreen extends StatelessWidget {
               },
             ),
 
-            // Card 4: Live Queue Monitor & Controls
+            // Card 4: Live Queue Master Control
             _managementCard(
               icon: Icons.queue_play_next_rounded,
               title: S.adminStaffQueuesTitle,
-              subtitle: 'Live OPD queue monitor, token tracking, and delay alerts',
+              subtitle: 'Advance tokens, broadcast OPD clinic delays, and pause/resume queues',
               color: const Color(0xFF0284C7),
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => ReceptionistQueueMonitorScreen(authService: m4_auth.AuthService())),
+                  MaterialPageRoute(builder: (_) => const AdminLiveQueueConsoleScreen()),
                 );
               },
             ),
