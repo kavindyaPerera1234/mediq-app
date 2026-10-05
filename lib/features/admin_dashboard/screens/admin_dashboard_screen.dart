@@ -9,6 +9,7 @@ import '../../patient_appointment_scheduling_module1/admin/screens/hospital_admi
 import '../../token_lifecycle_notification_module2/screens/notification_settings_screen.dart';
 import 'admin_user_management_screen.dart';
 import '../../../../screens/receptionist_queue_monitor_screen.dart';
+import '../../../../screens/staff_dashboard_screen.dart';
 import '../../../../services/auth_service.dart' as m4_auth;
 
 class AdminDashboardScreen extends StatelessWidget {
@@ -142,10 +143,11 @@ class AdminDashboardScreen extends StatelessWidget {
             const SizedBox(height: 14),
 
             // Card 1: Member 1 - Appointment & Hospital Scheduling
+            // Card 1: Member 1 - Hospital & OPD Scheduling
             _managementCard(
               icon: Icons.local_hospital_outlined,
               title: S.adminAppointmentsTitle,
-              subtitle: 'Manage hospitals, OPD rooms, and 25-patient slot capping',
+              subtitle: 'Manage hospitals, OPD rooms, and 25-patient slot capping (Module 1)',
               color: AppColors.primary,
               onTap: () {
                 Navigator.push(
@@ -159,7 +161,7 @@ class AdminDashboardScreen extends StatelessWidget {
             _managementCard(
               icon: Icons.notifications_none_rounded,
               title: S.adminTokensTitle,
-              subtitle: 'Configure delay alerts, SMS gateways, and reminder rules',
+              subtitle: 'Configure delay alerts, SMS gateways, and reminder rules (Module 2)',
               color: Colors.amber.shade800,
               onTap: () {
                 Navigator.push(
@@ -169,11 +171,11 @@ class AdminDashboardScreen extends StatelessWidget {
               },
             ),
 
-            // Card 3: Member 3 (You!) - Users & Account Access
+            // Card 3: Member 3 (Yours!) - Users & Account Access
             _managementCard(
               icon: Icons.manage_accounts_outlined,
               title: S.adminUsersTitle,
-              subtitle: 'Manage user profiles, roles, and activate/deactivate accounts',
+              subtitle: 'Manage user profiles, patient accounts, roles, and deactivations (Module 3)',
               color: Colors.purple,
               onTap: () {
                 Navigator.push(
@@ -183,16 +185,30 @@ class AdminDashboardScreen extends StatelessWidget {
               },
             ),
 
-            // Card 4: Member 4 - Queue & Staff Operations
+            // Card 4: Member 3 (Yours!) - Live Queue Monitor & Controls
             _managementCard(
-              icon: Icons.groups_outlined,
+              icon: Icons.queue_play_next_rounded,
               title: S.adminStaffQueuesTitle,
-              subtitle: 'Live receptionist queue monitor, delays, and doctor sessions',
-              color: Colors.teal,
+              subtitle: 'Real-time OPD queue monitor, clinic tokens, and delay alerts (Module 3)',
+              color: const Color(0xFF0284C7),
               onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => ReceptionistQueueMonitorScreen(authService: m4_auth.AuthService())),
+                );
+              },
+            ),
+
+            // Card 5: Member 4 - Doctor Consultation & Clinical Portal
+            _managementCard(
+              icon: Icons.medical_services_outlined,
+              title: 'Doctor Consultation & Clinical Operations',
+              subtitle: 'Doctor clinical console, consultation notes, and room operations (Module 4)',
+              color: Colors.teal,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => StaffDashboardScreen(authService: m4_auth.AuthService())),
                 );
               },
             ),
