@@ -337,6 +337,17 @@ class QueueService {
         'updatedAt': now,
       });
 
+      // Dual-sync: update appointments document status so patient live queue immediately reacts
+      if (entry.appointmentId.isNotEmpty) {
+        try {
+          await _db.collection(AppConstants.appointmentsCollection).doc(entry.appointmentId).update({
+            'status': AppConstants.statusMissed,
+            'missedAt': now,
+            'updatedAt': now,
+          });
+        } catch (_) {}
+      }
+
       // Record queue event
       await createQueueEvent(
         queueSessionId: entry.queueSessionId,

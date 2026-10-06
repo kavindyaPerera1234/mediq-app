@@ -11,6 +11,7 @@ import 'estimated_waiting_time_screen.dart';
 import '../states/queue_delayed_screen.dart';
 import '../states/your_turn_fullscreen_screen.dart';
 import '../states/queue_completed_screen.dart';
+import '../states/rejoin_queue_screen.dart';
 
 class LiveQueueMainScreen extends StatefulWidget {
   const LiveQueueMainScreen({super.key});
@@ -32,6 +33,11 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const YourTurnFullscreenScreen()),
+        );
+      } else if (status == PatientQueueStatus.missed) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const RejoinQueueScreen()),
         );
       } else if (status == PatientQueueStatus.completed) {
         Navigator.push(
@@ -109,6 +115,76 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
                     ),
                   );
                 },
+              ),
+              PopupMenuButton<String>(
+                tooltip: 'Queue Screen Quick Switcher',
+                icon: const Icon(Icons.more_vert_rounded, color: AppColors.primary),
+                onSelected: (value) {
+                  if (value == 'rejoin') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const RejoinQueueScreen()),
+                    );
+                  } else if (value == 'completed') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const QueueCompletedScreen()),
+                    );
+                  } else if (value == 'timeline') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const QueueTimelineScreen()),
+                    );
+                  } else if (value == 'journey') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const QueueJourneyMapScreen()),
+                    );
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'rejoin',
+                    child: Row(
+                      children: [
+                        Icon(Icons.replay_circle_filled_rounded, color: AppColors.error, size: 20),
+                        SizedBox(width: 10),
+                        Text('Rejoin Missed Queue Screen', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'completed',
+                    child: Row(
+                      children: [
+                        Icon(Icons.verified_rounded, color: AppColors.success, size: 20),
+                        SizedBox(width: 10),
+                        Text('Consultation Completed Screen', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuDivider(),
+                  const PopupMenuItem(
+                    value: 'timeline',
+                    child: Row(
+                      children: [
+                        Icon(Icons.timeline_rounded, color: AppColors.primary, size: 20),
+                        SizedBox(width: 10),
+                        Text('Queue Timeline View', style: TextStyle(fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'journey',
+                    child: Row(
+                      children: [
+                        Icon(Icons.map_rounded, color: AppColors.primary, size: 20),
+                        SizedBox(width: 10),
+                        Text('Patient Journey Map', style: TextStyle(fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -201,6 +277,179 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
                               backgroundColor: AppColors.primary,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  // Missed Turn Alert Banner (triggers Rejoin screen directly)
+                  if (myEntry.status == PatientQueueStatus.missed) ...[
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const RejoinQueueScreen(),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFDC2626),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFDC2626).withValues(alpha: 0.35),
+                              blurRadius: 14,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 28),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'YOU MISSED YOUR TURN',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Your token was called. Tap here to rejoin the queue immediately without rebooking.',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 13,
+                                      color: Colors.white.withValues(alpha: 0.95),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 18),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  // Consultation Completed Banner
+                  if (myEntry.status == PatientQueueStatus.completed) ...[
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const QueueCompletedScreen(),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF047857),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF047857).withValues(alpha: 0.35),
+                              blurRadius: 14,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.verified_rounded, color: Colors.white, size: 28),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'CONSULTATION COMPLETED',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Your OPD visit is complete. Tap to view your consultation summary & token receipt.',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 13,
+                                      color: Colors.white.withValues(alpha: 0.95),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 18),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  // Rejoined Active Queue Banner
+                  if (myEntry.rejoinRequested) ...[
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFF3B82F6)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.replay_rounded, color: Color(0xFF1D4ED8), size: 24),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Queue Rejoin Active',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
+                                    color: const Color(0xFF1E40AF),
+                                  ),
+                                ),
+                                Text(
+                                  'You have rejoined the queue. You are placed behind the next 2 patients.',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    color: const Color(0xFF2563EB),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],

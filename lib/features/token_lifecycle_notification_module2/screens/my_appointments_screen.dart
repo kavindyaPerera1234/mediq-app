@@ -4,13 +4,15 @@ import 'appointment_details_screen.dart';
 import '../../patient_appointment_scheduling_module1/screens/caregiver_setup_screen.dart';
 import '../services/appointment_service.dart';
 import '../models/appointment_model.dart';
-
-import '../../auth_live_queue_module3/services/auth_service.dart';
+import 'digital_token_details_screen.dart';
+import 'qr_scanner_screen.dart';
 
 class MyAppointmentsScreen extends StatefulWidget {
     const MyAppointmentsScreen({
         super.key,
+        this.initialTab = 0,
     });
+    final int initialTab;
     @override
     State<MyAppointmentsScreen> createState() =>
         _MyAppointmentsScreenState();
@@ -31,18 +33,15 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
     @override
     void initState() {
         super.initState();  
+        selectedTab = widget.initialTab;
         loadAppointments();
     }
     Future<void> loadAppointments() async {
-        final user = AuthService().currentUser;
-        final patientId = (user?.nic != null && user!.nic!.trim().isNotEmpty)
-            ? user.nic!.trim()
-            : (user?.phoneNumber != null && user!.phoneNumber.trim().isNotEmpty
-                ? user.phoneNumber.trim()
-                : (user?.userId != null && user!.userId.isNotEmpty ? user.userId : ''));
-        final data = patientId.isNotEmpty
-            ? await _appointmentService.getUpcomingAppointments(patientId)
-            : <AppointmentModel>[];
+        final data =
+        await _appointmentService.getUpcomingAppointments(
+            "200164801234",
+        );
+        print("UI received appointments: ${data.length}");
         setState(() {
             appointments = data;
             isLoading = false;
@@ -90,6 +89,20 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
 
                     ],
                 ),
+                actions: [
+                    IconButton(
+                        icon: const Icon(Icons.qr_code_scanner_rounded, color: AppColors.primary),
+                        tooltip: 'Scan Hospital Check-in QR Code',
+                        onPressed: () {
+                            Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => const QrScannerScreen(),
+                                ),
+                            );
+                        },
+                    ),
+                ],
             ),
 
             body: Column(
@@ -282,9 +295,9 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
         {
 
             return GestureDetector(
-                onTap: ()
+                onTap: ()async 
                 {
-                    Navigator.push(
+                    await Navigator.push(
                         context,
                         MaterialPageRoute(
                             builder:(context)=> AppointmentDetailsScreen(
@@ -299,6 +312,8 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                             ),
                         ),
                     );
+                    // Get latest appointment data after returning.
+                    await loadAppointments();
                 },
 
                 child: Container(
@@ -383,25 +398,37 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                                             ),
                                         ],
                                     ),
-                                    Text.rich(
-                                        TextSpan(
-                                            text:"Token: ",
-                                            children:[
-                                                TextSpan(
-                                                    text:
-                                                    token.isEmpty ? "N/A" : token,
-                                                    style: TextStyle(
-                                                        color: AppColors.primary,
-                                                        fontWeight: FontWeight.bold,
+                                    InkWell(
+                                        onTap: () {
+                                            Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                    builder: (context) => DigitalTokenDetailsScreen(
+                                                        appointmentId: appointmentId,
                                                     ),
-
-                                                )
-
-                                            ],
-
+                                                ),
+                                            );
+                                        },
+                                        borderRadius: BorderRadius.circular(6),
+                                        child: Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                            child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                    const Icon(Icons.qr_code_2_rounded, size: 16, color: AppColors.primary),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                        token.isEmpty ? "View Token" : "Token: $token",
+                                                        style: const TextStyle(
+                                                            color: AppColors.primary,
+                                                            fontWeight: FontWeight.bold,
+                                                            fontSize: 13,
+                                                        ),
+                                                    ),
+                                                ],
+                                            ),
                                         ),
-
-                                    )
+                                    ),
 
                                 ],
 
