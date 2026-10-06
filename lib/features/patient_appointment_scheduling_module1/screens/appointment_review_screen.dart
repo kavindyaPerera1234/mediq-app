@@ -69,6 +69,7 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
       hospitalId: widget.hospital.id,
       departmentId: widget.clinic.id,
       appointmentDate: formattedDate,
+      timeSlot: widget.selectedTimeSlot,
     );
 
     final appointment = AppointmentModel(
@@ -91,7 +92,7 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
     );
 
     // Call dedicated Service layer
-    await _appointmentService.bookAppointment(appointment);
+    final bookedId = await _appointmentService.bookAppointment(appointment);
 
     if (widget.isCaregiverBooking) {
       final curUserId = AuthService().currentUser?.userId ?? 'caregiver_user';
@@ -125,6 +126,7 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
           selectedDate: widget.selectedDate,
           selectedTimeSlot: widget.selectedTimeSlot,
           tokenNumber: token,
+          appointmentId: bookedId,
           patientName: effectivePatientName,
           patientNic: effectivePatientNic,
           isCaregiverBooking: widget.isCaregiverBooking,

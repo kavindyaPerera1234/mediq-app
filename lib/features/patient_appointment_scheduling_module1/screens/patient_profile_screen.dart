@@ -8,6 +8,8 @@ import 'senior_mode_settings_screen.dart';
 import '../../../core/localization/app_strings.dart';
 import '../../auth_live_queue_module3/services/auth_service.dart';
 import '../../auth_live_queue_module3/screens/auth/welcome_entry_screen.dart';
+import '../../token_lifecycle_notification_module2/screens/digital_token_details_screen.dart';
+import '../../token_lifecycle_notification_module2/screens/appointment_details_screen.dart';
 
 class PatientProfileScreen extends StatefulWidget {
   const PatientProfileScreen({super.key});
@@ -1503,6 +1505,63 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
               _buildModalDetailRow('Priority', app.priority.toUpperCase()),
               const SizedBox(height: 20),
 
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.qr_code_2_rounded, size: 20),
+                  label: const Text('Open Digital Token & QR Pass', style: TextStyle(fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accentColor,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => DigitalTokenDetailsScreen(appointmentId: app.id),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              SizedBox(
+                width: double.infinity,
+                height: 46,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.info_outline, size: 18),
+                  label: const Text('Full Visit Details & Reschedule', style: TextStyle(fontWeight: FontWeight.bold)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AppointmentDetailsScreen(
+                          appointmentId: app.id,
+                          token: app.tokenCode,
+                          patientName: app.patientName,
+                          hospitalName: app.hospitalName,
+                          clinic: app.departmentName,
+                          date: app.appointmentDate,
+                          time: app.timeSlot,
+                          status: app.status,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 10),
+
               if (isConfirmed) ...[
                 SizedBox(
                   width: double.infinity,
@@ -1533,7 +1592,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Close Pass', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: const Text('Close', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
             ],

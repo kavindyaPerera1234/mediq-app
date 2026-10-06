@@ -4,6 +4,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_accessibility.dart';
 import '../backend/backend.dart';
 import 'patient_main_screen.dart';
+import '../../token_lifecycle_notification_module2/screens/digital_token_details_screen.dart';
 import '../../auth_live_queue_module3/services/auth_service.dart';
 
 class BookingConfirmationScreen extends StatelessWidget {
@@ -12,6 +13,7 @@ class BookingConfirmationScreen extends StatelessWidget {
   final DateTime selectedDate;
   final String selectedTimeSlot;
   final String tokenNumber;
+  final String? appointmentId;
   final String? patientName;
   final String? patientNic;
   final bool isCaregiverBooking;
@@ -25,6 +27,7 @@ class BookingConfirmationScreen extends StatelessWidget {
     required this.selectedDate,
     required this.selectedTimeSlot,
     required this.tokenNumber,
+    this.appointmentId,
     this.patientName,
     this.patientNic,
     this.isCaregiverBooking = false,
@@ -297,20 +300,31 @@ class BookingConfirmationScreen extends StatelessWidget {
                                 child: SizedBox(
                                   height: 48,
                                   child: OutlinedButton.icon(
-                                    icon: const Icon(Icons.download_rounded, size: 18),
-                                    label: const Text('Save Pass', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                    icon: const Icon(Icons.qr_code_2_rounded, size: 20),
+                                    label: const Text('View Digital Token', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                                     style: OutlinedButton.styleFrom(
                                       foregroundColor: AppColors.accentColor,
                                       side: BorderSide(color: AppColors.accentColor),
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                     ),
                                     onPressed: () {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('Token $tokenNumber saved. Confirmation SMS queued to registered mobile.'),
-                                          backgroundColor: AppColors.statusGreen,
-                                        ),
-                                      );
+                                      if (appointmentId != null && appointmentId!.isNotEmpty) {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => DigitalTokenDetailsScreen(
+                                              appointmentId: appointmentId!,
+                                            ),
+                                          ),
+                                        );
+                                      } else {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const PatientMainScreen(initialIndex: 1),
+                                          ),
+                                        );
+                                      }
                                     },
                                   ),
                                 ),
@@ -319,12 +333,14 @@ class BookingConfirmationScreen extends StatelessWidget {
                               Expanded(
                                 child: SizedBox(
                                   height: 48,
-                                  child: ElevatedButton(
+                                  child: ElevatedButton.icon(
+                                    icon: const Icon(Icons.event_available_rounded, size: 18),
+                                    label: const Text('My Visits', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                                     onPressed: () {
                                       Navigator.pushAndRemoveUntil(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (context) => const PatientMainScreen(initialIndex: 4),
+                                          builder: (context) => const PatientMainScreen(initialIndex: 1),
                                         ),
                                         (route) => false,
                                       );
@@ -334,10 +350,6 @@ class BookingConfirmationScreen extends StatelessWidget {
                                       foregroundColor: AppColors.accentColor,
                                       elevation: 0,
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                    ),
-                                    child: const Text(
-                                      'My Profile',
-                                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                                     ),
                                   ),
                                 ),

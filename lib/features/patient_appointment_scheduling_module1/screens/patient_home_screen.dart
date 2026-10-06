@@ -4,7 +4,11 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_accessibility.dart';
 import '../backend/backend.dart';
 import 'senior_mode_settings_screen.dart';
+import 'caregiver_setup_screen.dart';
 import '../../auth_live_queue_module3/services/auth_service.dart';
+import '../../token_lifecycle_notification_module2/screens/digital_token_details_screen.dart';
+import '../../token_lifecycle_notification_module2/screens/qr_scanner_screen.dart';
+import '../../token_lifecycle_notification_module2/screens/my_appointments_screen.dart';
 
 class PatientHomeScreen extends StatelessWidget {
   final ValueChanged<int> onNavigateTab;
@@ -62,6 +66,16 @@ class PatientHomeScreen extends StatelessWidget {
             backgroundColor: AppColors.appBarBg,
             elevation: isDark ? 1 : 0,
             actions: [
+              IconButton(
+                icon: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white),
+                tooltip: 'Scan Hospital QR Code',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const QrScannerScreen()),
+                  );
+                },
+              ),
               IconButton(
                 icon: const Icon(Icons.accessibility_new_rounded, color: Colors.white),
                 tooltip: 'Senior & Accessibility Options',
@@ -194,110 +208,133 @@ class PatientHomeScreen extends StatelessWidget {
   }
 
   Widget _buildActiveTokenCard(BuildContext context, AppointmentModel appointment) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.primaryDark,
-            AppColors.primary,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DigitalTokenDetailsScreen(
+              appointmentId: appointment.id,
+            ),
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text(
-                  '● YOUR NEXT OPD TOKEN',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5),
-                ),
-              ),
-              Text(
-                appointment.appointmentDate,
-                style: const TextStyle(fontSize: 12, color: Colors.white70, fontWeight: FontWeight.w600),
-              ),
+        );
+      },
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppColors.primaryDark,
+              AppColors.primary,
             ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      appointment.tokenCode,
-                      style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w900, color: Colors.white),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      appointment.departmentName,
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${appointment.hospitalName} • ${appointment.roomNumber}',
-                      style: const TextStyle(fontSize: 11, color: Colors.white70),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    '● YOUR NEXT OPD TOKEN',
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5),
+                  ),
+                ),
+                Text(
+                  appointment.appointmentDate,
+                  style: const TextStyle(fontSize: 12, color: Colors.white70, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        appointment.tokenCode,
+                        style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w900, color: Colors.white),
                       ),
-                      child: Text(
-                        appointment.isCaregiverBooking
-                            ? '👨‍👩‍👧 For: ${appointment.patientName} (${appointment.relationship})'
-                            : '👤 For: ${appointment.patientName} (Self)',
-                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white),
+                      const SizedBox(height: 2),
+                      Text(
+                        appointment.departmentName,
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 2),
+                      Text(
+                        '${appointment.hospitalName} • ${appointment.roomNumber}',
+                        style: const TextStyle(fontSize: 11, color: Colors.white70),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          appointment.isCaregiverBooking
+                              ? '👨‍👩‍👧 For: ${appointment.patientName} (${appointment.relationship})'
+                              : '👤 For: ${appointment.patientName} (Self)',
+                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                onPressed: () => onNavigateTab(4), // Go to Profile
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: AppColors.primaryDark,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.qr_code_2_rounded, size: 16),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => DigitalTokenDetailsScreen(
+                          appointmentId: appointment.id,
+                        ),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: AppColors.primaryDark,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  label: const Text('View Pass', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                 ),
-                child: const Text('View Pass', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -363,9 +400,9 @@ class PatientHomeScreen extends StatelessWidget {
       childAspectRatio: 1.28,
       children: [
         _buildActionCard(
-          title: 'Book OPD Slot',
-          subtitle: 'Choose hospital & time',
-          icon: Icons.calendar_month_rounded,
+          title: 'My Visits & Tokens',
+          subtitle: 'Digital passes & QR codes',
+          icon: Icons.confirmation_number_outlined,
           color: AppColors.accentColor,
           onTap: () => onNavigateTab(1),
         ),
@@ -377,18 +414,23 @@ class PatientHomeScreen extends StatelessWidget {
           onTap: () => onNavigateTab(2),
         ),
         _buildActionCard(
-          title: 'SMS Alerts',
-          subtitle: 'Token notifications',
-          icon: Icons.sms_outlined,
-          color: AppColors.statusOrange,
-          onTap: () => onNavigateTab(3),
+          title: 'Hospital QR Scanner',
+          subtitle: 'Scan check-in counter QR',
+          icon: Icons.qr_code_scanner_rounded,
+          color: Colors.blue.shade600,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const QrScannerScreen()),
+            );
+          },
         ),
         _buildActionCard(
-          title: 'My Profile & Dependents',
-          subtitle: 'Caregiver management',
-          icon: Icons.person_pin_rounded,
-          color: Colors.purple.shade400,
-          onTap: () => onNavigateTab(4),
+          title: 'Notifications & Alerts',
+          subtitle: 'Near-turn & delay alerts',
+          icon: Icons.notifications_active_outlined,
+          color: AppColors.statusOrange,
+          onTap: () => onNavigateTab(3),
         ),
       ],
     );
