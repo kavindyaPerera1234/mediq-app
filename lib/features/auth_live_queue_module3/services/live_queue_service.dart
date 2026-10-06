@@ -238,6 +238,15 @@ class LiveQueueService extends ChangeNotifier {
       return;
     }
 
+    final user = AuthService().currentUser;
+    final lookupIds = <String>{};
+    if (nic.isNotEmpty) lookupIds.add(nic);
+    if (user != null) {
+      if (user.nic != null && user.nic!.trim().isNotEmpty) lookupIds.add(user.nic!.trim());
+      if (user.phoneNumber.trim().isNotEmpty) lookupIds.add(user.phoneNumber.trim());
+      if (user.userId.trim().isNotEmpty) lookupIds.add(user.userId.trim());
+    }
+
     _mySub = _firestore
         .collection('appointments')
         .snapshots()
@@ -246,7 +255,8 @@ class LiveQueueService extends ChangeNotifier {
         final data = d.data();
         final pNic = (data['patientNic'] ?? '').toString();
         final pId = (data['patientId'] ?? '').toString();
-        return pNic == nic || pId == nic;
+        final uId = (data['userId'] ?? '').toString();
+        return lookupIds.contains(pNic) || lookupIds.contains(pId) || lookupIds.contains(uId);
       }).toList();
       _onMyAppointments(myDocs);
     }, onError: _onStreamError);

@@ -212,13 +212,22 @@ class AppointmentService {
   /// Real-time stream of patient's booked appointments
   Stream<List<AppointmentModel>> streamPatientAppointments(String patientNic) {
     try {
+      final user = AuthService().currentUser;
+      final lookupIds = <String>{};
+      if (patientNic.trim().isNotEmpty) lookupIds.add(patientNic.trim());
+      if (user != null) {
+        if (user.nic != null && user.nic!.trim().isNotEmpty) lookupIds.add(user.nic!.trim());
+        if (user.phoneNumber.trim().isNotEmpty) lookupIds.add(user.phoneNumber.trim());
+        if (user.userId.trim().isNotEmpty) lookupIds.add(user.userId.trim());
+      }
+
       return _appointmentsRef
           .snapshots()
           .map((snapshot) {
-        if (patientNic.trim().isEmpty) return <AppointmentModel>[];
+        if (lookupIds.isEmpty) return <AppointmentModel>[];
         final list = snapshot.docs
             .map((doc) => AppointmentModel.fromFirestore(doc))
-            .where((app) => app.patientNic == patientNic || app.patientId == patientNic)
+            .where((app) => lookupIds.contains(app.patientNic) || lookupIds.contains(app.patientId))
             .toList();
         // Sort newest first
         list.sort((a, b) {

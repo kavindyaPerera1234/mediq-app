@@ -208,6 +208,96 @@ class QueueService {
 
   }
 
+  /// Call a specific patient directly by queue entry ID
+  Future<QueueActionResult> callSpecificPatient({
+    required String queueSessionId,
+    required String queueEntryId,
+    required String staffUserId,
+  }) async {
+    try {
+      final docRef = _db.collection(AppConstants.queueEntriesCollection).doc(queueEntryId);
+      final doc = await docRef.get();
+      if (!doc.exists) return QueueActionResult.failure('Queue entry not found.');
+
+      final patient = QueueEntry.fromFirestore(doc);
+      final now = FieldValue.serverTimestamp();
+
+      // Update queue entry
+      await docRef.update({
+        'status': AppConstants.statusCalled,
+        'calledAt': now,
+        'updatedAt': now,
+      });
+
+      // Update appointment doc
+      if (patient.appointmentId.isNotEmpty) {
+        try {
+          await _db.collection(AppConstants.appointmentsCollection).doc(patient.appointmentId).update({
+            'status': AppConstants.statusCalled,
+            'calledAt': now,
+            'updatedAt': now,
+          });
+        } catch (_) {}
+      }
+
+      // Update queue session
+      await _db.collection(AppConstants.queueSessionsCollection).doc(queueSessionId).update({
+        'currentToken': patient.tokenNumber,
+        'currentTokenNumber': patient.tokenNumber,
+        'currentTokenServing': patient.tokenNumber,
+        'nowServing': patient.tokenNumber,
+        'updatedAt': now,
+      });
+
+      // Also update QS-001 compatibility doc
+      try {
+        await _db.collection(AppConstants.queueSessionsCollection).doc('QS-001').set({
+          'currentToken': patient.tokenNumber,
+          'currentTokenNumber': patient.tokenNumber,
+          'currentTokenServing': patient.tokenNumber,
+          'nowServing': patient.tokenNumber,
+          'updatedAt': now,
+        }, SetOptions(merge: true));
+      } catch (_) {}
+
+      // Log queue event
+      await createQueueEvent(
+        queueSessionId: queueSessionId,
+        queueEntryId: queueEntryId,
+        appointmentId: patient.appointmentId,
+        performedBy: staffUserId,
+        eventType: 'called',
+        previousStatus: patient.status,
+        newStatus: AppConstants.statusCalled,
+      );
+
+      // Create patient notification
+      if (patient.patientId.isNotEmpty) {
+        final notifRef = _db.collection(AppConstants.notificationsCollection).doc();
+        await notifRef.set({
+          'userId': patient.patientId,
+          'type': 'your_turn',
+          'title': 'Token Called',
+          'message': 'Token ${patient.tokenNumber} has been called. Please proceed to the consultation room.',
+          'appointmentId': patient.appointmentId,
+          'queueEntryId': patient.queueEntryId,
+          'queueSessionId': queueSessionId,
+          'isRead': false,
+          'createdAt': now,
+        });
+      }
+
+      final updatedPatient = patient.copyWith(
+        status: AppConstants.statusCalled,
+        calledAt: DateTime.now(),
+      );
+
+      return QueueActionResult.success(updatedPatient, 'Token ${patient.tokenNumber} called successfully.');
+    } catch (e) {
+      return QueueActionResult.failure('Failed to call patient: $e');
+    }
+  }
+
   /// Put a called/active patient on hold
   Future<QueueActionResult> holdPatient({
     required String queueEntryId,

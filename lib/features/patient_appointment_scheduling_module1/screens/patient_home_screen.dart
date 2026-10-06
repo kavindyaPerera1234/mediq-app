@@ -5,6 +5,7 @@ import '../../../core/constants/app_accessibility.dart';
 import '../backend/backend.dart';
 import 'senior_mode_settings_screen.dart';
 import '../../auth_live_queue_module3/services/auth_service.dart';
+import '../../auth_live_queue_module3/screens/states/your_turn_fullscreen_screen.dart';
 
 class PatientHomeScreen extends StatelessWidget {
   final ValueChanged<int> onNavigateTab;
@@ -93,7 +94,7 @@ class PatientHomeScreen extends StatelessWidget {
                         final appointments = snapshot.data ?? [];
                         final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
                         final activeAppointments = appointments
-                            .where((a) => a.status == 'confirmed' && a.appointmentDate.compareTo(todayStr) >= 0)
+                            .where((a) => (a.status == 'confirmed' || a.status == 'called' || a.status == 'serving' || a.status == 'waiting') && a.appointmentDate.compareTo(todayStr) >= 0)
                             .toList();
 
                         if (activeAppointments.isNotEmpty) {
@@ -194,21 +195,21 @@ class PatientHomeScreen extends StatelessWidget {
   }
 
   Widget _buildActiveTokenCard(BuildContext context, AppointmentModel appointment) {
+    final isCalled = appointment.status == 'called' || appointment.status == 'serving';
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            AppColors.primaryDark,
-            AppColors.primary,
-          ],
+          colors: isCalled
+              ? [const Color(0xFF15803D), const Color(0xFF166534)]
+              : [AppColors.primaryDark, AppColors.primary],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.3),
+            color: (isCalled ? const Color(0xFF15803D) : AppColors.primary).withValues(alpha: 0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -223,12 +224,17 @@ class PatientHomeScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
+                  color: isCalled ? Colors.amber.shade400 : Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Text(
-                  '● YOUR NEXT OPD TOKEN',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5),
+                child: Text(
+                  isCalled ? '🚨 YOUR TURN IS CALLED NOW!' : '● YOUR NEXT OPD TOKEN',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: isCalled ? Colors.black87 : Colors.white,
+                    letterSpacing: 0.5,
+                  ),
                 ),
               ),
               Text(
@@ -285,15 +291,27 @@ class PatientHomeScreen extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               ElevatedButton(
-                onPressed: () => onNavigateTab(4), // Go to Profile
+                onPressed: () {
+                  if (isCalled) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const YourTurnFullscreenScreen()),
+                    );
+                  } else {
+                    onNavigateTab(4); // Go to Profile
+                  }
+                },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: AppColors.primaryDark,
+                  backgroundColor: isCalled ? Colors.amber.shade300 : Colors.white,
+                  foregroundColor: isCalled ? Colors.black87 : AppColors.primaryDark,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
-                child: const Text('View Pass', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                child: Text(
+                  isCalled ? 'ENTER ROOM' : 'View Pass',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
               ),
             ],
           ),
