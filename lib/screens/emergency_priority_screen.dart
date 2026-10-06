@@ -78,7 +78,7 @@ class _EmergencyPriorityScreenState extends State<EmergencyPriorityScreen> {
 
             final entries = snapshot.data ?? [];
             List<QueueEntry> eligibleWaiting = entries
-                .where((e) => e.status == 'waiting' || e.status == 'rejoined' || e.status == 'approaching')
+                .where((e) => e.status == 'waiting' || e.status == 'rejoined' || e.status == 'approaching' || e.status == 'confirmed' || e.status == 'booked')
                 .toList();
 
             if (eligibleWaiting.isEmpty) {

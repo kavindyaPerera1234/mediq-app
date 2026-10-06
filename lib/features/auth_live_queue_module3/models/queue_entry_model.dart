@@ -54,6 +54,52 @@ class QueueEntryModel {
     this.updatedAt,
   }) : tokenNumber = tokenNumber ?? _parseTokenNumber(tokenCode);
 
+  QueueEntryModel copyWith({
+    String? queueEntryId,
+    String? queueSessionId,
+    String? appointmentId,
+    String? patientId,
+    String? patientName,
+    String? tokenCode,
+    int? tokenNumber,
+    int? queuePosition,
+    int? peopleAhead,
+    PatientQueueStatus? status,
+    int? estimatedWaitMinutes,
+    String? priority,
+    bool? rejoinRequested,
+    String? rejoinReason,
+    DateTime? joinedAt,
+    DateTime? calledAt,
+    DateTime? missedAt,
+    DateTime? rejoinedAt,
+    DateTime? completedAt,
+    DateTime? updatedAt,
+  }) {
+    return QueueEntryModel(
+      queueEntryId: queueEntryId ?? this.queueEntryId,
+      queueSessionId: queueSessionId ?? this.queueSessionId,
+      appointmentId: appointmentId ?? this.appointmentId,
+      patientId: patientId ?? this.patientId,
+      patientName: patientName ?? this.patientName,
+      tokenCode: tokenCode ?? this.tokenCode,
+      tokenNumber: tokenNumber ?? this.tokenNumber,
+      queuePosition: queuePosition ?? this.queuePosition,
+      peopleAhead: peopleAhead ?? this.peopleAhead,
+      status: status ?? this.status,
+      estimatedWaitMinutes: estimatedWaitMinutes ?? this.estimatedWaitMinutes,
+      priority: priority ?? this.priority,
+      rejoinRequested: rejoinRequested ?? this.rejoinRequested,
+      rejoinReason: rejoinReason ?? this.rejoinReason,
+      joinedAt: joinedAt ?? this.joinedAt,
+      calledAt: calledAt ?? this.calledAt,
+      missedAt: missedAt ?? this.missedAt,
+      rejoinedAt: rejoinedAt ?? this.rejoinedAt,
+      completedAt: completedAt ?? this.completedAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
   static int _parseTokenNumber(String code) {
     final digits = RegExp(r'\d+').firstMatch(code);
     return digits != null ? (int.tryParse(digits.group(0)!) ?? 1) : 1;

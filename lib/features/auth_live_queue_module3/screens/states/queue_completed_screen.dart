@@ -133,14 +133,17 @@ class QueueCompletedScreen extends StatelessWidget {
 
               // Return to Dashboard Button
               ElevatedButton(
-                onPressed: () {
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const PatientMainScreen(initialIndex: 0),
-                    ),
-                    (route) => false,
-                  );
+                onPressed: () async {
+                  await LiveQueueService().completeCurrentConsultation();
+                  if (context.mounted) {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const PatientMainScreen(initialIndex: 0),
+                      ),
+                      (route) => false,
+                    );
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,

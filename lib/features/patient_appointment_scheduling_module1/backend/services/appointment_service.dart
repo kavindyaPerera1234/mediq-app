@@ -12,28 +12,7 @@ class AppointmentService {
   // Collection reference
   CollectionReference get _appointmentsRef => _firestore.collection('appointments');
 
-  /// Generate the next strictly sequential OPD token for the given date and department
-  int _slotBaseToken(String? timeSlot) {
-    if (timeSlot == null || timeSlot.trim().isEmpty) {
-      final hour = DateTime.now().hour;
-      if (hour < 9) return 1;
-      if (hour < 10) return 26;
-      if (hour < 11) return 51;
-      if (hour < 12) return 76;
-      if (hour < 13) return 101;
-      return 126;
-    }
-    final lower = timeSlot.toLowerCase();
-    if (lower.contains('08:00') || lower.contains('8:00')) return 1;
-    if (lower.contains('09:00') || lower.contains('9:00')) return 26;
-    if (lower.contains('10:00')) return 51;
-    if (lower.contains('11:00')) return 76;
-    if (lower.contains('12:00')) return 101;
-    if (lower.contains('01:00') || lower.contains('1:00')) return 126;
-    if (lower.contains('02:00') || lower.contains('2:00')) return 151;
-    return 1;
-  }
-
+  /// Generate the next strictly sequential OPD token for the given date and department (A-001, A-002, A-003...)
   Future<String> getNextTokenCode({
     required String hospitalId,
     required String departmentId,
@@ -41,52 +20,51 @@ class AppointmentService {
     String? timeSlot,
   }) async {
     try {
-      final baseToken = _slotBaseToken(timeSlot);
-
-      // Check existing appointments for this date & department
+      // Check all existing appointments for this date & department
       final query = await _appointmentsRef
           .where('appointmentDate', isEqualTo: appointmentDate)
           .where('departmentId', isEqualTo: departmentId)
           .get();
 
-      int maxTokenInSlot = 0;
-      int countInSlot = 0;
-
+      int maxToken = 0;
       for (var doc in query.docs) {
         final data = doc.data() as Map<String, dynamic>;
-        final slot = (data['timeSlot'] ?? '').toString();
         final token = (data['tokenCode'] ?? '').toString();
         final match = RegExp(r'\d+').firstMatch(token);
         if (match != null) {
           final num = int.tryParse(match.group(0)!) ?? 0;
-          if (timeSlot != null && timeSlot.isNotEmpty && slot == timeSlot) {
-            countInSlot++;
-            if (num > maxTokenInSlot) maxTokenInSlot = num;
-          } else if (timeSlot == null || timeSlot.isEmpty) {
-            if (num > maxTokenInSlot) maxTokenInSlot = num;
-          }
+          if (num > maxToken) maxToken = num;
         }
       }
 
-      int nextNum;
-      if (maxTokenInSlot >= baseToken) {
-        nextNum = maxTokenInSlot + 1;
-      } else {
-        nextNum = baseToken + countInSlot;
-      }
+      // Also cross-check queue_entries to be 100% sure we don't duplicate
+      try {
+        final sessionId = '${hospitalId}_${departmentId}_$appointmentDate';
+        final qSnap = await _firestore
+            .collection('queue_entries')
+            .where('queueSessionId', isEqualTo: sessionId)
+            .get();
+        for (var doc in qSnap.docs) {
+          final token = (doc.data()['tokenCode'] ?? doc.data()['tokenNumber'] ?? '').toString();
+          final match = RegExp(r'\d+').firstMatch(token);
+          if (match != null) {
+            final num = int.tryParse(match.group(0)!) ?? 0;
+            if (num > maxToken) maxToken = num;
+          }
+        }
+      } catch (_) {}
 
+      final nextNum = maxToken + 1;
       return 'A-${nextNum.toString().padLeft(3, '0')}';
     } catch (e) {
       debugPrint('AppointmentService getNextTokenCode fallback: $e');
-      final fallbackBase = _slotBaseToken(timeSlot);
-      return 'A-${fallbackBase.toString().padLeft(3, '0')}';
+      return 'A-001';
     }
   }
 
   /// Synchronous fallback
   String generateTokenCode({String? timeSlot}) {
-    final base = _slotBaseToken(timeSlot);
-    return 'A-${base.toString().padLeft(3, '0')}';
+    return 'A-001';
   }
 
   /// Book an appointment atomically into Firestore

@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/widgets/patient_bottom_nav_bar.dart';
-import 'caregiver_setup_screen.dart';
+import '../../token_lifecycle_notification_module2/screens/my_appointments_screen.dart';
 import 'patient_home_screen.dart';
 import 'patient_profile_screen.dart';
 import '../../auth_live_queue_module3/screens/queue/live_queue_main_screen.dart';
@@ -84,7 +84,7 @@ class _PatientMainScreenState extends State<PatientMainScreen> {
           });
         },
       ), // Tab 0: Home (Member 1)
-      const CaregiverSetupScreen(), // Tab 1: Book OPD Appointments (Member 1)
+      const MyAppointmentsScreen(), // Tab 1: My Appointments & History (Member 2)
       const LiveQueueMainScreen(), // Tab 2: Live Queue (Member 3)
       const NotificationCentreScreen(), // Tab 3: Alerts & Digital Tokens (Member 2)
       const PatientProfileScreen(), // Tab 4: Profile & Senior Accessibility (Member 1)

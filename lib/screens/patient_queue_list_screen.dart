@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../core/constants/app_colors.dart';
-import '../core/constants/app_constants.dart';
 import '../models/queue_entry.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
@@ -37,17 +37,61 @@ class _PatientQueueListScreenState extends State<PatientQueueListScreen>
   String _searchQuery = '';
   String _selectedPriority = 'All';
   int _currentBottomNavIndex = 1;
+  late DateTime _selectedDate;
+
+  bool get _isToday {
+    final now = DateTime.now();
+    return _selectedDate.year == now.year &&
+        _selectedDate.month == now.month &&
+        _selectedDate.day == now.day;
+  }
+
+  bool get _isTomorrow {
+    final tomorrow = DateTime.now().add(const Duration(days: 1));
+    return _selectedDate.year == tomorrow.year &&
+        _selectedDate.month == tomorrow.month &&
+        _selectedDate.day == tomorrow.day;
+  }
 
   String get effectiveSessionId {
-    if (widget.queueSessionId.isNotEmpty && !widget.queueSessionId.contains('HOSP-001')) {
-      return widget.queueSessionId;
+    final parts = (widget.queueSessionId.isNotEmpty && !widget.queueSessionId.contains('HOSP-001'))
+        ? widget.queueSessionId.split('_')
+        : ['nhsl', 'gen_med'];
+    final hId = parts.isNotEmpty ? parts[0] : 'nhsl';
+    final dId = parts.length > 1 ? parts[1] : 'gen_med';
+    final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+    return '${hId}_${dId}_$dateStr';
+  }
+
+  Future<void> _pickQueueDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 7)),
+      lastDate: DateTime.now().add(const Duration(days: 30)),
+    );
+    if (picked != null) {
+      setState(() {
+        _selectedDate = picked;
+      });
     }
-    return AppConstants.defaultQueueSessionId('nhsl', 'gen_med');
   }
 
   @override
   void initState() {
     super.initState();
+    // Initialize date from session ID if available, else today
+    DateTime initial = DateTime.now();
+    if (widget.queueSessionId.isNotEmpty) {
+      final parts = widget.queueSessionId.split('_');
+      if (parts.length >= 3) {
+        try {
+          initial = DateTime.parse(parts[2]);
+        } catch (_) {}
+      }
+    }
+    _selectedDate = initial;
+
     _tabController = TabController(
       length: 3,
       vsync: this,
@@ -67,20 +111,43 @@ class _PatientQueueListScreenState extends State<PatientQueueListScreen>
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Column(
-          children: const [
-            Text(
-              "Today's Queue",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        title: InkWell(
+          onTap: _pickQueueDate,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _isToday
+                          ? "Today's Queue"
+                          : (_isTomorrow
+                              ? "Tomorrow's Queue"
+                              : DateFormat('MMM d, yyyy').format(_selectedDate)),
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.primary),
+                  ],
+                ),
+                Text(
+                  "General Medicine OPD • ${DateFormat('yyyy-MM-dd').format(_selectedDate)}",
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.primary),
+                ),
+              ],
             ),
-            Text(
-              "General Medicine OPD",
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w400, color: AppColors.primary),
-            ),
-          ],
+          ),
         ),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.calendar_month_rounded, color: AppColors.primary),
+            tooltip: 'Change Queue Date',
+            onPressed: _pickQueueDate,
+          ),
           IconButton(
             icon: const Icon(Icons.warning_amber_rounded, color: AppColors.error),
             tooltip: 'Emergency Priority',
@@ -164,7 +231,9 @@ class _PatientQueueListScreenState extends State<PatientQueueListScreen>
                     e.status == 'approaching' ||
                     e.status == 'called' ||
                     e.status == 'in_consultation' ||
-                    e.status == 'rejoined')
+                    e.status == 'rejoined' ||
+                    e.status == 'confirmed' ||
+                    e.status == 'booked')
                 .toList();
 
             final onHoldEntries = filteredEntries.where((e) => e.status == 'on_hold').toList();
@@ -200,7 +269,7 @@ class _PatientQueueListScreenState extends State<PatientQueueListScreen>
                             MaterialPageRoute(
                               builder: (context) => CallNextPatientScreen(
                                 authService: widget.authService,
-                                queueSessionId: widget.queueSessionId,
+                                queueSessionId: effectiveSessionId,
                               ),
                             ),
                           );

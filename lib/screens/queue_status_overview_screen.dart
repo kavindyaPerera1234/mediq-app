@@ -63,7 +63,7 @@ class _QueueStatusOverviewScreenState extends State<QueueStatusOverviewScreen> {
 
                 final entries = entriesSnapshot.data ?? [];
 
-                final waitingCount = entries.where((e) => e.status == 'waiting' || e.status == 'approaching' || e.status == 'rejoined').length;
+                final waitingCount = entries.where((e) => e.status == 'waiting' || e.status == 'approaching' || e.status == 'rejoined' || e.status == 'confirmed' || e.status == 'booked').length;
                 final completedCount = entries.where((e) => e.status == 'completed').length;
                 final onHoldCount = entries.where((e) => e.status == 'on_hold').length;
                 final skippedCount = entries.where((e) => e.status == 'missed' || e.status == 'skipped').length;

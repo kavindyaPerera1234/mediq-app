@@ -5,8 +5,10 @@ import '../../../core/constants/app_accessibility.dart';
 import '../backend/backend.dart';
 import 'patient_main_screen.dart';
 import '../../auth_live_queue_module3/services/auth_service.dart';
+import '../../token_lifecycle_notification_module2/screens/digital_token_details_screen.dart';
 
 class BookingConfirmationScreen extends StatelessWidget {
+  final String? appointmentId;
   final GovernmentHospital hospital;
   final OpdClinic clinic;
   final DateTime selectedDate;
@@ -20,6 +22,7 @@ class BookingConfirmationScreen extends StatelessWidget {
 
   const BookingConfirmationScreen({
     super.key,
+    this.appointmentId,
     required this.hospital,
     required this.clinic,
     required this.selectedDate,
@@ -305,10 +308,14 @@ class BookingConfirmationScreen extends StatelessWidget {
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                     ),
                                     onPressed: () {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('Token $tokenNumber saved. Confirmation SMS queued to registered mobile.'),
-                                          backgroundColor: AppColors.statusGreen,
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => DigitalTokenDetailsScreen(
+                                            appointmentId: (appointmentId != null && appointmentId!.isNotEmpty)
+                                                ? appointmentId!
+                                                : tokenNumber,
+                                          ),
                                         ),
                                       );
                                     },

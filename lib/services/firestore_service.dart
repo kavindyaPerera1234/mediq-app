@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../core/constants/app_constants.dart';
 import '../models/user_model.dart';
@@ -78,89 +80,210 @@ class FirestoreService {
 
   // --- Queue Entries ---
   Stream<List<QueueEntry>> streamQueueEntries(String sessionId) {
-    return _db
-        .collection(AppConstants.queueEntriesCollection)
-        .where('queueSessionId', isEqualTo: sessionId)
-        .snapshots()
-        .asyncMap((snapshot) async {
-      List<QueueEntry> entries = [];
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-        String patientName = (data['patientName'] ?? '').toString();
-        if ((patientName.isEmpty || patientName == 'Unknown Patient') && data['patientId'] != null) {
-          try {
-            final userDoc = await _db.collection(AppConstants.usersCollection).doc(data['patientId']).get();
-            if (userDoc.exists && userDoc.data() != null) {
-              patientName = (userDoc.data()!['fullName'] ?? patientName).toString();
-            }
-          } catch (_) {}
-        }
-        entries.add(QueueEntry.fromFirestore(doc, patientName: patientName.isNotEmpty ? patientName : null));
+    late StreamController<List<QueueEntry>> controller;
+    StreamSubscription? qSub;
+    StreamSubscription? aSub;
+
+    final parts = sessionId.split('_');
+    final dept = parts.length >= 2 ? parts[1] : 'gen_med';
+    final dateStr = parts.length >= 3 ? parts[2] : '';
+
+    List<QueueEntry> queueEntries = [];
+    List<QueueEntry> apptEntries = [];
+
+    void emitMerged() {
+      if (controller.isClosed) return;
+      final Map<String, QueueEntry> merged = {};
+
+      // 1. Add queue_entries
+      for (var qe in queueEntries) {
+        final key = qe.appointmentId.isNotEmpty ? qe.appointmentId : qe.queueEntryId;
+        merged[key] = qe;
       }
 
-      // If empty for this exact sessionId, check appointments collection
-      if (entries.isEmpty) {
-        try {
-          final parts = sessionId.split('_');
-          final dept = parts.length >= 2 ? parts[1] : 'gen_med';
-          final apptsSnap = await _db
-              .collection(AppConstants.appointmentsCollection)
-              .where('departmentId', isEqualTo: dept)
-              .get();
+      // 2. Add appointments (newly booked OPD patients)
+      for (var appt in apptEntries) {
+        final key = appt.appointmentId.isNotEmpty ? appt.appointmentId : appt.queueEntryId;
+        if (!merged.containsKey(key)) {
+          merged[key] = appt;
+        } else {
+          // If queue_entry has default placeholder name, upgrade with appointment's real patientName
+          final existing = merged[key]!;
+          if ((existing.patientName == null || existing.patientName == 'Patient' || existing.patientName == 'Unknown Patient') &&
+              (appt.patientName != null && appt.patientName!.isNotEmpty && appt.patientName != 'Patient')) {
+            merged[key] = QueueEntry(
+              queueEntryId: existing.queueEntryId,
+              queueSessionId: existing.queueSessionId,
+              appointmentId: existing.appointmentId,
+              patientId: existing.patientId,
+              tokenNumber: existing.tokenNumber,
+              tokenCode: existing.tokenCode,
+              status: existing.status,
+              queuePosition: existing.queuePosition,
+              estimatedWaitMinutes: existing.estimatedWaitMinutes,
+              priority: existing.priority,
+              calledAt: existing.calledAt,
+              consultationStartedAt: existing.consultationStartedAt,
+              completedAt: existing.completedAt,
+              missedAt: existing.missedAt,
+              createdAt: existing.createdAt,
+              updatedAt: existing.updatedAt,
+              patientName: appt.patientName,
+            );
+          }
+        }
+      }
 
-          for (var aDoc in apptsSnap.docs) {
+      final list = merged.values.toList();
+      // Sort: Emergency priority first, then position / token
+      list.sort((a, b) {
+        if (a.priority == AppConstants.priorityEmergency && b.priority != AppConstants.priorityEmergency) {
+          return -1;
+        } else if (a.priority != AppConstants.priorityEmergency && b.priority == AppConstants.priorityEmergency) {
+          return 1;
+        }
+        final posComp = a.queuePosition.compareTo(b.queuePosition);
+        if (posComp != 0) return posComp;
+        return a.tokenNumber.compareTo(b.tokenNumber);
+      });
+
+      controller.add(list);
+    }
+
+    controller = StreamController<List<QueueEntry>>.broadcast(
+      onListen: () {
+        // Listen to queue_entries collection
+        qSub = _db
+            .collection(AppConstants.queueEntriesCollection)
+            .where('queueSessionId', isEqualTo: sessionId)
+            .snapshots()
+            .listen((snapshot) async {
+          List<QueueEntry> entries = [];
+          for (var doc in snapshot.docs) {
+            final data = doc.data();
+            String patientName = (data['patientName'] ?? '').toString();
+            if ((patientName.isEmpty || patientName == 'Unknown Patient') && data['patientId'] != null) {
+              try {
+                final userDoc = await _db.collection(AppConstants.usersCollection).doc(data['patientId']).get();
+                if (userDoc.exists && userDoc.data() != null) {
+                  patientName = (userDoc.data()!['fullName'] ?? patientName).toString();
+                }
+              } catch (_) {}
+            }
+            entries.add(QueueEntry.fromFirestore(doc, patientName: patientName.isNotEmpty ? patientName : null));
+          }
+          queueEntries = entries;
+          emitMerged();
+        }, onError: (err) {
+          debugPrint('queue_entries stream error: $err');
+        });
+
+        // Listen to appointments collection in real-time
+        var apptQuery = _db
+            .collection(AppConstants.appointmentsCollection)
+            .where('departmentId', isEqualTo: dept);
+        if (dateStr.isNotEmpty) {
+          apptQuery = apptQuery.where('appointmentDate', isEqualTo: dateStr);
+        }
+
+        aSub = apptQuery.snapshots().listen((snapshot) {
+          List<QueueEntry> list = [];
+          for (var aDoc in snapshot.docs) {
             final aData = aDoc.data();
-            final token = (aData['tokenCode'] ?? 'A-001').toString();
-            entries.add(QueueEntry(
+            final token = (aData['tokenCode'] ?? aData['tokenNumber'] ?? 'A-001').toString();
+            final rawStatus = (aData['status'] ?? 'waiting').toString();
+            final mappedStatus = (rawStatus == 'confirmed' || rawStatus == 'booked') ? 'waiting' : rawStatus;
+            final pName = (aData['patientName'] ?? 'Patient $token').toString();
+            final priority = (aData['priority'] ?? 'normal').toString();
+            list.add(QueueEntry(
               queueEntryId: aDoc.id,
               queueSessionId: sessionId,
               appointmentId: aDoc.id,
               patientId: (aData['patientId'] ?? '').toString(),
               tokenNumber: token,
               tokenCode: token,
-              status: (aData['status'] ?? 'waiting').toString(),
-              patientName: (aData['patientName'] ?? 'Patient $token').toString(),
+              status: mappedStatus,
+              patientName: pName,
+              priority: priority,
               queuePosition: 1,
             ));
           }
-        } catch (_) {}
-      }
+          apptEntries = list;
+          emitMerged();
+        }, onError: (err) {
+          debugPrint('appointments stream error: $err');
+        });
+      },
+      onCancel: () {
+        qSub?.cancel();
+        aSub?.cancel();
+      },
+    );
 
-      // Sort by position or emergency priority
-      entries.sort((a, b) {
-        if (a.priority == AppConstants.priorityEmergency && b.priority != AppConstants.priorityEmergency) {
-          return -1;
-        } else if (a.priority != AppConstants.priorityEmergency && b.priority == AppConstants.priorityEmergency) {
-          return 1;
-        }
-        return a.queuePosition.compareTo(b.queuePosition);
-      });
-
-      return entries;
-    });
+    return controller.stream;
   }
 
   Future<List<QueueEntry>> getPatientQueue(String sessionId) async {
-    final snapshot = await _db
-        .collection(AppConstants.queueEntriesCollection)
-        .where('queueSessionId', isEqualTo: sessionId)
-        .get();
+    final parts = sessionId.split('_');
+    final dept = parts.length >= 2 ? parts[1] : 'gen_med';
+    final dateStr = parts.length >= 3 ? parts[2] : '';
 
-    List<QueueEntry> entries = [];
-    for (var doc in snapshot.docs) {
-      final data = doc.data();
-      String patientName = (data['patientName'] ?? '').toString();
-      if (patientName.isEmpty && data['patientId'] != null) {
-        try {
-          final userDoc = await _db.collection(AppConstants.usersCollection).doc(data['patientId']).get();
-          if (userDoc.exists && userDoc.data() != null) {
-            patientName = (userDoc.data()!['fullName'] ?? 'Patient').toString();
-          }
-        } catch (_) {}
+    final Map<String, QueueEntry> merged = {};
+
+    try {
+      final snapshot = await _db
+          .collection(AppConstants.queueEntriesCollection)
+          .where('queueSessionId', isEqualTo: sessionId)
+          .get();
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        String patientName = (data['patientName'] ?? '').toString();
+        if (patientName.isEmpty && data['patientId'] != null) {
+          try {
+            final userDoc = await _db.collection(AppConstants.usersCollection).doc(data['patientId']).get();
+            if (userDoc.exists && userDoc.data() != null) {
+              patientName = (userDoc.data()!['fullName'] ?? 'Patient').toString();
+            }
+          } catch (_) {}
+        }
+        final entry = QueueEntry.fromFirestore(doc, patientName: patientName.isNotEmpty ? patientName : null);
+        merged[entry.appointmentId.isNotEmpty ? entry.appointmentId : entry.queueEntryId] = entry;
       }
-      entries.add(QueueEntry.fromFirestore(doc, patientName: patientName.isNotEmpty ? patientName : null));
-    }
-    return entries;
+    } catch (_) {}
+
+    try {
+      var apptQuery = _db.collection(AppConstants.appointmentsCollection).where('departmentId', isEqualTo: dept);
+      if (dateStr.isNotEmpty) {
+        apptQuery = apptQuery.where('appointmentDate', isEqualTo: dateStr);
+      }
+      final apptsSnap = await apptQuery.get();
+      for (var aDoc in apptsSnap.docs) {
+        final key = aDoc.id;
+        if (!merged.containsKey(key)) {
+          final aData = aDoc.data();
+          final token = (aData['tokenCode'] ?? aData['tokenNumber'] ?? 'A-001').toString();
+          final rawStatus = (aData['status'] ?? 'waiting').toString();
+          final mappedStatus = (rawStatus == 'confirmed' || rawStatus == 'booked') ? 'waiting' : rawStatus;
+          merged[key] = QueueEntry(
+            queueEntryId: aDoc.id,
+            queueSessionId: sessionId,
+            appointmentId: aDoc.id,
+            patientId: (aData['patientId'] ?? '').toString(),
+            tokenNumber: token,
+            tokenCode: token,
+            status: mappedStatus,
+            patientName: (aData['patientName'] ?? 'Patient $token').toString(),
+            priority: (aData['priority'] ?? 'normal').toString(),
+            queuePosition: merged.length + 1,
+          );
+        }
+      }
+    } catch (_) {}
+
+    final list = merged.values.toList();
+    list.sort((a, b) => a.queuePosition.compareTo(b.queuePosition));
+    return list;
   }
 
   Future<QueueEntry?> getQueueEntry(String queueEntryId) async {

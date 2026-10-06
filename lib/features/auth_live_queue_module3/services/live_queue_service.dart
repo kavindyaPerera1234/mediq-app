@@ -470,18 +470,12 @@ class LiveQueueService extends ChangeNotifier {
     final servingIdx = mapped.indexWhere((st) => st == PatientQueueStatus.called);
     final explicitServing = (s['currentTokenServing'] ?? s['currentToken'] ?? s['currentTokenNumber'])?.toString();
     String nowServing = '—';
-    if (explicitServing != null && explicitServing.isNotEmpty && explicitServing != '—') {
-      nowServing = explicitServing;
-    } else if (servingIdx >= 0) {
+    if (servingIdx >= 0) {
       nowServing = (ordered[servingIdx].value['tokenCode'] ?? '—').toString();
+    } else if (explicitServing != null && explicitServing.isNotEmpty && explicitServing != '—') {
+      nowServing = explicitServing;
     } else {
-      // Check if any previous patient completed
-      final lastDone = mapped.lastIndexWhere((st) => st == PatientQueueStatus.completed);
-      if (lastDone >= 0) {
-        nowServing = (ordered[lastDone].value['tokenCode'] ?? '—').toString();
-      } else {
-        nowServing = '—';
-      }
+      nowServing = '—';
     }
 
     int parseTokenNum(String? tokenStr) {
@@ -853,6 +847,104 @@ class LiveQueueService extends ChangeNotifier {
       debugPrint('rejoinQueueEntry notice: $e');
       return await rejoinQueue(reason);
     }
+  }
+
+  /// Mark the current active consultation as completed across Firestore collections
+  /// (appointments, queue_entries, queue_sessions) and update local status.
+  Future<void> completeCurrentConsultation() async {
+    String? apptId = _myApptId;
+    String token = _entry?.tokenCode ?? (_myAppt?['tokenCode'] ?? '').toString();
+
+    // Fallback: If _myApptId is not set, find any currently called or active appointment
+    if (apptId == null || apptId.isEmpty) {
+      final called = _myAppointmentsList.where((a) {
+        final st = _statusOf(a);
+        return st == 'called' || st == 'serving' || st == 'in_consultation';
+      }).toList();
+      if (called.isNotEmpty) {
+        apptId = called.first['id']?.toString();
+        token = (called.first['tokenCode'] ?? '').toString();
+      } else if (_myAppointmentsList.isNotEmpty) {
+        apptId = _myAppointmentsList.first['id']?.toString();
+        token = (_myAppointmentsList.first['tokenCode'] ?? '').toString();
+      }
+    }
+
+    final now = FieldValue.serverTimestamp();
+
+    if (apptId != null && apptId.isNotEmpty) {
+      try {
+        await _firestore.collection('appointments').doc(apptId).update({
+          'status': 'completed',
+          'completedAt': now,
+          'updatedAt': now,
+        });
+      } catch (e) {
+        debugPrint('Error updating appointment to completed: $e');
+      }
+
+      try {
+        await _firestore.collection('queue_entries').doc(apptId).update({
+          'status': 'completed',
+          'completedAt': now,
+          'updatedAt': now,
+        });
+      } catch (e) {
+        debugPrint('Error updating queue entry to completed: $e');
+      }
+    }
+
+    final hospId = (_myAppt?['hospitalId'] ?? _session?.hospitalId ?? '').toString();
+    final deptId = (_myAppt?['departmentId'] ?? _session?.departmentId ?? '').toString();
+    final date = (_myAppt?['appointmentDate'] ?? appointmentDate).toString();
+    final sessId = (hospId.isNotEmpty && deptId.isNotEmpty && date.isNotEmpty)
+        ? sessionIdFor(hospId, deptId, date)
+        : (_watchedSessionId ?? '');
+
+    if (sessId.isNotEmpty) {
+      try {
+        final sDoc = await _firestore.collection('queue_sessions').doc(sessId).get();
+        if (sDoc.exists) {
+          final curr = (sDoc.data()?['currentTokenServing'] ?? sDoc.data()?['currentToken'] ?? '').toString();
+          if (token.isEmpty || curr == token || curr == '—') {
+            await _firestore.collection('queue_sessions').doc(sessId).update({
+              'currentTokenServing': '—',
+              'currentToken': '—',
+              'currentTokenNumber': '—',
+              'nowServing': '—',
+              'updatedAt': now,
+            });
+          }
+        }
+      } catch (e) {
+        debugPrint('Error updating queue session on complete: $e');
+      }
+    }
+
+    try {
+      final qs1Doc = await _firestore.collection('queue_sessions').doc('QS-001').get();
+      if (qs1Doc.exists) {
+        final curr = (qs1Doc.data()?['currentTokenServing'] ?? qs1Doc.data()?['currentToken'] ?? '').toString();
+        if (token.isEmpty || curr == token || curr == '—') {
+          await _firestore.collection('queue_sessions').doc('QS-001').update({
+            'currentTokenServing': '—',
+            'currentToken': '—',
+            'currentTokenNumber': '—',
+            'nowServing': '—',
+            'updatedAt': now,
+          });
+        }
+      }
+    } catch (_) {}
+
+    if (_entry != null) {
+      _entry = _entry!.copyWith(status: PatientQueueStatus.completed);
+    }
+    if (_myAppt != null) {
+      _myAppt!['status'] = 'completed';
+    }
+    _statusController.add(PatientQueueStatus.completed);
+    notifyListeners();
   }
 
   // ── Clinic simulator (stand-in for Module 4 until it is merged) ───────────

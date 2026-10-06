@@ -92,7 +92,7 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
     );
 
     // Call dedicated Service layer
-    await _appointmentService.bookAppointment(appointment);
+    final bookedId = await _appointmentService.bookAppointment(appointment);
 
     if (widget.isCaregiverBooking) {
       final curUserId = AuthService().currentUser?.userId ?? 'caregiver_user';
@@ -121,6 +121,7 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => BookingConfirmationScreen(
+          appointmentId: bookedId,
           hospital: widget.hospital,
           clinic: widget.clinic,
           selectedDate: widget.selectedDate,

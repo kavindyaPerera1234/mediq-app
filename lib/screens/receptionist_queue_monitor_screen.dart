@@ -149,7 +149,7 @@ class _ReceptionistQueueMonitorScreenState extends State<ReceptionistQueueMonito
                     builder: (context, entriesSnapshot) {
                       final entries = entriesSnapshot.data ?? [];
                       final waitingCount = entries
-                          .where((e) => e.status == 'waiting' || e.status == 'rejoined' || e.status == 'approaching')
+                          .where((e) => e.status == 'waiting' || e.status == 'rejoined' || e.status == 'approaching' || e.status == 'confirmed' || e.status == 'booked')
                           .length;
                       final hasEmergency = entries.any((e) => e.priority == 'emergency' && e.status != 'completed');
 

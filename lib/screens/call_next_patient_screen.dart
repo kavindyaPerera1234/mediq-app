@@ -120,7 +120,7 @@ class _CallNextPatientScreenState extends State<CallNextPatientScreen> {
 
                 // Next eligible patient (waiting/rejoined with emergency priority first)
                 final waitingList = entries
-                    .where((e) => e.status == 'waiting' || e.status == 'rejoined' || e.status == 'approaching')
+                    .where((e) => e.status == 'waiting' || e.status == 'rejoined' || e.status == 'approaching' || e.status == 'confirmed' || e.status == 'booked')
                     .toList();
 
                 waitingList.sort((a, b) {

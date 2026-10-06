@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:google_fonts/google_fonts.dart';
 import '../../services/live_queue_service.dart';
+import '../../models/queue_entry_model.dart';
 import 'your_turn_now_screen.dart';
+import 'queue_completed_screen.dart';
 
 class YourTurnFullscreenScreen extends StatefulWidget {
   const YourTurnFullscreenScreen({super.key});
@@ -14,6 +17,7 @@ class _YourTurnFullscreenScreenState extends State<YourTurnFullscreenScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _animController;
   late Animation<double> _scaleAnimation;
+  StreamSubscription<PatientQueueStatus>? _statusSub;
 
   @override
   void initState() {
@@ -26,10 +30,20 @@ class _YourTurnFullscreenScreenState extends State<YourTurnFullscreenScreen>
     _scaleAnimation = Tween<double>(begin: 0.95, end: 1.05).animate(
       CurvedAnimation(parent: _animController, curve: Curves.easeInOut),
     );
+
+    _statusSub = LiveQueueService().statusChanges.listen((status) {
+      if (status == PatientQueueStatus.completed && mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const QueueCompletedScreen()),
+        );
+      }
+    });
   }
 
   @override
   void dispose() {
+    _statusSub?.cancel();
     _animController.dispose();
     super.dispose();
   }

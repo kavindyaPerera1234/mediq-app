@@ -129,13 +129,16 @@ class AppointmentService {
         .collection('appointments')
         .doc(appointmentId)
         .update({
-
       'status': 'cancelled',
-
       'cancelledAt': Timestamp.now(),
-
       'updatedAt': Timestamp.now(),
-
     });
+
+    try {
+      await _firestore.collection('queue_entries').doc(appointmentId).update({
+        'status': 'cancelled',
+        'updatedAt': Timestamp.now(),
+      });
+    } catch (_) {}
   }
 }

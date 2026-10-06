@@ -44,6 +44,28 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
   final SeedDataService _seedDataService = SeedDataService();
   int _currentBottomNavIndex = 0;
   bool _isSeeding = false;
+  DateTime _selectedDate = DateTime.now();
+
+  bool get _isToday {
+    final now = DateTime.now();
+    return _selectedDate.year == now.year &&
+        _selectedDate.month == now.month &&
+        _selectedDate.day == now.day;
+  }
+
+  Future<void> _pickDashboardDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 7)),
+      lastDate: DateTime.now().add(const Duration(days: 30)),
+    );
+    if (picked != null) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
+  }
 
   Future<void> _handleSeedDatabase() async {
     setState(() {
@@ -259,16 +281,34 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
     final rawDId = staffProfile?.departmentId ?? '';
     final hId = (rawHId == 'HOSP-001' || rawHId.isEmpty) ? 'nhsl' : rawHId;
     final dId = (rawDId == 'DEPT-001' || rawDId.isEmpty) ? 'gen_med' : rawDId;
-    final sessionId = AppConstants.defaultQueueSessionId(hId, dId);
+    final dateStr = "${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}";
+    final sessionId = '${hId}_${dId}_$dateStr';
 
     final staffName = staffUser?.fullName ?? 'Dr. Silva';
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('MediQ OPD Portal'),
+        title: InkWell(
+          onTap: _pickDashboardDate,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('MediQ OPD Portal', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Text(
+                _isToday ? "Today • $dateStr" : "Date: $dateStr",
+                style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+        ),
         automaticallyImplyLeading: false,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.calendar_month_rounded, color: AppColors.primary),
+            tooltip: 'Select OPD Date',
+            onPressed: _pickDashboardDate,
+          ),
           IconButton(
             icon: const Icon(Icons.logout_rounded, color: AppColors.error),
             tooltip: 'Log Out of Staff Portal',
@@ -323,7 +363,7 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
 
                 final entries = entriesSnapshot.data ?? [];
 
-                final waitingCount = entries.where((e) => e.status == 'waiting' || e.status == 'approaching' || e.status == 'rejoined').length;
+                final waitingCount = entries.where((e) => e.status == 'waiting' || e.status == 'approaching' || e.status == 'rejoined' || e.status == 'confirmed' || e.status == 'booked').length;
                 final completedCount = entries.where((e) => e.status == 'completed').length;
                 final onHoldCount = entries.where((e) => e.status == 'on_hold').length;
                 final totalScheduled = entries.length;
@@ -397,12 +437,12 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Row(
+                              Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    "Today's OPD Summary",
-                                    style: TextStyle(
+                                    _isToday ? "Today's OPD Summary" : "$dateStr OPD Summary",
+                                    style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
                                       color: AppColors.textPrimary,

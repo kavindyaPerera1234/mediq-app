@@ -40,6 +40,11 @@ class AppointmentModel {
   });
 
   Map<String, dynamic> toMap() {
+    final parts = timeSlot.split('-');
+    final start = parts.isNotEmpty ? parts[0].trim() : '';
+    final end = parts.length > 1 ? parts[1].trim() : '';
+    final slot = 'SLOT-${(timeSlot.hashCode.abs() % 10 + 1).toString().padLeft(3, '0')}';
+
     return {
       'appointmentId': id,
       'patientId': patientId,
@@ -47,6 +52,7 @@ class AppointmentModel {
       'patientNic': patientNic,
       'userId': patientId,
       'caregiverId': isCaregiverBooking ? (patientNic.isNotEmpty ? patientNic : patientId) : null,
+      'caregiverPatientId': isCaregiverBooking ? (patientNic.isNotEmpty ? patientNic : patientId) : null,
       'isCaregiverBooking': isCaregiverBooking,
       'relationship': relationship,
       'priority': priority,
@@ -57,9 +63,14 @@ class AppointmentModel {
       'roomNumber': roomNumber,
       'appointmentDate': appointmentDate,
       'timeSlot': timeSlot,
+      'slotId': slot,
+      'startTime': start,
+      'endTime': end,
       'tokenCode': tokenCode,
+      'tokenNumber': tokenCode,
       'status': status,
       'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
     };
   }
 

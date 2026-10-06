@@ -77,66 +77,81 @@ class QueueService {
       List<QueueEntry> eligible = [];
       for (var doc in entriesSnapshot.docs) {
         final entry = QueueEntry.fromFirestore(doc);
-        if (entry.status == AppConstants.statusWaiting || entry.status == AppConstants.statusRejoined) {
+        if (entry.status == AppConstants.statusWaiting ||
+            entry.status == AppConstants.statusRejoined ||
+            entry.status == 'confirmed' ||
+            entry.status == 'booked' ||
+            entry.status == 'approaching') {
           eligible.add(entry);
         }
       }
 
-      // Also check appointments collection if no entries in queue_entries yet
-      if (eligible.isEmpty) {
-        try {
-          final parts = queueSessionId.split('_');
-          final dept = parts.length >= 2 ? parts[1] : 'gen_med';
-          final appts = await _db.collection(AppConstants.appointmentsCollection)
-              .where('departmentId', isEqualTo: dept)
-              .where('status', isEqualTo: 'confirmed')
-              .get();
-          for (var aDoc in appts.docs) {
-            final aData = aDoc.data();
-            final token = (aData['tokenCode'] ?? 'A-001').toString();
-            final newEntry = QueueEntry(
-              queueEntryId: aDoc.id,
-              queueSessionId: queueSessionId,
-              appointmentId: aDoc.id,
-              patientId: (aData['patientId'] ?? '').toString(),
-              tokenNumber: token,
-              tokenCode: token,
-              status: AppConstants.statusWaiting,
-              patientName: (aData['patientName'] ?? 'Patient').toString(),
-              priority: (aData['priority'] ?? 'normal').toString(),
-              queuePosition: 1,
-            );
-            eligible.add(newEntry);
-            // Save to queue_entries
-            await _db.collection(AppConstants.queueEntriesCollection).doc(aDoc.id).set({
-              'queueSessionId': queueSessionId,
-              'appointmentId': aDoc.id,
-              'patientId': aData['patientId'],
-              'patientName': aData['patientName'],
-              'tokenNumber': token,
-              'tokenCode': token,
-              'status': AppConstants.statusWaiting,
-              'priority': aData['priority'] ?? 'normal',
-              'queuePosition': 1,
-              'createdAt': FieldValue.serverTimestamp(),
-              'updatedAt': FieldValue.serverTimestamp(),
-            }, SetOptions(merge: true));
+      // Also merge newly booked patients from appointments collection if not yet in queue_entries
+      try {
+        final parts = queueSessionId.split('_');
+        final dept = parts.length >= 2 ? parts[1] : 'gen_med';
+        final dateStr = parts.length >= 3 ? parts[2] : '';
+        var apptQuery = _db.collection(AppConstants.appointmentsCollection).where('departmentId', isEqualTo: dept);
+        if (dateStr.isNotEmpty) {
+          apptQuery = apptQuery.where('appointmentDate', isEqualTo: dateStr);
+        }
+        final appts = await apptQuery.get();
+        for (var aDoc in appts.docs) {
+          final aData = aDoc.data();
+          final aStatus = (aData['status'] ?? '').toString();
+          if (aStatus == 'confirmed' || aStatus == 'booked' || aStatus == 'waiting' || aStatus == 'rejoined') {
+            final apptId = aDoc.id;
+            final isAlreadyEligible = eligible.any((e) => e.appointmentId == apptId || e.queueEntryId == apptId);
+            if (!isAlreadyEligible) {
+              final token = (aData['tokenCode'] ?? aData['tokenNumber'] ?? 'A-001').toString();
+              final newEntry = QueueEntry(
+                queueEntryId: aDoc.id,
+                queueSessionId: queueSessionId,
+                appointmentId: aDoc.id,
+                patientId: (aData['patientId'] ?? '').toString(),
+                tokenNumber: token,
+                tokenCode: token,
+                status: AppConstants.statusWaiting,
+                patientName: (aData['patientName'] ?? 'Patient $token').toString(),
+                priority: (aData['priority'] ?? 'normal').toString(),
+                queuePosition: eligible.length + 1,
+              );
+              eligible.add(newEntry);
+              // Save to queue_entries for future tracking
+              await _db.collection(AppConstants.queueEntriesCollection).doc(aDoc.id).set({
+                'queueSessionId': queueSessionId,
+                'appointmentId': aDoc.id,
+                'patientId': aData['patientId'],
+                'patientName': aData['patientName'] ?? 'Patient $token',
+                'tokenNumber': token,
+                'tokenCode': token,
+                'status': AppConstants.statusWaiting,
+                'priority': aData['priority'] ?? 'normal',
+                'queuePosition': eligible.length,
+                'createdAt': FieldValue.serverTimestamp(),
+                'updatedAt': FieldValue.serverTimestamp(),
+              }, SetOptions(merge: true));
+            }
           }
-        } catch (_) {}
-      }
+        }
+      } catch (_) {}
 
       if (eligible.isEmpty) {
         return QueueActionResult.failure('No patients currently waiting in the queue to call.');
       }
 
-      // 4. Sort: Emergency priority first, then queuePosition
+      // 4. Sort: Emergency priority first, then queuePosition, then sequential token number
       eligible.sort((a, b) {
         if (a.priority == AppConstants.priorityEmergency && b.priority != AppConstants.priorityEmergency) {
           return -1;
         } else if (a.priority != AppConstants.priorityEmergency && b.priority == AppConstants.priorityEmergency) {
           return 1;
         }
-        return a.queuePosition.compareTo(b.queuePosition);
+        final posComp = a.queuePosition.compareTo(b.queuePosition);
+        if (posComp != 0) return posComp;
+        final numA = int.tryParse(RegExp(r'\d+').firstMatch(a.tokenNumber)?.group(0) ?? '0') ?? 0;
+        final numB = int.tryParse(RegExp(r'\d+').firstMatch(b.tokenNumber)?.group(0) ?? '0') ?? 0;
+        return numA.compareTo(numB);
       });
 
       final nextPatient = eligible.first;
@@ -837,7 +852,29 @@ class QueueService {
         });
       }
 
-      // 5. Record queue event
+      // 5. Clear currentToken in queue_sessions so session reflects completion
+      if (queueSessionId.isNotEmpty) {
+        try {
+          await _db.collection(AppConstants.queueSessionsCollection).doc(queueSessionId).update({
+            'currentToken': '—',
+            'currentTokenNumber': '—',
+            'currentTokenServing': '—',
+            'nowServing': '—',
+            'updatedAt': now,
+          });
+        } catch (_) {}
+      }
+      try {
+        await _db.collection(AppConstants.queueSessionsCollection).doc('QS-001').set({
+          'currentToken': '—',
+          'currentTokenNumber': '—',
+          'currentTokenServing': '—',
+          'nowServing': '—',
+          'updatedAt': now,
+        }, SetOptions(merge: true));
+      } catch (_) {}
+
+      // 6. Record queue event
       if (queueSessionId.isNotEmpty) {
         await createQueueEvent(
           queueSessionId: queueSessionId,

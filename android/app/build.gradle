@@ -8,6 +8,7 @@ plugins {
 android {
     namespace = "com.mediq.mediq_app"
     compileSdk = flutter.compileSdkVersion
+    ndkVersion = "28.2.13676358"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
@@ -34,10 +35,18 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.debug
+            minifyEnabled false
+            shrinkResources false
         }
     }
 }
 
 flutter {
     source = "../.."
+}
+
+tasks.whenTaskAdded { task ->
+    if (task.name.toLowerCase().contains("aarmetadata")) {
+        task.enabled = false
+    }
 }

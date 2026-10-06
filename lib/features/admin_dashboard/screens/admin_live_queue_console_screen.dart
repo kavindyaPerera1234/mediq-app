@@ -507,14 +507,19 @@ class _AdminLiveQueueConsoleScreenState extends State<AdminLiveQueueConsoleScree
           .collection(AppConstants.queueEntriesCollection)
           .where('queueSessionId', isEqualTo: sessionId)
           .where('status', isEqualTo: 'waiting')
-          .limit(1)
           .get();
 
       String nextToken = '';
       final batch = _firestore.batch();
 
       if (waitingQuery.docs.isNotEmpty) {
-        final nextDoc = waitingQuery.docs.first;
+        final sortedDocs = List<QueryDocumentSnapshot<Map<String, dynamic>>>.from(waitingQuery.docs)
+          ..sort((a, b) {
+            final posA = (a.data()['queuePosition'] as num?)?.toInt() ?? 999;
+            final posB = (b.data()['queuePosition'] as num?)?.toInt() ?? 999;
+            return posA.compareTo(posB);
+          });
+        final nextDoc = sortedDocs.first;
         nextToken = nextDoc.data()['tokenCode'] ?? 'A-001';
 
         // Update entry to 'called'
@@ -531,7 +536,7 @@ class _AdminLiveQueueConsoleScreenState extends State<AdminLiveQueueConsoleScree
           final num = int.tryParse(match.group(2) ?? '0') ?? 0;
           nextToken = '$prefix-${(num + 1).toString().padLeft(3, '0')}';
         } else {
-          nextToken = 'A-025';
+          nextToken = 'A-001';
         }
       }
 

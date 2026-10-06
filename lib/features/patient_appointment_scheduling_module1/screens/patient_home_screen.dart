@@ -3,9 +3,12 @@ import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_accessibility.dart';
 import '../backend/backend.dart';
+import 'caregiver_setup_screen.dart';
 import 'senior_mode_settings_screen.dart';
 import '../../auth_live_queue_module3/services/auth_service.dart';
 import '../../auth_live_queue_module3/screens/states/your_turn_fullscreen_screen.dart';
+import '../../auth_live_queue_module3/screens/states/queue_completed_screen.dart';
+import '../../token_lifecycle_notification_module2/screens/digital_token_details_screen.dart';
 
 class PatientHomeScreen extends StatelessWidget {
   final ValueChanged<int> onNavigateTab;
@@ -100,7 +103,13 @@ class PatientHomeScreen extends StatelessWidget {
                         if (activeAppointments.isNotEmpty) {
                           return _buildActiveTokenCard(context, activeAppointments.first);
                         } else {
-                          return _buildNoActiveTokenCard();
+                          final completedToday = appointments
+                              .where((a) => (a.status == 'completed' || a.status == 'done') && a.appointmentDate == todayStr)
+                              .toList();
+                          if (completedToday.isNotEmpty) {
+                            return _buildCompletedTodayCard(context, completedToday.first);
+                          }
+                          return _buildNoActiveTokenCard(context);
                         }
                       },
                     ),
@@ -112,7 +121,7 @@ class PatientHomeScreen extends StatelessWidget {
                       style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.headingText),
                     ),
                     const SizedBox(height: 10),
-                    _buildQuickActionsGrid(),
+                    _buildQuickActionsGrid(context),
                     const SizedBox(height: 20),
 
                     // 4. Ministry of Health Guidelines
@@ -298,7 +307,14 @@ class PatientHomeScreen extends StatelessWidget {
                       MaterialPageRoute(builder: (_) => const YourTurnFullscreenScreen()),
                     );
                   } else {
-                    onNavigateTab(4); // Go to Profile
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => DigitalTokenDetailsScreen(
+                          appointmentId: appointment.id.isNotEmpty ? appointment.id : appointment.tokenCode,
+                        ),
+                      ),
+                    );
                   }
                 },
                 style: ElevatedButton.styleFrom(
@@ -320,7 +336,105 @@ class PatientHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildNoActiveTokenCard() {
+  Widget _buildCompletedTodayCard(BuildContext context, AppointmentModel appointment) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.cardSurface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.cardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.isDark ? Colors.black26 : AppColors.textDark.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDCFCE7),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.check_circle_rounded, color: Color(0xFF15803D), size: 14),
+                    SizedBox(width: 4),
+                    Text(
+                      'OPD VISIT COMPLETED',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF15803D),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                appointment.appointmentDate,
+                style: TextStyle(fontSize: 12, color: AppColors.bodyText, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      appointment.tokenCode,
+                      style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: AppColors.headingText),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      appointment.departmentName,
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.headingText),
+                    ),
+                    Text(
+                      '${appointment.hospitalName} • Consultation Finished',
+                      style: TextStyle(fontSize: 11, color: AppColors.bodyText),
+                    ),
+                  ],
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const QueueCompletedScreen()),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.chipBg,
+                  foregroundColor: AppColors.accentColor,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: const Text('View Summary', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoActiveTokenCard(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -356,7 +470,10 @@ class PatientHomeScreen extends StatelessWidget {
             ),
           ),
           ElevatedButton(
-            onPressed: () => onNavigateTab(1), // Go to Book Appointment
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CaregiverSetupScreen()),
+            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.accentColor,
               foregroundColor: Colors.white,
@@ -371,7 +488,7 @@ class PatientHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildQuickActionsGrid() {
+  Widget _buildQuickActionsGrid(BuildContext context) {
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -385,7 +502,10 @@ class PatientHomeScreen extends StatelessWidget {
           subtitle: 'Choose hospital & time',
           icon: Icons.calendar_month_rounded,
           color: AppColors.accentColor,
-          onTap: () => onNavigateTab(1),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const CaregiverSetupScreen()),
+          ),
         ),
         _buildActionCard(
           title: 'Live Queue',

@@ -50,7 +50,9 @@ class QueueEntry {
       patientId: data['patientId'] ?? '',
       tokenNumber: data['tokenNumber'] ?? data['tokenCode'] ?? '',
       tokenCode: data['tokenCode'] ?? data['tokenNumber'] ?? '',
-      status: data['status'] ?? 'waiting',
+      status: (data['status'] == 'confirmed' || data['status'] == 'booked')
+          ? 'waiting'
+          : (data['status'] ?? 'waiting'),
       queuePosition: data['queuePosition'] ?? 0,
       estimatedWaitMinutes: data['estimatedWaitMinutes'] ?? 0,
       priority: data['priority'] ?? 'normal',
