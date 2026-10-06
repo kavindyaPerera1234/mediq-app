@@ -12,6 +12,7 @@ import 'call_next_patient_screen.dart';
 import 'hold_and_resume_screen.dart';
 import 'emergency_priority_screen.dart';
 import 'staff_delay_communication_screen.dart';
+import '../services/queue_service.dart';
 
 class PatientQueueListScreen extends StatefulWidget {
   final AuthService authService;
@@ -369,8 +370,31 @@ class _PatientQueueListScreenState extends State<PatientQueueListScreen>
       itemCount: entries.length,
       itemBuilder: (context, index) {
         final entry = entries[index];
+        final bool canCall = entry.status == 'waiting' ||
+            entry.status == 'rejoined' ||
+            entry.status == 'approaching' ||
+            entry.status == 'on_hold';
+
         return QueueCard(
           entry: entry,
+          primaryActionLabel: canCall ? 'Call' : null,
+          onPrimaryAction: canCall
+              ? () async {
+                  final staffId = widget.authService.currentUser?.uid ?? 'doc-001';
+                  final res = await QueueService().callSpecificPatient(
+                    queueEntryId: entry.queueEntryId,
+                    staffUserId: staffId,
+                  );
+                  if (context.mounted && res.message.isNotEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(res.message),
+                        backgroundColor: res.success ? AppColors.success : AppColors.error,
+                      ),
+                    );
+                  }
+                }
+              : null,
           onTap: () {
             Navigator.push(
               context,

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../core/constants/app_colors.dart';
-import '../core/constants/app_constants.dart';
 import '../models/queue_session.dart';
 import '../models/queue_entry.dart';
 import '../services/auth_service.dart';
@@ -24,6 +23,7 @@ import 'receptionist_queue_monitor_screen.dart';
 import 'queue_pause_resume_screen.dart';
 import 'consultation_complete_screen.dart';
 import 'skip_patient_confirmation_screen.dart';
+import '../features/admin_dashboard/screens/admin_dashboard_screen.dart';
 
 class StaffDashboardScreen extends StatefulWidget {
   final AuthService authService;
@@ -42,6 +42,47 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
   final SeedDataService _seedDataService = SeedDataService();
   int _currentBottomNavIndex = 0;
   bool _isSeeding = false;
+  DateTime _selectedDate = DateTime.now();
+
+  Future<void> _pickDashboardDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2025),
+      lastDate: DateTime(2030),
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
+  }
+
+  void _handleLogout() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Staff Logout'),
+        content: const Text('Are you sure you want to log out of MediQ OPD Portal?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () async {
+              await widget.authService.signOut();
+              if (mounted) {
+                Navigator.of(context).popUntil((route) => route.isFirst);
+              }
+            },
+            child: const Text('Logout', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
 
   Future<void> _handleSeedDatabase() async {
     setState(() {
@@ -79,10 +120,8 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
     final staffProfile = widget.authService.currentStaffProfile;
     final hId = staffProfile?.hospitalId ?? 'nhsl';
     final dId = staffProfile?.departmentId ?? 'gen_med';
-    final dynamicSessionId = AppConstants.defaultQueueSessionId(
-      hId.isNotEmpty ? hId : 'nhsl',
-      dId.isNotEmpty ? dId : 'gen_med',
-    );
+    final dateStr = "${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}";
+    final dynamicSessionId = '${hId.isNotEmpty ? hId : 'nhsl'}_${dId.isNotEmpty ? dId : 'gen_med'}_$dateStr';
 
     showModalBottomSheet(
       context: context,
@@ -101,7 +140,7 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'MODULE 4 — ALL 14 SCREENS',
+                    'MODULE 4 — ALL SCREENS & ADMIN',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -118,6 +157,7 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
               Expanded(
                 child: ListView(
                   children: [
+                    _buildScreenTile('0. Admin Dashboard Console', Icons.admin_panel_settings_rounded, () => _openScreen(AdminDashboardScreen(authService: widget.authService))),
                     _buildScreenTile('1. Staff Dashboard', Icons.dashboard_rounded, () => Navigator.pop(context)),
                     _buildScreenTile('2. Patient Queue List', Icons.format_list_bulleted_rounded, () => _openScreen(PatientQueueListScreen(authService: widget.authService, queueSessionId: dynamicSessionId))),
                     _buildScreenTile('4. Patient Queue Detail', Icons.person_search_rounded, () => _openScreen(PatientQueueDetailScreen(authService: widget.authService, queueEntryId: 'QE-pat-019'))),
@@ -171,10 +211,8 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
 
     final hId = staffProfile?.hospitalId ?? 'nhsl';
     final dId = staffProfile?.departmentId ?? 'gen_med';
-    final sessionId = AppConstants.defaultQueueSessionId(
-      hId.isNotEmpty ? hId : 'nhsl',
-      dId.isNotEmpty ? dId : 'gen_med',
-    );
+    final dateStr = "${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}";
+    final sessionId = '${hId.isNotEmpty ? hId : 'nhsl'}_${dId.isNotEmpty ? dId : 'gen_med'}_$dateStr';
 
     final staffName = staffUser?.fullName ?? 'Dr. Silva';
 
@@ -184,6 +222,11 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
         title: const Text('MediQ OPD Portal'),
         automaticallyImplyLeading: false,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.calendar_month_rounded, color: AppColors.primary),
+            tooltip: 'Pick OPD Clinic Date',
+            onPressed: _pickDashboardDate,
+          ),
           IconButton(
             icon: _isSeeding
                 ? const SizedBox(
@@ -197,15 +240,13 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.apps_rounded, color: AppColors.primary),
-            tooltip: 'All 14 Screens Quick Navigator',
+            tooltip: 'All Screens Navigator',
             onPressed: _showAllScreensModal,
           ),
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: AppColors.primary),
-            tooltip: 'Refresh Dashboard',
-            onPressed: () {
-              setState(() {});
-            },
+            icon: const Icon(Icons.logout_rounded, color: AppColors.error),
+            tooltip: 'Logout',
+            onPressed: _handleLogout,
           ),
         ],
       ),

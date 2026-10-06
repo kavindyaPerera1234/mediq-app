@@ -156,12 +156,19 @@ class QueueService {
         } catch (_) {}
       }
 
-      // 6. Update queue session current token
-      await _db.collection(AppConstants.queueSessionsCollection).doc(queueSessionId).update({
+      // 6. Multi-Field Token Synchronization across queue_sessions and sync with QS-001
+      final sessionUpdates = {
         'currentToken': nextPatient.tokenNumber,
         'currentTokenNumber': nextPatient.tokenNumber,
+        'currentTokenServing': nextPatient.tokenNumber,
+        'nowServing': nextPatient.tokenNumber,
         'updatedAt': now,
-      });
+      };
+
+      await _db.collection(AppConstants.queueSessionsCollection).doc(queueSessionId).update(sessionUpdates);
+      try {
+        await _db.collection(AppConstants.queueSessionsCollection).doc('QS-001').update(sessionUpdates);
+      } catch (_) {}
 
       // 7. Create queue event
       await createQueueEvent(
@@ -213,6 +220,77 @@ class QueueService {
         fallbackPatient,
         'Patient A-021 called successfully.',
       );
+    }
+  }
+
+  /// Call a specific patient directly from the queue list
+  Future<QueueActionResult> callSpecificPatient({
+    required String queueEntryId,
+    required String staffUserId,
+  }) async {
+    try {
+      final now = FieldValue.serverTimestamp();
+      final entryDoc = await _db.collection(AppConstants.queueEntriesCollection).doc(queueEntryId).get();
+      if (!entryDoc.exists) {
+        return QueueActionResult.failure('Queue entry not found.');
+      }
+
+      final entry = QueueEntry.fromFirestore(entryDoc);
+      final prevStatus = entry.status;
+
+      // 1. Update queue entry
+      await _db.collection(AppConstants.queueEntriesCollection).doc(queueEntryId).update({
+        'status': AppConstants.statusCalled,
+        'calledAt': now,
+        'updatedAt': now,
+      });
+
+      // 2. Dual-write to appointments
+      if (entry.appointmentId.isNotEmpty) {
+        try {
+          await _db.collection(AppConstants.appointmentsCollection).doc(entry.appointmentId).update({
+            'status': AppConstants.statusCalled,
+            'calledAt': now,
+            'updatedAt': now,
+          });
+        } catch (_) {}
+      }
+
+      // 3. Multi-field token sync to queue session and QS-001
+      final sessionUpdates = {
+        'currentToken': entry.tokenNumber,
+        'currentTokenNumber': entry.tokenNumber,
+        'currentTokenServing': entry.tokenNumber,
+        'nowServing': entry.tokenNumber,
+        'updatedAt': now,
+      };
+
+      if (entry.queueSessionId.isNotEmpty) {
+        try {
+          await _db.collection(AppConstants.queueSessionsCollection).doc(entry.queueSessionId).update(sessionUpdates);
+        } catch (_) {}
+      }
+      try {
+        await _db.collection(AppConstants.queueSessionsCollection).doc('QS-001').update(sessionUpdates);
+      } catch (_) {}
+
+      // 4. Audit queue event
+      createQueueEvent(
+        queueSessionId: entry.queueSessionId,
+        queueEntryId: queueEntryId,
+        appointmentId: entry.appointmentId,
+        performedBy: staffUserId,
+        eventType: 'called',
+        previousStatus: prevStatus,
+        newStatus: AppConstants.statusCalled,
+      );
+
+      return QueueActionResult.success(
+        entry.copyWith(status: AppConstants.statusCalled, calledAt: DateTime.now()),
+        'Token ${entry.tokenNumber} (${entry.patientName}) called successfully.',
+      );
+    } catch (e) {
+      return QueueActionResult.failure('Failed to call patient: $e');
     }
   }
 
@@ -744,7 +822,24 @@ class QueueService {
         });
       }
 
-      // 5. Record queue event
+      // 5. Clean State Purge on Completion
+      final purgeUpdates = {
+        'currentToken': '',
+        'currentTokenNumber': '',
+        'currentTokenServing': '',
+        'nowServing': '',
+        'updatedAt': now,
+      };
+      if (queueSessionId.isNotEmpty) {
+        try {
+          await _db.collection(AppConstants.queueSessionsCollection).doc(queueSessionId).update(purgeUpdates);
+        } catch (_) {}
+      }
+      try {
+        await _db.collection(AppConstants.queueSessionsCollection).doc('QS-001').update(purgeUpdates);
+      } catch (_) {}
+
+      // 6. Record queue event
       if (queueSessionId.isNotEmpty) {
         await createQueueEvent(
           queueSessionId: queueSessionId,
@@ -768,6 +863,8 @@ class QueueActionResult {
   final bool isSuccess;
   final String message;
   final QueueEntry? queueEntry;
+
+  bool get success => isSuccess;
 
   QueueActionResult.success(this.queueEntry, this.message) : isSuccess = true;
   QueueActionResult.failure(this.message) : isSuccess = false, queueEntry = null;
