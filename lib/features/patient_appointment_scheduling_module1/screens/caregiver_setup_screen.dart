@@ -4,6 +4,7 @@ import '../../../../core/constants/app_accessibility.dart';
 import 'hospital_selection_screen.dart';
 import '../admin/screens/hospital_admin_dashboard.dart';
 import '../backend/backend.dart';
+import '../../auth_live_queue_module3/services/auth_service.dart';
 
 class CaregiverSetupScreen extends StatefulWidget {
   const CaregiverSetupScreen({super.key});
@@ -26,7 +27,7 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
   String? _selectedDependentNic;
   final List<String> _relationships = ['Father', 'Mother', 'Child', 'Spouse', 'Other'];
   final CaregiverService _caregiverService = CaregiverService();
-  final String _currentUserId = 'user_sandeepani_001';
+  String get _currentUserId => AuthService().currentUser?.userId ?? 'caregiver_user';
 
   @override
   void dispose() {
@@ -53,13 +54,19 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
       }
     }
 
+    final user = AuthService().currentUser;
+    final selfName = (user?.fullName.isNotEmpty == true) ? user!.fullName : 'Patient';
+    final selfNic = (user?.nic?.isNotEmpty == true)
+        ? user!.nic!
+        : (user?.phoneNumber.isNotEmpty == true ? user!.phoneNumber : (user?.userId ?? ''));
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => HospitalSelectionScreen(
           isCaregiverBooking: _bookingMode == 'someone_else',
-          patientName: _bookingMode == 'someone_else' ? _nameController.text.trim() : 'Sandeepani Perera',
-          patientNic: _bookingMode == 'someone_else' ? _nicController.text.trim() : '200164801234',
+          patientName: _bookingMode == 'someone_else' ? _nameController.text.trim() : selfName,
+          patientNic: _bookingMode == 'someone_else' ? _nicController.text.trim() : selfNic,
           relationship: _bookingMode == 'someone_else' ? (_selectedRelationship ?? 'Other') : 'Self',
           priority: _bookingMode == 'someone_else' ? _selectedPriority : 'normal',
         ),
@@ -69,9 +76,12 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: AppAccessibility.isHighContrastMode,
-      builder: (context, isDark, _) {
+    return ListenableBuilder(
+      listenable: AuthService(),
+      builder: (context, _) {
+        return ValueListenableBuilder<bool>(
+          valueListenable: AppAccessibility.isHighContrastMode,
+          builder: (context, isDark, _) {
         return Scaffold(
           backgroundColor: AppColors.pageBg,
           appBar: AppBar(
@@ -168,6 +178,8 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
             ),
           ),
         );
+      },
+    );
       },
     );
   }
@@ -431,11 +443,23 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
             ],
           ),
           Divider(height: 20, color: AppColors.cardBorder),
-          _buildInfoRow('Full Name:', 'Sandeepani Perera'),
-          const SizedBox(height: 10),
-          _buildInfoRow('National ID (NIC):', '200164801234'),
-          const SizedBox(height: 10),
-          _buildInfoRow('Mobile Phone:', '+94 77 123 4567'),
+          Builder(
+            builder: (context) {
+              final curUser = AuthService().currentUser;
+              final name = curUser?.fullName.isNotEmpty == true ? curUser!.fullName : 'Registered Patient';
+              final nic = (curUser?.nic?.isNotEmpty == true) ? curUser!.nic! : (curUser?.phoneNumber.isNotEmpty == true ? curUser!.phoneNumber : 'Not provided');
+              final phone = curUser?.phoneNumber.isNotEmpty == true ? curUser!.phoneNumber : '—';
+              return Column(
+                children: [
+                  _buildInfoRow('Full Name:', name),
+                  const SizedBox(height: 10),
+                  _buildInfoRow('National ID (NIC):', nic),
+                  const SizedBox(height: 10),
+                  _buildInfoRow('Mobile Phone:', phone),
+                ],
+              );
+            },
+          ),
           const SizedBox(height: 14),
           Container(
             padding: const EdgeInsets.all(12),

@@ -3,19 +3,20 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_accessibility.dart';
 import '../backend/backend.dart';
 import 'clinic_selection_screen.dart';
+import '../../auth_live_queue_module3/services/auth_service.dart';
 
 class HospitalSelectionScreen extends StatefulWidget {
   final bool isCaregiverBooking;
-  final String patientName;
-  final String patientNic;
+  final String? patientName;
+  final String? patientNic;
   final String relationship;
   final String priority;
 
   const HospitalSelectionScreen({
     super.key,
     this.isCaregiverBooking = false,
-    this.patientName = 'Sandeepani Perera',
-    this.patientNic = '200164801234',
+    this.patientName,
+    this.patientNic,
     this.relationship = 'Self',
     this.priority = 'normal',
   });
@@ -28,6 +29,24 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
   late List<GovernmentHospital> _allHospitals;
   late List<GovernmentHospital> _filteredHospitals;
   final TextEditingController _searchController = TextEditingController();
+
+  String get effectivePatientName {
+    if (widget.patientName != null && widget.patientName!.isNotEmpty && widget.patientName != 'Sandeepani Perera') {
+      return widget.patientName!;
+    }
+    final user = AuthService().currentUser;
+    return (user?.fullName.isNotEmpty == true) ? user!.fullName : 'Patient';
+  }
+
+  String get effectivePatientNic {
+    if (widget.patientNic != null && widget.patientNic!.isNotEmpty && widget.patientNic != '200164801234') {
+      return widget.patientNic!;
+    }
+    final user = AuthService().currentUser;
+    return (user?.nic?.isNotEmpty == true)
+        ? user!.nic!
+        : (user?.phoneNumber.isNotEmpty == true ? user!.phoneNumber : (user?.userId ?? ''));
+  }
 
   @override
   void initState() {
@@ -231,7 +250,7 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Booking for: ${widget.patientName} (${widget.relationship})',
+              'Booking for: $effectivePatientName (${widget.relationship})',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -313,8 +332,8 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
             builder: (context) => ClinicSelectionScreen(
               hospital: hospital,
               isCaregiverBooking: widget.isCaregiverBooking,
-              patientName: widget.patientName,
-              patientNic: widget.patientNic,
+              patientName: effectivePatientName,
+              patientNic: effectivePatientNic,
               relationship: widget.relationship,
               priority: widget.priority,
             ),

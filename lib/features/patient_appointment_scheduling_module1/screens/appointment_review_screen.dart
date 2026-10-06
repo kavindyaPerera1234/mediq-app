@@ -5,6 +5,7 @@ import '../../../core/constants/app_accessibility.dart';
 import '../../../core/services/voice_guidance_service.dart';
 import '../backend/backend.dart';
 import 'booking_confirmation_screen.dart';
+import '../../auth_live_queue_module3/services/auth_service.dart';
 
 class AppointmentReviewScreen extends StatefulWidget {
   final GovernmentHospital hospital;
@@ -12,8 +13,8 @@ class AppointmentReviewScreen extends StatefulWidget {
   final DateTime selectedDate;
   final String selectedTimeSlot;
   final bool isCaregiverBooking;
-  final String patientName;
-  final String patientNic;
+  final String? patientName;
+  final String? patientNic;
   final String relationship;
   final String priority;
 
@@ -24,8 +25,8 @@ class AppointmentReviewScreen extends StatefulWidget {
     required this.selectedDate,
     required this.selectedTimeSlot,
     this.isCaregiverBooking = false,
-    this.patientName = 'Sandeepani Perera',
-    this.patientNic = '200164801234',
+    this.patientName,
+    this.patientNic,
     this.relationship = 'Self',
     this.priority = 'normal',
   });
@@ -40,6 +41,24 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
   final AppointmentService _appointmentService = AppointmentService();
   final CaregiverService _caregiverService = CaregiverService();
 
+  String get effectivePatientName {
+    if (widget.patientName != null && widget.patientName!.isNotEmpty && widget.patientName != 'Sandeepani Perera') {
+      return widget.patientName!;
+    }
+    final user = AuthService().currentUser;
+    return (user?.fullName.isNotEmpty == true) ? user!.fullName : 'Patient';
+  }
+
+  String get effectivePatientNic {
+    if (widget.patientNic != null && widget.patientNic!.isNotEmpty && widget.patientNic != '200164801234') {
+      return widget.patientNic!;
+    }
+    final user = AuthService().currentUser;
+    return (user?.nic?.isNotEmpty == true)
+        ? user!.nic!
+        : (user?.phoneNumber.isNotEmpty == true ? user!.phoneNumber : (user?.userId ?? ''));
+  }
+
   Future<void> _handleConfirmAppointment() async {
     setState(() {
       _isSubmitting = true;
@@ -49,9 +68,9 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
 
     final appointment = AppointmentModel(
       id: '',
-      patientId: widget.patientNic,
-      patientName: widget.patientName,
-      patientNic: widget.patientNic,
+      patientId: effectivePatientNic,
+      patientName: effectivePatientName,
+      patientNic: effectivePatientNic,
       isCaregiverBooking: widget.isCaregiverBooking,
       relationship: widget.relationship,
       priority: widget.priority,
@@ -70,11 +89,12 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
     await _appointmentService.bookAppointment(appointment);
 
     if (widget.isCaregiverBooking) {
+      final curUserId = AuthService().currentUser?.userId ?? 'caregiver_user';
       await _caregiverService.addCaregiverPatient(CaregiverPatientModel(
         id: '',
-        caregiverUserId: 'user_sandeepani_001',
-        patientName: widget.patientName,
-        patientNic: widget.patientNic,
+        caregiverUserId: curUserId,
+        patientName: effectivePatientName,
+        patientNic: effectivePatientNic,
         relationship: widget.relationship,
         priority: widget.priority,
       ));
@@ -87,7 +107,7 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
     });
 
     VoiceGuidanceService.speak(
-      "Appointment confirmed for ${widget.patientName}. Your OPD token number is $token for room ${widget.clinic.roomNumber}.",
+      "Appointment confirmed for $effectivePatientName. Your OPD token number is $token for room ${widget.clinic.roomNumber}.",
       context: context,
     );
 
@@ -100,8 +120,8 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
           selectedDate: widget.selectedDate,
           selectedTimeSlot: widget.selectedTimeSlot,
           tokenNumber: token,
-          patientName: widget.patientName,
-          patientNic: widget.patientNic,
+          patientName: effectivePatientName,
+          patientNic: effectivePatientNic,
           isCaregiverBooking: widget.isCaregiverBooking,
           relationship: widget.relationship,
           priority: widget.priority,
@@ -187,9 +207,9 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
                             title: 'Patient Information',
                             icon: Icons.person_rounded,
                             children: [
-                              _buildDetailRow('Patient Full Name', widget.patientName),
+                              _buildDetailRow('Patient Full Name', effectivePatientName),
                               Divider(height: 18, color: AppColors.cardBorder),
-                              _buildDetailRow('National ID (NIC)', widget.patientNic),
+                              _buildDetailRow('National ID (NIC)', effectivePatientNic),
                               Divider(height: 18, color: AppColors.cardBorder),
                               _buildDetailRow(
                                 'Booking Type',

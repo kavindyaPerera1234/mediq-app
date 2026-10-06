@@ -5,6 +5,8 @@ import '../../patient_appointment_scheduling_module1/screens/caregiver_setup_scr
 import '../services/appointment_service.dart';
 import '../models/appointment_model.dart';
 
+import '../../auth_live_queue_module3/services/auth_service.dart';
+
 class MyAppointmentsScreen extends StatefulWidget {
     const MyAppointmentsScreen({
         super.key,
@@ -32,11 +34,15 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
         loadAppointments();
     }
     Future<void> loadAppointments() async {
-        final data =
-        await _appointmentService.getUpcomingAppointments(
-            "200164801234",
-        );
-        print("UI received appointments: ${data.length}");
+        final user = AuthService().currentUser;
+        final patientId = (user?.nic != null && user!.nic!.trim().isNotEmpty)
+            ? user.nic!.trim()
+            : (user?.phoneNumber != null && user!.phoneNumber.trim().isNotEmpty
+                ? user.phoneNumber.trim()
+                : (user?.userId != null && user!.userId.isNotEmpty ? user.userId : ''));
+        final data = patientId.isNotEmpty
+            ? await _appointmentService.getUpcomingAppointments(patientId)
+            : <AppointmentModel>[];
         setState(() {
             appointments = data;
             isLoading = false;

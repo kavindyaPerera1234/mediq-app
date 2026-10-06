@@ -24,18 +24,48 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
   late PatientProfileModel _profile;
   bool _isLoading = true;
 
-  final String _currentUserId = 'user_sandeepani_001';
-  final String _currentPatientNic = '200164801234';
+  String get _currentUserId => AuthService().currentUser?.userId ?? 'patient_user';
+  String get _currentPatientNic {
+    final user = AuthService().currentUser;
+    if (user?.nic != null && user!.nic!.trim().isNotEmpty) return user.nic!.trim();
+    if (user?.phoneNumber != null && user!.phoneNumber.trim().isNotEmpty) return user.phoneNumber.trim();
+    return user?.userId ?? '';
+  }
   String _appointmentFilter = 'upcoming'; // 'upcoming' or 'past'
 
   @override
   void initState() {
     super.initState();
+    AuthService().addListener(_loadProfile);
     _loadProfile();
   }
 
+  @override
+  void dispose() {
+    AuthService().removeListener(_loadProfile);
+    super.dispose();
+  }
+
   Future<void> _loadProfile() async {
-    final profile = await _profileService.getPatientProfile(_currentPatientNic);
+    final user = AuthService().currentUser;
+    final patientKey = _currentPatientNic;
+    var profile = await _profileService.getPatientProfile(patientKey);
+    if (user != null) {
+      profile = PatientProfileModel(
+        patientId: profile.patientId.isNotEmpty && profile.patientId != '200164801234' ? profile.patientId : (user.nic ?? user.userId),
+        fullName: user.fullName.isNotEmpty ? user.fullName : profile.fullName,
+        nic: (user.nic != null && user.nic!.isNotEmpty) ? user.nic! : profile.nic,
+        phone: user.phoneNumber.isNotEmpty ? user.phoneNumber : profile.phone,
+        email: (user.email != null && user.email!.isNotEmpty) ? user.email! : profile.email,
+        bloodGroup: profile.bloodGroup.isNotEmpty ? profile.bloodGroup : 'O+',
+        dateOfBirth: profile.dateOfBirth,
+        gender: profile.gender,
+        emergencyContactName: profile.emergencyContactName,
+        emergencyContactPhone: profile.emergencyContactPhone,
+        isSeniorModeEnabled: profile.isSeniorModeEnabled,
+        photoUrl: profile.photoUrl,
+      );
+    }
     if (mounted) {
       setState(() {
         _profile = profile;

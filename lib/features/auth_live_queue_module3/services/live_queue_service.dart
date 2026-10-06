@@ -22,12 +22,10 @@ class LiveQueueService extends ChangeNotifier {
   static final LiveQueueService _instance = LiveQueueService._internal();
   factory LiveQueueService() => _instance;
   LiveQueueService._internal() {
-    _initFallbackState();
+    _session = _emptySession();
+    _entry = null;
     start();
   }
-
-  /// Shared demo patient NIC used by Module 1 & 2 until real patient auth exists.
-  static const String demoPatientNic = '200164801234';
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -119,8 +117,13 @@ class LiveQueueService extends ChangeNotifier {
   bool get isToday => appointmentDate == _todayString();
 
   String get currentPatientNic {
-    final nic = AuthService().currentUser?.nic;
-    return (nic != null && nic.trim().isNotEmpty) ? nic.trim() : demoPatientNic;
+    final user = AuthService().currentUser;
+    if (user != null) {
+      if (user.nic != null && user.nic!.trim().isNotEmpty) return user.nic!.trim();
+      if (user.phoneNumber.trim().isNotEmpty) return user.phoneNumber.trim();
+      if (user.userId.isNotEmpty) return user.userId.trim();
+    }
+    return '';
   }
 
   // ── Spec Stream & Query Methods ──────────────────────────────────────────
@@ -222,11 +225,31 @@ class LiveQueueService extends ChangeNotifier {
     _isLoading = true;
     _error = null;
 
+    final nic = currentPatientNic;
+    if (nic.isEmpty) {
+      _myAppointmentsList = [];
+      _myAppt = null;
+      _myApptId = null;
+      _entry = null;
+      _session = _emptySession();
+      _queue = [];
+      _isLoading = false;
+      notifyListeners();
+      return;
+    }
+
     _mySub = _firestore
         .collection('appointments')
-        .where('patientNic', isEqualTo: currentPatientNic)
         .snapshots()
-        .listen(_onMyAppointments, onError: _onStreamError);
+        .listen((snap) {
+      final myDocs = snap.docs.where((d) {
+        final data = d.data();
+        final pNic = (data['patientNic'] ?? '').toString();
+        final pId = (data['patientId'] ?? '').toString();
+        return pNic == nic || pId == nic;
+      }).toList();
+      _onMyAppointments(myDocs);
+    }, onError: _onStreamError);
   }
 
   /// Tears down and restarts all listeners (e.g. after login change).
@@ -255,9 +278,9 @@ class LiveQueueService extends ChangeNotifier {
 
   // ── Stream handlers ───────────────────────────────────────────────────────
 
-  void _onMyAppointments(QuerySnapshot<Map<String, dynamic>> snap) {
+  void _onMyAppointments(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
     final today = _todayString();
-    final active = snap.docs.where((d) => _statusOf(d.data()) != 'cancelled').toList();
+    final active = docs.where((d) => _statusOf(d.data()) != 'cancelled').toList();
 
     // Ensure all active appointments have corresponding queue_entries in Firestore
     for (final doc in active) {
@@ -391,7 +414,8 @@ class LiveQueueService extends ChangeNotifier {
 
   void _recompute() {
     if (_myAppt == null || _myApptId == null) {
-      _initFallbackState();
+      _entry = null;
+      _session = _emptySession();
       _queue = [];
       _lastStatus = null;
       _trackedApptId = null;
@@ -918,37 +942,6 @@ class LiveQueueService extends ChangeNotifier {
         notifyListeners();
       }
     }
-  }
-
-  void _initFallbackState() {
-    _session = QueueSessionModel(
-      sessionId: 'session_demo_01',
-      hospitalId: 'hosp_colombo_general',
-      hospitalName: 'General Hospital Colombo',
-      departmentId: 'dept_opd_general',
-      departmentName: 'General Medicine OPD',
-      roomNumber: 'Room 04',
-      doctorName: 'Dr. H. M. Perera',
-      currentTokenServing: 'A-008',
-      totalTokens: 40,
-      estimatedMinutesPerPatient: 4,
-      status: QueueSessionStatus.active,
-      delayMinutes: 0,
-      lastUpdated: DateTime.now(),
-    );
-
-    _entry = QueueEntryModel(
-      queueEntryId: 'entry_014',
-      appointmentId: 'apt_demo_014',
-      patientId: 'patient_001',
-      patientName: 'Kamal Gunaratne',
-      tokenCode: 'A-014',
-      queuePosition: 14,
-      peopleAhead: 6,
-      status: PatientQueueStatus.waiting,
-      estimatedWaitMinutes: 24,
-      joinedAt: DateTime.now().subtract(const Duration(minutes: 45)),
-    );
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────

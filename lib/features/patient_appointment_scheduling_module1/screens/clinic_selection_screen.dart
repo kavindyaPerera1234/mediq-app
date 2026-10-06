@@ -3,12 +3,13 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_accessibility.dart';
 import '../backend/backend.dart';
 import 'date_selection_screen.dart';
+import '../../auth_live_queue_module3/services/auth_service.dart';
 
 class ClinicSelectionScreen extends StatelessWidget {
   final GovernmentHospital hospital;
   final bool isCaregiverBooking;
-  final String patientName;
-  final String patientNic;
+  final String? patientName;
+  final String? patientNic;
   final String relationship;
   final String priority;
 
@@ -16,11 +17,29 @@ class ClinicSelectionScreen extends StatelessWidget {
     super.key,
     required this.hospital,
     this.isCaregiverBooking = false,
-    this.patientName = 'Sandeepani Perera',
-    this.patientNic = '200164801234',
+    this.patientName,
+    this.patientNic,
     this.relationship = 'Self',
     this.priority = 'normal',
   });
+
+  String get effectivePatientName {
+    if (patientName != null && patientName!.isNotEmpty && patientName != 'Sandeepani Perera') {
+      return patientName!;
+    }
+    final user = AuthService().currentUser;
+    return (user?.fullName.isNotEmpty == true) ? user!.fullName : 'Patient';
+  }
+
+  String get effectivePatientNic {
+    if (patientNic != null && patientNic!.isNotEmpty && patientNic != '200164801234') {
+      return patientNic!;
+    }
+    final user = AuthService().currentUser;
+    return (user?.nic?.isNotEmpty == true)
+        ? user!.nic!
+        : (user?.phoneNumber.isNotEmpty == true ? user!.phoneNumber : (user?.userId ?? ''));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -263,8 +282,8 @@ class ClinicSelectionScreen extends StatelessWidget {
               hospital: hospital,
               clinic: clinic,
               isCaregiverBooking: isCaregiverBooking,
-              patientName: patientName,
-              patientNic: patientNic,
+              patientName: effectivePatientName,
+              patientNic: effectivePatientNic,
               relationship: relationship,
               priority: priority,
             ),

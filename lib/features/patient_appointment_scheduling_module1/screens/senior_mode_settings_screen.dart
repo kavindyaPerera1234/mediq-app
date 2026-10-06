@@ -5,6 +5,7 @@ import '../../../core/constants/app_accessibility.dart';
 import '../../../core/services/voice_guidance_service.dart';
 import '../../../core/localization/app_language.dart';
 import '../backend/backend.dart';
+import '../../auth_live_queue_module3/services/auth_service.dart';
 
 class SeniorModeSettingsScreen extends StatefulWidget {
   const SeniorModeSettingsScreen({super.key});
@@ -15,7 +16,12 @@ class SeniorModeSettingsScreen extends StatefulWidget {
 
 class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
   final ProfileService _profileService = ProfileService();
-  final String _patientNic = '200164801234';
+  String get _patientNic {
+    final user = AuthService().currentUser;
+    if (user?.nic != null && user!.nic!.trim().isNotEmpty) return user.nic!.trim();
+    if (user?.phoneNumber != null && user!.phoneNumber.trim().isNotEmpty) return user.phoneNumber.trim();
+    return user?.userId ?? '';
+  }
 
   bool _largeTextMode = true;
   bool _highContrastMode = false;

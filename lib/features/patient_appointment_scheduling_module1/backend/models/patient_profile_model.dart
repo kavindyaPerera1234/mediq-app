@@ -81,32 +81,38 @@ class PatientProfileModel {
     final data = doc.data() as Map<String, dynamic>? ?? {};
     return PatientProfileModel(
       patientId: doc.id,
-      fullName: data['fullName'] ?? 'Sandeepani Perera',
-      nic: data['nic'] ?? '200164801234',
-      phone: data['phone'] ?? '+94 77 123 4567',
-      email: data['email'] ?? 'sandeepani@gmail.com',
+      fullName: data['fullName'] ?? 'Patient',
+      nic: data['nic'] ?? doc.id,
+      phone: data['phone'] ?? '+94 77 000 0000',
+      email: data['email'] ?? '',
       bloodGroup: data['bloodGroup'] ?? 'O+',
-      dateOfBirth: data['dateOfBirth'] ?? '2001-08-15',
-      gender: data['gender'] ?? 'Female',
-      emergencyContactName: data['emergencyContactName'] ?? 'Sunil Perera',
-      emergencyContactPhone: data['emergencyContactPhone'] ?? '+94 77 987 6543',
+      dateOfBirth: data['dateOfBirth'] ?? '1995-01-01',
+      gender: data['gender'] ?? 'Not Specified',
+      emergencyContactName: data['emergencyContactName'] ?? '',
+      emergencyContactPhone: data['emergencyContactPhone'] ?? '',
       isSeniorModeEnabled: data['isSeniorModeEnabled'] ?? false,
       photoUrl: data['photoUrl'] ?? '',
     );
   }
 
-  static PatientProfileModel defaultProfile() {
-    return const PatientProfileModel(
-      patientId: '200164801234',
-      fullName: 'Sandeepani Perera',
-      nic: '200164801234',
-      phone: '+94 77 123 4567',
-      email: 'sandeepani@gmail.com',
+  static PatientProfileModel defaultProfile({
+    String? fullName,
+    String? nic,
+    String? phone,
+    String? email,
+    String? patientId,
+  }) {
+    return PatientProfileModel(
+      patientId: patientId ?? (nic != null && nic.isNotEmpty ? nic : 'patient_user'),
+      fullName: fullName ?? 'Registered Patient',
+      nic: nic ?? '',
+      phone: phone ?? '',
+      email: email ?? '',
       bloodGroup: 'O+',
-      dateOfBirth: '2001-08-15',
-      gender: 'Female',
-      emergencyContactName: 'Sunil Perera',
-      emergencyContactPhone: '+94 77 987 6543',
+      dateOfBirth: '1995-01-01',
+      gender: 'Not Specified',
+      emergencyContactName: '',
+      emergencyContactPhone: '',
       isSeniorModeEnabled: false,
       photoUrl: '',
     );

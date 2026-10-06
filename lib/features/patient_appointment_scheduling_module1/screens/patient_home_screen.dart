@@ -4,6 +4,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_accessibility.dart';
 import '../backend/backend.dart';
 import 'senior_mode_settings_screen.dart';
+import '../../auth_live_queue_module3/services/auth_service.dart';
 
 class PatientHomeScreen extends StatelessWidget {
   final ValueChanged<int> onNavigateTab;
@@ -15,12 +16,20 @@ class PatientHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const patientNic = '200164801234';
-    final appointmentService = AppointmentService();
+    return ListenableBuilder(
+      listenable: AuthService(),
+      builder: (context, _) {
+        final currentUser = AuthService().currentUser;
+        final patientNic = (currentUser?.nic != null && currentUser!.nic!.trim().isNotEmpty)
+            ? currentUser.nic!.trim()
+            : (currentUser?.phoneNumber != null && currentUser!.phoneNumber.trim().isNotEmpty
+                ? currentUser.phoneNumber.trim()
+                : (currentUser?.userId != null && currentUser!.userId.isNotEmpty ? currentUser.userId : ''));
+        final appointmentService = AppointmentService();
 
-    return ValueListenableBuilder<bool>(
-      valueListenable: AppAccessibility.isHighContrastMode,
-      builder: (context, isDark, _) {
+        return ValueListenableBuilder<bool>(
+          valueListenable: AppAccessibility.isHighContrastMode,
+          builder: (context, isDark, _) {
         return Scaffold(
           backgroundColor: AppColors.pageBg,
           appBar: AppBar(
@@ -74,7 +83,7 @@ class PatientHomeScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // 1. Patient Welcome Banner
-                    _buildWelcomeHeader(),
+                    _buildWelcomeHeader(currentUser),
                     const SizedBox(height: 16),
 
                     // 2. Active Token Live Card (Streamed from Firestore)
@@ -125,9 +134,22 @@ class PatientHomeScreen extends StatelessWidget {
         );
       },
     );
+      },
+    );
   }
 
-  Widget _buildWelcomeHeader() {
+  Widget _buildWelcomeHeader(dynamic user) {
+    final rawName = user?.fullName?.toString().trim();
+    final name = (rawName != null && rawName.isNotEmpty) ? rawName : 'Patient';
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : 'P';
+    final rawNic = user?.nic?.toString().trim();
+    final rawPhone = user?.phoneNumber?.toString().trim();
+    final idSubtitle = (rawNic != null && rawNic.isNotEmpty)
+        ? 'NIC: $rawNic'
+        : (rawPhone != null && rawPhone.isNotEmpty)
+            ? 'Phone: $rawPhone'
+            : 'Registered MediQ Patient';
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -147,7 +169,7 @@ class PatientHomeScreen extends StatelessWidget {
           CircleAvatar(
             radius: 26,
             backgroundColor: AppColors.chipBg,
-            child: Text('S', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.accentColor)),
+            child: Text(initial, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.accentColor)),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -155,12 +177,12 @@ class PatientHomeScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Ayubowan, Sandeepani 🌿',
+                  'Ayubowan, $name 🌿',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.headingText),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'NIC: 200164801234 • Blood: B+',
+                  idSubtitle,
                   style: TextStyle(fontSize: 12, color: AppColors.bodyText),
                 ),
               ],

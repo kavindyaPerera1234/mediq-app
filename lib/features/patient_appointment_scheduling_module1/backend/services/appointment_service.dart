@@ -106,9 +106,10 @@ class AppointmentService {
       return _appointmentsRef
           .snapshots()
           .map((snapshot) {
+        if (patientNic.trim().isEmpty) return <AppointmentModel>[];
         final list = snapshot.docs
             .map((doc) => AppointmentModel.fromFirestore(doc))
-            .where((app) => app.patientNic == patientNic || app.isCaregiverBooking)
+            .where((app) => app.patientNic == patientNic || app.patientId == patientNic)
             .toList();
         // Sort newest first
         list.sort((a, b) {

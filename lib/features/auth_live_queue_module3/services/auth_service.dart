@@ -4,10 +4,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../patient_appointment_scheduling_module1/screens/patient_main_screen.dart';
-import '../screens/auth/splash_screen.dart';
 import 'package:mediq_app/screens/staff_dashboard_screen.dart';
 import 'package:mediq_app/services/auth_service.dart' as m4_auth;
 import 'package:mediq_app/features/admin_dashboard/screens/admin_dashboard_screen.dart';
+import 'live_queue_service.dart';
 
 class AuthService extends ChangeNotifier {
   static final AuthService _instance = AuthService._internal();
@@ -52,6 +52,7 @@ class AuthService extends ChangeNotifier {
 
       if (doc.exists) {
         _currentUser = UserModel.fromMap(doc.data()!, id: doc.id);
+        LiveQueueService().refresh();
         notifyListeners();
         return _currentUser!.role.name; // 'admin', 'patient', 'doctor', etc.
       } else {
@@ -142,12 +143,14 @@ class AuthService extends ChangeNotifier {
         if (!_currentUser!.isActive) {
           await _auth.signOut();
           _currentUser = null;
+          LiveQueueService().refresh();
           notifyListeners();
           throw FirebaseAuthException(
             code: 'user-disabled',
             message: 'This account has been deactivated. Please contact hospital admin.',
           );
         }
+        LiveQueueService().refresh();
         notifyListeners();
         return _currentUser!.role.name;
       } else {
@@ -167,6 +170,7 @@ class AuthService extends ChangeNotifier {
             .doc(uid)
             .set(newUser.toMap());
         _currentUser = newUser;
+        LiveQueueService().refresh();
         notifyListeners();
         return 'staff';
       }
@@ -228,7 +232,30 @@ class AuthService extends ChangeNotifier {
           .doc(uid)
           .set(newUser.toMap());
 
+      // Dual write to patient_profiles for Module 1 ProfileService
+      try {
+        final profileDocId = (nic != null && nic.trim().isNotEmpty) ? nic.trim() : uid;
+        await _firestore.collection('patient_profiles').doc(profileDocId).set({
+          'patientId': profileDocId,
+          'fullName': fullName.trim(),
+          'nic': (nic != null && nic.trim().isNotEmpty) ? nic.trim() : profileDocId,
+          'phone': phoneNumber.trim(),
+          'email': email.trim(),
+          'bloodGroup': 'O+',
+          'dateOfBirth': '1995-01-01',
+          'gender': 'Not Specified',
+          'emergencyContactName': '',
+          'emergencyContactPhone': '',
+          'isSeniorModeEnabled': false,
+          'photoUrl': '',
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      } catch (profileErr) {
+        debugPrint('patient_profiles dual-write notice: $profileErr');
+      }
+
       _currentUser = newUser;
+      LiveQueueService().refresh();
       notifyListeners();
       return newUser;
     } on FirebaseAuthException catch (e) {
@@ -309,6 +336,7 @@ class AuthService extends ChangeNotifier {
       if (query.docs.isNotEmpty) {
         final doc = query.docs.first;
         _currentUser = UserModel.fromMap(doc.data(), id: doc.id);
+        LiveQueueService().refresh();
         notifyListeners();
         return true;
       }
@@ -401,6 +429,7 @@ class AuthService extends ChangeNotifier {
       await _auth.signOut();
     } catch (_) {}
     _currentUser = null;
+    LiveQueueService().refresh();
     notifyListeners();
   }
 
@@ -510,6 +539,19 @@ class AuthService extends ChangeNotifier {
       } else {
         await _auth.signInWithCredential(credential);
       }
+
+      final activeUser = _auth.currentUser;
+      if (activeUser != null && (_currentUser == null || _currentUser!.userId != activeUser.uid)) {
+        try {
+          final doc = await _firestore.collection(AppConstants.usersCollection).doc(activeUser.uid).get();
+          if (doc.exists) {
+            _currentUser = UserModel.fromMap(doc.data()!, id: doc.id);
+          }
+        } catch (_) {}
+      }
+
+      LiveQueueService().refresh();
+      notifyListeners();
       return true;
     } on FirebaseAuthException catch (e) {
       debugPrint('AuthService: verifyPhoneOtp error: ${e.code} - ${e.message}');

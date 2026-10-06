@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/patient_profile_model.dart';
+import '../../../auth_live_queue_module3/services/auth_service.dart';
 
 class ProfileService {
   final FirebaseFirestore _firestore;
@@ -13,13 +14,27 @@ class ProfileService {
   /// Fetch profile from Firestore with local fallback
   Future<PatientProfileModel> getPatientProfile(String patientNic) async {
     try {
-      final doc = await _profilesRef.doc(patientNic).get().timeout(const Duration(seconds: 3));
-      if (doc.exists) {
-        return PatientProfileModel.fromFirestore(doc);
+      if (patientNic.isNotEmpty) {
+        final doc = await _profilesRef.doc(patientNic).get().timeout(const Duration(seconds: 3));
+        if (doc.exists) {
+          return PatientProfileModel.fromFirestore(doc);
+        }
       }
     } catch (e) {
       debugPrint('ProfileService: getPatientProfile fallback: $e');
     }
+
+    final current = AuthService().currentUser;
+    if (current != null) {
+      return PatientProfileModel.defaultProfile(
+        fullName: current.fullName.isNotEmpty ? current.fullName : 'Patient',
+        nic: current.nic ?? patientNic,
+        phone: current.phoneNumber,
+        email: current.email ?? '',
+        patientId: (current.nic != null && current.nic!.isNotEmpty) ? current.nic : current.userId,
+      );
+    }
+
     return PatientProfileModel.defaultProfile();
   }
 

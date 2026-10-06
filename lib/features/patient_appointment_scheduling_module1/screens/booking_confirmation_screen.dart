@@ -4,6 +4,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_accessibility.dart';
 import '../backend/backend.dart';
 import 'patient_main_screen.dart';
+import '../../auth_live_queue_module3/services/auth_service.dart';
 
 class BookingConfirmationScreen extends StatelessWidget {
   final GovernmentHospital hospital;
@@ -11,8 +12,8 @@ class BookingConfirmationScreen extends StatelessWidget {
   final DateTime selectedDate;
   final String selectedTimeSlot;
   final String tokenNumber;
-  final String patientName;
-  final String patientNic;
+  final String? patientName;
+  final String? patientNic;
   final bool isCaregiverBooking;
   final String relationship;
   final String priority;
@@ -24,12 +25,30 @@ class BookingConfirmationScreen extends StatelessWidget {
     required this.selectedDate,
     required this.selectedTimeSlot,
     required this.tokenNumber,
-    this.patientName = 'Sandeepani Perera',
-    this.patientNic = '200164801234',
+    this.patientName,
+    this.patientNic,
     this.isCaregiverBooking = false,
     this.relationship = 'Self',
     this.priority = 'normal',
   });
+
+  String get effectivePatientName {
+    if (patientName != null && patientName!.isNotEmpty && patientName != 'Sandeepani Perera') {
+      return patientName!;
+    }
+    final user = AuthService().currentUser;
+    return (user?.fullName.isNotEmpty == true) ? user!.fullName : 'Patient';
+  }
+
+  String get effectivePatientNic {
+    if (patientNic != null && patientNic!.isNotEmpty && patientNic != '200164801234') {
+      return patientNic!;
+    }
+    final user = AuthService().currentUser;
+    return (user?.nic?.isNotEmpty == true)
+        ? user!.nic!
+        : (user?.phoneNumber.isNotEmpty == true ? user!.phoneNumber : (user?.userId ?? ''));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -193,9 +212,9 @@ class BookingConfirmationScreen extends StatelessWidget {
                                   padding: const EdgeInsets.all(18),
                                   child: Column(
                                     children: [
-                                      _buildDetailRow('Patient', patientName),
+                                      _buildDetailRow('Patient', effectivePatientName),
                                       const SizedBox(height: 10),
-                                      _buildDetailRow('NIC Number', patientNic),
+                                      _buildDetailRow('NIC Number', effectivePatientNic),
                                       const SizedBox(height: 10),
                                       _buildDetailRow('Hospital', hospital.name),
                                       const SizedBox(height: 10),
@@ -242,7 +261,7 @@ class BookingConfirmationScreen extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 3),
                                 Text(
-                                  '• If delayed, your appointment can be tracked live in Member 3 Queue Tracker.',
+                                  '• If delayed, your appointment can be tracked live in Live Queue Tracker.',
                                   style: TextStyle(fontSize: 12, color: AppColors.bodyText, height: 1.3),
                                 ),
                               ],

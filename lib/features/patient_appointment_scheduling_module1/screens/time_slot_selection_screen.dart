@@ -4,6 +4,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_accessibility.dart';
 import '../backend/backend.dart';
 import 'appointment_review_screen.dart';
+import '../../auth_live_queue_module3/services/auth_service.dart';
 
 class OpdTimeSlot {
   final String id;
@@ -32,8 +33,8 @@ class TimeSlotSelectionScreen extends StatefulWidget {
   final OpdClinic clinic;
   final DateTime selectedDate;
   final bool isCaregiverBooking;
-  final String patientName;
-  final String patientNic;
+  final String? patientName;
+  final String? patientNic;
   final String relationship;
   final String priority;
 
@@ -43,8 +44,8 @@ class TimeSlotSelectionScreen extends StatefulWidget {
     required this.clinic,
     required this.selectedDate,
     this.isCaregiverBooking = false,
-    this.patientName = 'Sandeepani Perera',
-    this.patientNic = '200164801234',
+    this.patientName,
+    this.patientNic,
     this.relationship = 'Self',
     this.priority = 'normal',
   });
@@ -55,6 +56,24 @@ class TimeSlotSelectionScreen extends StatefulWidget {
 
 class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
   String _selectedSlotId = 'slot_1';
+
+  String get effectivePatientName {
+    if (widget.patientName != null && widget.patientName!.isNotEmpty && widget.patientName != 'Sandeepani Perera') {
+      return widget.patientName!;
+    }
+    final user = AuthService().currentUser;
+    return (user?.fullName.isNotEmpty == true) ? user!.fullName : 'Patient';
+  }
+
+  String get effectivePatientNic {
+    if (widget.patientNic != null && widget.patientNic!.isNotEmpty && widget.patientNic != '200164801234') {
+      return widget.patientNic!;
+    }
+    final user = AuthService().currentUser;
+    return (user?.nic?.isNotEmpty == true)
+        ? user!.nic!
+        : (user?.phoneNumber.isNotEmpty == true ? user!.phoneNumber : (user?.userId ?? ''));
+  }
 
   final List<OpdTimeSlot> _slots = const [
     // Morning Slots
@@ -121,8 +140,8 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
           selectedDate: widget.selectedDate,
           selectedTimeSlot: _currentSelectedSlot.displayTime,
           isCaregiverBooking: widget.isCaregiverBooking,
-          patientName: widget.patientName,
-          patientNic: widget.patientNic,
+          patientName: effectivePatientName,
+          patientNic: effectivePatientNic,
           relationship: widget.relationship,
           priority: widget.priority,
         ),

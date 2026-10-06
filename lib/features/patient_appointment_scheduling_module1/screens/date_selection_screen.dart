@@ -5,13 +5,14 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_accessibility.dart';
 import '../backend/backend.dart';
 import 'time_slot_selection_screen.dart';
+import '../../auth_live_queue_module3/services/auth_service.dart';
 
 class DateSelectionScreen extends StatefulWidget {
   final GovernmentHospital hospital;
   final OpdClinic clinic;
   final bool isCaregiverBooking;
-  final String patientName;
-  final String patientNic;
+  final String? patientName;
+  final String? patientNic;
   final String relationship;
   final String priority;
 
@@ -20,8 +21,8 @@ class DateSelectionScreen extends StatefulWidget {
     required this.hospital,
     required this.clinic,
     this.isCaregiverBooking = false,
-    this.patientName = 'Sandeepani Perera',
-    this.patientNic = '200164801234',
+    this.patientName,
+    this.patientNic,
     this.relationship = 'Self',
     this.priority = 'normal',
   });
@@ -33,6 +34,24 @@ class DateSelectionScreen extends StatefulWidget {
 class _DateSelectionScreenState extends State<DateSelectionScreen> {
   late DateTime _focusedDay;
   late DateTime _selectedDay;
+
+  String get effectivePatientName {
+    if (widget.patientName != null && widget.patientName!.isNotEmpty && widget.patientName != 'Sandeepani Perera') {
+      return widget.patientName!;
+    }
+    final user = AuthService().currentUser;
+    return (user?.fullName.isNotEmpty == true) ? user!.fullName : 'Patient';
+  }
+
+  String get effectivePatientNic {
+    if (widget.patientNic != null && widget.patientNic!.isNotEmpty && widget.patientNic != '200164801234') {
+      return widget.patientNic!;
+    }
+    final user = AuthService().currentUser;
+    return (user?.nic?.isNotEmpty == true)
+        ? user!.nic!
+        : (user?.phoneNumber.isNotEmpty == true ? user!.phoneNumber : (user?.userId ?? ''));
+  }
 
   @override
   void initState() {
@@ -52,8 +71,8 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
           clinic: widget.clinic,
           selectedDate: _selectedDay,
           isCaregiverBooking: widget.isCaregiverBooking,
-          patientName: widget.patientName,
-          patientNic: widget.patientNic,
+          patientName: effectivePatientName,
+          patientNic: effectivePatientNic,
           relationship: widget.relationship,
           priority: widget.priority,
         ),

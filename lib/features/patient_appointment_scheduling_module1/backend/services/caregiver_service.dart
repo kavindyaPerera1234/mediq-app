@@ -38,9 +38,10 @@ class CaregiverService {
   /// Real-time stream of all dependents registered by this caregiver/patient
   Stream<List<CaregiverPatientModel>> streamCaregiverPatients(String caregiverUserId) {
     try {
-      final userIds = {caregiverUserId, 'user_sandeepani_001', 'user_200164801234', '200164801234'}.toList();
+      final validId = caregiverUserId.trim();
+      if (validId.isEmpty) return Stream.value([]);
       return _caregiversRef
-          .where('caregiverUserId', whereIn: userIds)
+          .where('caregiverUserId', isEqualTo: validId)
           .snapshots()
           .map((snapshot) {
         final list = snapshot.docs.map((doc) => CaregiverPatientModel.fromFirestore(doc)).toList();
