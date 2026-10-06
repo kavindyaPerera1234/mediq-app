@@ -13,6 +13,13 @@ class SeedDataService {
       const departmentId = 'gen_med';
       final dynamicSessionId = '${hospitalId}_${departmentId}_$dateStr';
 
+      // Check if reference data is already present to prevent any overwrites
+      final hospCheck = await _db.collection(AppConstants.hospitalsCollection).doc(hospitalId).get();
+      if (hospCheck.exists) {
+        debugPrint('Firestore: Reference hospital and departments already present.');
+        return true;
+      }
+
       // 1. Hospitals & Departments
       await _db.collection(AppConstants.hospitalsCollection).doc(hospitalId).set({
         'hospitalId': hospitalId,
@@ -31,7 +38,7 @@ class SeedDataService {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      // 2. Staff Users & Profiles
+      // 2. Staff Users & Profiles (Needed for doctor/nurse logins)
       final staffUsers = [
         {
           'uid': 'doc-silva-uid',
@@ -91,90 +98,27 @@ class SeedDataService {
         });
       }
 
-      // 3. Patient Users & Appointments
-      final patients = [
-        {'id': 'pat-018', 'name': 'Nimal Perera', 'phone': '0711111111', 'token': 'A-018', 'status': 'completed', 'priority': 'normal', 'pos': 1},
-        {'id': 'pat-019', 'name': 'Nimali Wijesekera', 'phone': '0712222222', 'token': 'A-019', 'status': 'called', 'priority': 'normal', 'pos': 2},
-        {'id': 'pat-020', 'name': 'Suresh Kumar', 'phone': '0713333333', 'token': 'A-020', 'status': 'on_hold', 'priority': 'normal', 'pos': 3},
-        {'id': 'pat-021', 'name': 'Chamari D.', 'phone': '0714444444', 'token': 'A-021', 'status': 'waiting', 'priority': 'normal', 'pos': 4},
-        {'id': 'pat-022', 'name': 'Ranjith M.', 'phone': '0715555555', 'token': 'A-022', 'status': 'waiting', 'priority': 'normal', 'pos': 5},
-        {'id': 'pat-023', 'name': 'Amal R.', 'phone': '0716666666', 'token': 'A-023', 'status': 'waiting', 'priority': 'emergency', 'pos': 6},
-      ];
-
-      for (var p in patients) {
-        await _db.collection(AppConstants.usersCollection).doc(p['id'] as String).set({
-          'uid': p['id'],
-          'email': '${p['id']}@patient.mediq.lk',
-          'fullName': p['name'],
-          'phone': p['phone'],
-          'nic': '2000${p['id']}',
-          'role': 'patient',
-          'preferredLanguage': 'en',
-          'isActive': true,
-          'createdAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-
-        // Create appointment doc (shared with Module 1)
-        await _db.collection(AppConstants.appointmentsCollection).doc('APT-${p['id']}').set({
-          'appointmentId': 'APT-${p['id']}',
-          'patientId': p['id'],
-          'caregiverId': '',
-          'caregiverPatientId': '',
-          'hospitalId': hospitalId,
-          'departmentId': departmentId,
-          'slotId': 'SLOT-001',
-          'appointmentDate': dateStr,
-          'startTime': '08:30 AM',
-          'endTime': '12:30 PM',
-          'status': p['status'] == 'completed' ? 'completed' : (p['status'] == 'called' ? 'called' : 'booked'),
-          'createdAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-      }
-
-      // 4. Queue Session (Write both dynamic ID and QS-001 doc for compatibility)
+      // 3. Initial Clean Queue Session starting from A-000 (first patient will get A-001)
       final sessionMap = {
         'queueSessionId': dynamicSessionId,
         'hospitalId': hospitalId,
         'departmentId': departmentId,
         'date': dateStr,
         'status': 'active',
-        'currentToken': 'A-019',
-        'currentTokenNumber': 'A-019',
-        'lastIssuedToken': 'A-023',
-        'lastIssuedTokenNumber': 'A-023',
+        'currentToken': '—',
+        'currentTokenNumber': '—',
+        'lastIssuedToken': 'A-000',
+        'lastIssuedTokenNumber': 'A-000',
         'estimatedMinutesPerPatient': 10,
         'delayMinutes': 0,
         'delayReason': '',
+        'totalTokens': 0,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
       await _db.collection(AppConstants.queueSessionsCollection).doc(dynamicSessionId).set(sessionMap);
       await _db.collection(AppConstants.queueSessionsCollection).doc('QS-001').set({...sessionMap, 'queueSessionId': 'QS-001'});
-
-      // 5. Queue Entries
-      for (var p in patients) {
-        final entryMap = {
-          'queueSessionId': dynamicSessionId,
-          'appointmentId': 'APT-${p['id']}',
-          'patientId': p['id'],
-          'patientName': p['name'],
-          'tokenCode': p['token'],
-          'tokenNumber': p['token'],
-          'status': p['status'],
-          'queuePosition': p['pos'],
-          'estimatedWaitMinutes': ((p['pos'] as int) - 1) * 10,
-          'priority': p['priority'],
-          'calledAt': p['status'] == 'called' || p['status'] == 'completed' ? FieldValue.serverTimestamp() : null,
-          'completedAt': p['status'] == 'completed' ? FieldValue.serverTimestamp() : null,
-          'createdAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        };
-
-        await _db.collection(AppConstants.queueEntriesCollection).doc('QE-${p['id']}').set(entryMap);
-      }
 
       // 6. Initial Sample Queue Event (so queue_events collection appears in Firestore)
       await _db.collection(AppConstants.queueEventsCollection).doc('EVT-pat-018').set({
