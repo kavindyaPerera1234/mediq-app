@@ -98,7 +98,7 @@ class SeedDataService {
         {'id': 'pat-020', 'name': 'Suresh Kumar', 'phone': '0713333333', 'token': 'A-020', 'status': 'on_hold', 'priority': 'normal', 'pos': 3},
         {'id': 'pat-021', 'name': 'Chamari D.', 'phone': '0714444444', 'token': 'A-021', 'status': 'waiting', 'priority': 'normal', 'pos': 4},
         {'id': 'pat-022', 'name': 'Ranjith M.', 'phone': '0715555555', 'token': 'A-022', 'status': 'waiting', 'priority': 'normal', 'pos': 5},
-        {'id': 'pat-025', 'name': 'Amal R.', 'phone': '0716666666', 'token': 'A-025', 'status': 'waiting', 'priority': 'emergency', 'pos': 6},
+        {'id': 'pat-023', 'name': 'Amal R.', 'phone': '0716666666', 'token': 'A-023', 'status': 'waiting', 'priority': 'emergency', 'pos': 6},
       ];
 
       for (var p in patients) {
@@ -142,8 +142,8 @@ class SeedDataService {
         'status': 'active',
         'currentToken': 'A-019',
         'currentTokenNumber': 'A-019',
-        'lastIssuedToken': 'A-025',
-        'lastIssuedTokenNumber': 'A-025',
+        'lastIssuedToken': 'A-023',
+        'lastIssuedTokenNumber': 'A-023',
         'estimatedMinutesPerPatient': 10,
         'delayMinutes': 0,
         'delayReason': '',

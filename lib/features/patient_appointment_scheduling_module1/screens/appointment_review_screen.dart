@@ -64,7 +64,12 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
       _isSubmitting = true;
     });
 
-    final token = _appointmentService.generateTokenCode();
+    final formattedDate = DateFormat('yyyy-MM-dd').format(widget.selectedDate);
+    final token = await _appointmentService.getNextTokenCode(
+      hospitalId: widget.hospital.id,
+      departmentId: widget.clinic.id,
+      appointmentDate: formattedDate,
+    );
 
     final appointment = AppointmentModel(
       id: '',

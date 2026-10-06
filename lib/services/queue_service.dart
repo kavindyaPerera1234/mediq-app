@@ -57,8 +57,8 @@ class QueueService {
           'status': 'active',
           'currentToken': 'A-018',
           'currentTokenNumber': 'A-018',
-          'lastIssuedToken': 'A-025',
-          'lastIssuedTokenNumber': 'A-025',
+          'lastIssuedToken': 'A-023',
+          'lastIssuedTokenNumber': 'A-023',
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         });

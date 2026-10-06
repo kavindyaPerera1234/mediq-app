@@ -11,10 +11,66 @@ class AppointmentService {
   // Collection reference
   CollectionReference get _appointmentsRef => _firestore.collection('appointments');
 
-  /// Generate sequential or randomized realistic OPD token
+  /// Generate the next strictly sequential OPD token for the given date and department
+  Future<String> getNextTokenCode({
+    required String hospitalId,
+    required String departmentId,
+    required String appointmentDate,
+  }) async {
+    try {
+      int highestNum = 0;
+
+      // 1. Check existing queue_sessions document
+      final sessionId = '${hospitalId}_${departmentId}_$appointmentDate';
+      final sessionDoc = await _firestore.collection('queue_sessions').doc(sessionId).get();
+
+      if (sessionDoc.exists) {
+        final lastToken = (sessionDoc.data()?['lastIssuedTokenNumber'] ?? sessionDoc.data()?['lastIssuedToken'] ?? '').toString();
+        final match = RegExp(r'\d+').firstMatch(lastToken);
+        if (match != null) {
+          highestNum = int.tryParse(match.group(0)!) ?? 0;
+        }
+      }
+
+      // Also check QS-001 fallback session
+      if (highestNum == 0) {
+        final qs1 = await _firestore.collection('queue_sessions').doc('QS-001').get();
+        if (qs1.exists) {
+          final lastToken = (qs1.data()?['lastIssuedTokenNumber'] ?? qs1.data()?['lastIssuedToken'] ?? '').toString();
+          final match = RegExp(r'\d+').firstMatch(lastToken);
+          if (match != null) {
+            highestNum = int.tryParse(match.group(0)!) ?? 0;
+          }
+        }
+      }
+
+      // 2. Also check appointments collection for this date & department
+      final query = await _appointmentsRef
+          .where('appointmentDate', isEqualTo: appointmentDate)
+          .where('departmentId', isEqualTo: departmentId)
+          .get();
+
+      for (var doc in query.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final token = (data['tokenCode'] ?? '').toString();
+        final match = RegExp(r'\d+').firstMatch(token);
+        if (match != null) {
+          final num = int.tryParse(match.group(0)!) ?? 0;
+          if (num > highestNum) highestNum = num;
+        }
+      }
+
+      final nextNum = highestNum + 1;
+      return 'A-${nextNum.toString().padLeft(3, '0')}';
+    } catch (e) {
+      debugPrint('AppointmentService getNextTokenCode fallback: $e');
+      return 'A-001';
+    }
+  }
+
+  /// Synchronous fallback
   String generateTokenCode() {
-    final rand = 10 + (DateTime.now().millisecond % 50);
-    return 'A-${rand.toString().padLeft(3, '0')}';
+    return 'A-001';
   }
 
   /// Book an appointment atomically into Firestore
@@ -68,16 +124,28 @@ class AppointmentService {
 
         await _firestore.collection('queue_sessions').doc(sessionId).set({
           'sessionId': sessionId,
+          'queueSessionId': sessionId,
           'hospitalId': appointment.hospitalId,
           'hospitalName': appointment.hospitalName,
           'departmentId': appointment.departmentId,
           'departmentName': appointment.departmentName,
           'date': appointment.appointmentDate,
           'status': 'active',
+          'lastIssuedToken': appointment.tokenCode,
+          'lastIssuedTokenNumber': appointment.tokenCode,
           'roomNumber': appointment.roomNumber.isNotEmpty ? appointment.roomNumber : 'OPD Room 01',
           'doctorName': 'Duty Medical Officer',
           'estimatedMinutesPerPatient': 4,
           'delayMinutes': 0,
+          'totalTokens': FieldValue.increment(1),
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
+        // Also update QS-001 compatibility doc
+        await _firestore.collection('queue_sessions').doc('QS-001').set({
+          'lastIssuedToken': appointment.tokenCode,
+          'lastIssuedTokenNumber': appointment.tokenCode,
+          'totalTokens': FieldValue.increment(1),
           'updatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
       } catch (syncErr) {
