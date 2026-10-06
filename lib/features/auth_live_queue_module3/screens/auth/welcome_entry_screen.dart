@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
 import 'login_screen.dart';
 import 'registration_screen.dart';
+import '../../../../core/localization/app_language.dart' as core_lang;
 
 enum AppLanguage { english, sinhala, tamil }
 
@@ -149,21 +150,22 @@ class _WelcomeEntryScreenState extends State<WelcomeEntryScreen> {
                   width: 100,
                   height: 100,
                   decoration: BoxDecoration(
-                    color: AppColors.primaryLight,
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(26),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.12),
-                        blurRadius: 20,
+                        color: AppColors.primary.withValues(alpha: 0.20),
+                        blurRadius: 24,
                         offset: const Offset(0, 8),
                       ),
                     ],
                   ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.local_hospital_rounded,
-                      size: 56,
-                      color: AppColors.primary,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(26),
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      width: 100,
+                      height: 100,
+                      fit: BoxFit.cover,
                     ),
                   ),
                 ),
@@ -330,7 +332,16 @@ class _WelcomeEntryScreenState extends State<WelcomeEntryScreen> {
     final isSelected = _selectedLanguage == lang;
     return Expanded(
       child: GestureDetector(
-        onTap: () => setState(() => _selectedLanguage = lang),
+        onTap: () {
+          setState(() => _selectedLanguage = lang);
+          if (lang == AppLanguage.sinhala) {
+            core_lang.AppLanguage.setSinhala();
+          } else if (lang == AppLanguage.tamil) {
+            core_lang.AppLanguage.setTamil();
+          } else {
+            core_lang.AppLanguage.setEnglish();
+          }
+        },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeInOut,

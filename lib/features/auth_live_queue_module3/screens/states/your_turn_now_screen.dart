@@ -1,11 +1,39 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../services/live_queue_service.dart';
+import '../../models/queue_entry_model.dart';
 import 'queue_completed_screen.dart';
 
-class YourTurnNowScreen extends StatelessWidget {
+class YourTurnNowScreen extends StatefulWidget {
   const YourTurnNowScreen({super.key});
+
+  @override
+  State<YourTurnNowScreen> createState() => _YourTurnNowScreenState();
+}
+
+class _YourTurnNowScreenState extends State<YourTurnNowScreen> {
+  StreamSubscription<PatientQueueStatus>? _statusSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _statusSub = LiveQueueService().statusChanges.listen((status) {
+      if (status == PatientQueueStatus.completed && mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const QueueCompletedScreen()),
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _statusSub?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -105,13 +133,16 @@ class YourTurnNowScreen extends StatelessWidget {
 
               // Consultation Complete Button
               ElevatedButton(
-                onPressed: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const QueueCompletedScreen(),
-                    ),
-                  );
+                onPressed: () async {
+                  await LiveQueueService().completeCurrentConsultation();
+                  if (context.mounted) {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const QueueCompletedScreen(),
+                      ),
+                    );
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,

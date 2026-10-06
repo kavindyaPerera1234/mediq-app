@@ -80,8 +80,12 @@ class QueueTimelineScreen extends StatelessWidget {
                   // Event 3: Now Serving Current Token
                   _buildTimelineEvent(
                     time: 'NOW',
-                    title: 'NOW SERVING: Token ${session.currentTokenServing}',
-                    detail: 'Consultation currently in progress with ${session.doctorName}.',
+                    title: session.currentTokenServing == '—'
+                        ? 'QUEUE STATUS: Waiting to Begin'
+                        : 'NOW SERVING: Token ${session.currentTokenServing}',
+                    detail: session.currentTokenServing == '—'
+                        ? 'Doctor consultation will begin shortly for scheduled patients.'
+                        : 'Consultation currently in progress with ${session.doctorName}.',
                     icon: Icons.person_pin_circle_rounded,
                     isPast: false,
                     isCurrent: true,

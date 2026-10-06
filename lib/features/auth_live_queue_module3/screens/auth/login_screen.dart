@@ -7,6 +7,8 @@ import 'registration_screen.dart';
 import 'forgot_password_screen.dart';
 import 'verification_code_screen.dart';
 
+import '../../../../core/localization/app_strings.dart';
+
 class LoginScreen extends StatefulWidget {
   final bool isStaffMode;
 
@@ -147,7 +149,7 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 // Header
                 Text(
-                  _isStaff ? 'Staff / Admin Sign In' : 'Patient Sign In',
+                  _isStaff ? S.staffLoginTitle : S.patientLoginTitle,
                   style: GoogleFonts.inter(
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
@@ -157,10 +159,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 8),
                 Text(
                   _isStaff
-                      ? 'Sign in with your hospital staff credentials.'
+                      ? S.loginSubtitleStaff
                       : (_useOtpLogin
-                          ? 'Enter your mobile number to receive a secure one-time verification code.'
-                          : 'Sign in with your mobile number or email and password.'),
+                          ? S.verifyOtpSubtitle
+                          : S.loginSubtitlePatient),
                   style: GoogleFonts.inter(
                     fontSize: 15,
                     fontWeight: FontWeight.w400,
@@ -203,7 +205,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 // Input Field 1: Phone / Email
                 Text(
-                  _isStaff ? 'Email Address' : 'Mobile Phone Number or Email',
+                  _isStaff ? S.labelHospitalEmail : S.labelPhoneOrEmail,
                   style: GoogleFonts.inter(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -220,7 +222,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       _isStaff ? Icons.email_outlined : Icons.person_outline_rounded,
                       color: AppColors.primary,
                     ),
-                    hintText: _isStaff ? 'e.g. admin@mediq.lk' : '07X XXX XXXX or email',
+                    hintText: _isStaff ? 'e.g. admin@mediq.lk' : '07X XXX XXXX / email',
                     filled: true,
                     fillColor: AppColors.surface,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -252,7 +254,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 if (!_useOtpLogin) ...[
                   const SizedBox(height: 18),
                   Text(
-                    'Password',
+                    S.labelPassword,
                     style: GoogleFonts.inter(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
@@ -273,7 +275,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                       ),
-                      hintText: 'Enter your password',
+                      hintText: S.labelEnterPassword,
                       filled: true,
                       fillColor: AppColors.surface,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -314,7 +316,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             });
                           },
                           child: Text(
-                            _useOtpLogin ? 'Use Password Sign In' : 'Sign in with SMS Code',
+                            _useOtpLogin ? S.btnLoginWithPassword : S.btnLoginWithOtp,
                             style: GoogleFonts.inter(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
@@ -335,7 +337,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           );
                         },
                         child: Text(
-                          'Forgot Password?',
+                          S.btnForgotPassword,
                           style: GoogleFonts.inter(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -368,7 +370,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                         )
                       : Text(
-                          _useOtpLogin ? 'Send Verification Code' : 'Sign In',
+                          _useOtpLogin ? S.verifyOtpTitle : S.btnSignIn,
                           style: GoogleFonts.inter(
                             fontSize: 17,
                             fontWeight: FontWeight.w700,
@@ -384,7 +386,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'First time visiting the OPD? ',
+                        '${S.dontHaveAccount} ',
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           color: AppColors.textSecondary,
@@ -400,7 +402,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           );
                         },
                         child: Text(
-                          'Register Here',
+                          S.registerNow,
                           style: GoogleFonts.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.w800,

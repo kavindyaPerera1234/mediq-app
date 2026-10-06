@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../services/auth_service.dart';
 import 'verification_code_screen.dart';
+import '../../../../core/localization/app_strings.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -123,7 +124,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Patient Registration',
+                  S.registerTitle,
                   style: GoogleFonts.inter(
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
@@ -132,7 +133,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Register your profile once to book appointments and track OPD queue tokens seamlessly.',
+                  S.registerSubtitle,
                   style: GoogleFonts.inter(
                     fontSize: 15,
                     color: AppColors.textSecondary,
@@ -143,7 +144,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 const SizedBox(height: 28),
 
                 // Full Name
-                _buildFieldLabel('Full Name (as on NIC or Clinic Book) *'),
+                _buildFieldLabel('${S.labelFullName} *'),
                 TextFormField(
                   controller: _nameController,
                   textCapitalization: TextCapitalization.words,
@@ -158,7 +159,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 const SizedBox(height: 18),
 
                 // Mobile Phone Number
-                _buildFieldLabel('Mobile Phone Number *'),
+                _buildFieldLabel('${S.labelPhone} *'),
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
@@ -177,7 +178,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 const SizedBox(height: 18),
 
                 // Email Address (Optional)
-                _buildFieldLabel('Email Address (Optional)'),
+                _buildFieldLabel(S.labelEmailOptional),
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -316,7 +317,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                         )
                       : Text(
-                          'Create Account & Verify',
+                          S.btnCreateAccount,
                           style: GoogleFonts.inter(
                             fontSize: 17,
                             fontWeight: FontWeight.w700,

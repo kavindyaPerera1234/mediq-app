@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../models/queue_entry_model.dart';
 import '../../services/live_queue_service.dart';
 
 class EstimatedWaitingTimeScreen extends StatelessWidget {
@@ -14,7 +15,13 @@ class EstimatedWaitingTimeScreen extends StatelessWidget {
 
     final baseTime = myEntry.peopleAhead * session.estimatedMinutesPerPatient;
     final delayTime = session.delayMinutes;
-    final totalTime = baseTime + delayTime;
+    final totalTime = (myEntry.peopleAhead > 0 || myEntry.estimatedWaitMinutes > 0)
+        ? (myEntry.estimatedWaitMinutes > 0 ? myEntry.estimatedWaitMinutes : (baseTime + delayTime))
+        : (myEntry.status == PatientQueueStatus.called || myEntry.status == PatientQueueStatus.completed
+            ? 0
+            : (session.currentTokenServing == '—' || session.currentTokenServing == 'Not Started'
+                ? session.estimatedMinutesPerPatient + delayTime
+                : delayTime));
 
     return Scaffold(
       backgroundColor: AppColors.background,

@@ -22,12 +22,10 @@ class LiveQueueService extends ChangeNotifier {
   static final LiveQueueService _instance = LiveQueueService._internal();
   factory LiveQueueService() => _instance;
   LiveQueueService._internal() {
-    _initFallbackState();
+    _session = _emptySession();
+    _entry = null;
     start();
   }
-
-  /// Shared demo patient NIC used by Module 1 & 2 until real patient auth exists.
-  static const String demoPatientNic = '200164801234';
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -119,8 +117,13 @@ class LiveQueueService extends ChangeNotifier {
   bool get isToday => appointmentDate == _todayString();
 
   String get currentPatientNic {
-    final nic = AuthService().currentUser?.nic;
-    return (nic != null && nic.trim().isNotEmpty) ? nic.trim() : demoPatientNic;
+    final user = AuthService().currentUser;
+    if (user != null) {
+      if (user.nic != null && user.nic!.trim().isNotEmpty) return user.nic!.trim();
+      if (user.phoneNumber.trim().isNotEmpty) return user.phoneNumber.trim();
+      if (user.userId.isNotEmpty) return user.userId.trim();
+    }
+    return '';
   }
 
   // ── Spec Stream & Query Methods ──────────────────────────────────────────
@@ -222,11 +225,41 @@ class LiveQueueService extends ChangeNotifier {
     _isLoading = true;
     _error = null;
 
+    final nic = currentPatientNic;
+    if (nic.isEmpty) {
+      _myAppointmentsList = [];
+      _myAppt = null;
+      _myApptId = null;
+      _entry = null;
+      _session = _emptySession();
+      _queue = [];
+      _isLoading = false;
+      notifyListeners();
+      return;
+    }
+
+    final user = AuthService().currentUser;
+    final lookupIds = <String>{};
+    if (nic.isNotEmpty) lookupIds.add(nic);
+    if (user != null) {
+      if (user.nic != null && user.nic!.trim().isNotEmpty) lookupIds.add(user.nic!.trim());
+      if (user.phoneNumber.trim().isNotEmpty) lookupIds.add(user.phoneNumber.trim());
+      if (user.userId.trim().isNotEmpty) lookupIds.add(user.userId.trim());
+    }
+
     _mySub = _firestore
         .collection('appointments')
-        .where('patientNic', isEqualTo: currentPatientNic)
         .snapshots()
-        .listen(_onMyAppointments, onError: _onStreamError);
+        .listen((snap) {
+      final myDocs = snap.docs.where((d) {
+        final data = d.data();
+        final pNic = (data['patientNic'] ?? '').toString();
+        final pId = (data['patientId'] ?? '').toString();
+        final uId = (data['userId'] ?? '').toString();
+        return lookupIds.contains(pNic) || lookupIds.contains(pId) || lookupIds.contains(uId);
+      }).toList();
+      _onMyAppointments(myDocs);
+    }, onError: _onStreamError);
   }
 
   /// Tears down and restarts all listeners (e.g. after login change).
@@ -255,9 +288,9 @@ class LiveQueueService extends ChangeNotifier {
 
   // ── Stream handlers ───────────────────────────────────────────────────────
 
-  void _onMyAppointments(QuerySnapshot<Map<String, dynamic>> snap) {
+  void _onMyAppointments(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
     final today = _todayString();
-    final active = snap.docs.where((d) => _statusOf(d.data()) != 'cancelled').toList();
+    final active = docs.where((d) => _statusOf(d.data()) != 'cancelled').toList();
 
     // Ensure all active appointments have corresponding queue_entries in Firestore
     for (final doc in active) {
@@ -391,7 +424,8 @@ class LiveQueueService extends ChangeNotifier {
 
   void _recompute() {
     if (_myAppt == null || _myApptId == null) {
-      _initFallbackState();
+      _entry = null;
+      _session = _emptySession();
       _queue = [];
       _lastStatus = null;
       _trackedApptId = null;
@@ -431,24 +465,29 @@ class LiveQueueService extends ChangeNotifier {
     final rawSessionStatus = (s['status'] ?? 'active').toString().toLowerCase();
     final isDelayed = delayMinutes > 0 || rawSessionStatus == 'delayed';
 
-    // Now serving = whoever Module 4 called; otherwise next person not yet seen.
+    // Now serving = whoever Module 4 called / is currently in consultation
     final mapped = ordered.map((e) => _mapStatus(_statusOf(e.value))).toList();
-    int servingIdx = mapped.indexWhere((st) => st == PatientQueueStatus.called);
-    if (servingIdx < 0) servingIdx = mapped.indexWhere((st) => st == PatientQueueStatus.waiting);
-    final explicitServing = (s['currentTokenServing'] ?? s['currentToken'])?.toString();
+    final servingIdx = mapped.indexWhere((st) => st == PatientQueueStatus.called);
+    final explicitServing = (s['currentTokenServing'] ?? s['currentToken'] ?? s['currentTokenNumber'])?.toString();
     String nowServing = '—';
-    if (explicitServing != null && explicitServing.isNotEmpty && explicitServing != '—') {
-      nowServing = explicitServing;
-    } else if (servingIdx >= 0) {
+    if (servingIdx >= 0) {
       nowServing = (ordered[servingIdx].value['tokenCode'] ?? '—').toString();
-    } else if (ordered.isNotEmpty) {
-      final lastDone = mapped.lastIndexWhere((st) => st == PatientQueueStatus.completed);
-      if (lastDone >= 0) {
-        nowServing = (ordered[lastDone].value['tokenCode'] ?? '—').toString();
-      } else {
-        nowServing = (ordered.first.value['tokenCode'] ?? 'A-001').toString();
-      }
+    } else if (explicitServing != null && explicitServing.isNotEmpty && explicitServing != '—') {
+      nowServing = explicitServing;
+    } else {
+      nowServing = '—';
     }
+
+    int parseTokenNum(String? tokenStr) {
+      if (tokenStr == null || tokenStr.isEmpty) return 0;
+      final match = RegExp(r'\d+').firstMatch(tokenStr);
+      if (match != null) {
+        return int.tryParse(match.group(0) ?? '') ?? 0;
+      }
+      return 0;
+    }
+
+    final servingNum = parseTokenNum(nowServing);
 
     // Build entries
     final entries = <QueueEntryModel>[];
@@ -465,14 +504,53 @@ class LiveQueueService extends ChangeNotifier {
       var status = base;
       int wait = 0;
 
+      final tokenCodeStr = (data['tokenCode'] ?? data['tokenNumber'] ?? data['token'] ?? '—').toString();
+      final tokenNum = parseTokenNum(tokenCodeStr);
+
+      int seqAhead = 0;
+      if (tokenNum > 0) {
+        if (servingNum <= 0) {
+          // Consultation hasn't started yet. All tokens before tokenNum are ahead.
+          seqAhead = tokenNum > 1 ? (tokenNum - 1) : 0;
+        } else {
+          // If doctor is serving token servingNum:
+          if (tokenNum > servingNum) {
+            seqAhead = tokenNum - servingNum;
+          } else {
+            seqAhead = 0;
+          }
+        }
+      }
+
       if (base == PatientQueueStatus.waiting) {
-        ahead = stillWaitingAhead;
+        // Take maximum of actual documents ahead and token sequence difference
+        ahead = seqAhead > stillWaitingAhead ? seqAhead : stillWaitingAhead;
         if (isDelayed) {
           status = PatientQueueStatus.delayed;
         } else if (ahead <= 2) {
           status = PatientQueueStatus.approaching;
+        } else {
+          status = PatientQueueStatus.waiting;
         }
-        wait = ahead * minsPerPatient + delayMinutes;
+
+        if (ahead > 0) {
+          wait = ahead * minsPerPatient + delayMinutes;
+        } else {
+          // Next in line before consultation has begun
+          wait = (servingNum <= 0) ? (minsPerPatient + delayMinutes) : delayMinutes;
+        }
+      } else if (base == PatientQueueStatus.called) {
+        ahead = 0;
+        status = PatientQueueStatus.called;
+        wait = 0;
+      } else if (base == PatientQueueStatus.completed) {
+        ahead = 0;
+        status = PatientQueueStatus.completed;
+        wait = 0;
+      } else if (base == PatientQueueStatus.missed) {
+        ahead = 0;
+        status = PatientQueueStatus.missed;
+        wait = 0;
       }
 
       final entry = QueueEntryModel(
@@ -480,7 +558,7 @@ class LiveQueueService extends ChangeNotifier {
         appointmentId: id,
         patientId: (data['patientId'] ?? '').toString(),
         patientName: (data['patientName'] ?? 'Patient').toString(),
-        tokenCode: (data['tokenCode'] ?? '—').toString(),
+        tokenCode: tokenCodeStr,
         queuePosition: i + 1,
         peopleAhead: ahead,
         status: status,
@@ -497,6 +575,14 @@ class LiveQueueService extends ChangeNotifier {
         stillWaitingAhead++;
       }
     }
+
+    final explicitTokens = (s['totalTokens'] as num?)?.toInt() ?? (s['totalPatients'] as num?)?.toInt();
+    final maxTokenFromEntries = entries.fold<int>(0, (prev, e) {
+      final n = parseTokenNum(e.tokenCode);
+      return n > prev ? n : prev;
+    });
+    final computedTotalTokens = explicitTokens ??
+        (maxTokenFromEntries > entries.length ? maxTokenFromEntries : entries.length);
 
     QueueSessionStatus sessionStatus = QueueSessionStatus.active;
     if (isDelayed) {
@@ -516,7 +602,7 @@ class LiveQueueService extends ChangeNotifier {
       roomNumber: (s['roomNumber'] ?? me['roomNumber'] ?? 'OPD Room 01').toString(),
       doctorName: (s['doctorName'] ?? 'Duty Medical Officer').toString(),
       currentTokenServing: nowServing,
-      totalTokens: entries.length,
+      totalTokens: computedTotalTokens,
       estimatedMinutesPerPatient: minsPerPatient,
       status: sessionStatus,
       delayMinutes: delayMinutes,
@@ -763,6 +849,104 @@ class LiveQueueService extends ChangeNotifier {
     }
   }
 
+  /// Mark the current active consultation as completed across Firestore collections
+  /// (appointments, queue_entries, queue_sessions) and update local status.
+  Future<void> completeCurrentConsultation() async {
+    String? apptId = _myApptId;
+    String token = _entry?.tokenCode ?? (_myAppt?['tokenCode'] ?? '').toString();
+
+    // Fallback: If _myApptId is not set, find any currently called or active appointment
+    if (apptId == null || apptId.isEmpty) {
+      final called = _myAppointmentsList.where((a) {
+        final st = _statusOf(a);
+        return st == 'called' || st == 'serving' || st == 'in_consultation';
+      }).toList();
+      if (called.isNotEmpty) {
+        apptId = called.first['id']?.toString();
+        token = (called.first['tokenCode'] ?? '').toString();
+      } else if (_myAppointmentsList.isNotEmpty) {
+        apptId = _myAppointmentsList.first['id']?.toString();
+        token = (_myAppointmentsList.first['tokenCode'] ?? '').toString();
+      }
+    }
+
+    final now = FieldValue.serverTimestamp();
+
+    if (apptId != null && apptId.isNotEmpty) {
+      try {
+        await _firestore.collection('appointments').doc(apptId).update({
+          'status': 'completed',
+          'completedAt': now,
+          'updatedAt': now,
+        });
+      } catch (e) {
+        debugPrint('Error updating appointment to completed: $e');
+      }
+
+      try {
+        await _firestore.collection('queue_entries').doc(apptId).update({
+          'status': 'completed',
+          'completedAt': now,
+          'updatedAt': now,
+        });
+      } catch (e) {
+        debugPrint('Error updating queue entry to completed: $e');
+      }
+    }
+
+    final hospId = (_myAppt?['hospitalId'] ?? _session?.hospitalId ?? '').toString();
+    final deptId = (_myAppt?['departmentId'] ?? _session?.departmentId ?? '').toString();
+    final date = (_myAppt?['appointmentDate'] ?? appointmentDate).toString();
+    final sessId = (hospId.isNotEmpty && deptId.isNotEmpty && date.isNotEmpty)
+        ? sessionIdFor(hospId, deptId, date)
+        : (_watchedSessionId ?? '');
+
+    if (sessId.isNotEmpty) {
+      try {
+        final sDoc = await _firestore.collection('queue_sessions').doc(sessId).get();
+        if (sDoc.exists) {
+          final curr = (sDoc.data()?['currentTokenServing'] ?? sDoc.data()?['currentToken'] ?? '').toString();
+          if (token.isEmpty || curr == token || curr == '—') {
+            await _firestore.collection('queue_sessions').doc(sessId).update({
+              'currentTokenServing': '—',
+              'currentToken': '—',
+              'currentTokenNumber': '—',
+              'nowServing': '—',
+              'updatedAt': now,
+            });
+          }
+        }
+      } catch (e) {
+        debugPrint('Error updating queue session on complete: $e');
+      }
+    }
+
+    try {
+      final qs1Doc = await _firestore.collection('queue_sessions').doc('QS-001').get();
+      if (qs1Doc.exists) {
+        final curr = (qs1Doc.data()?['currentTokenServing'] ?? qs1Doc.data()?['currentToken'] ?? '').toString();
+        if (token.isEmpty || curr == token || curr == '—') {
+          await _firestore.collection('queue_sessions').doc('QS-001').update({
+            'currentTokenServing': '—',
+            'currentToken': '—',
+            'currentTokenNumber': '—',
+            'nowServing': '—',
+            'updatedAt': now,
+          });
+        }
+      }
+    } catch (_) {}
+
+    if (_entry != null) {
+      _entry = _entry!.copyWith(status: PatientQueueStatus.completed);
+    }
+    if (_myAppt != null) {
+      _myAppt!['status'] = 'completed';
+    }
+    _statusController.add(PatientQueueStatus.completed);
+    notifyListeners();
+  }
+
   // ── Clinic simulator (stand-in for Module 4 until it is merged) ───────────
   // These write to Firestore with exactly the same contract Module 4 uses,
   // so every device / module sees the change in real time.
@@ -918,37 +1102,6 @@ class LiveQueueService extends ChangeNotifier {
         notifyListeners();
       }
     }
-  }
-
-  void _initFallbackState() {
-    _session = QueueSessionModel(
-      sessionId: 'session_demo_01',
-      hospitalId: 'hosp_colombo_general',
-      hospitalName: 'General Hospital Colombo',
-      departmentId: 'dept_opd_general',
-      departmentName: 'General Medicine OPD',
-      roomNumber: 'Room 04',
-      doctorName: 'Dr. H. M. Perera',
-      currentTokenServing: 'A-008',
-      totalTokens: 40,
-      estimatedMinutesPerPatient: 4,
-      status: QueueSessionStatus.active,
-      delayMinutes: 0,
-      lastUpdated: DateTime.now(),
-    );
-
-    _entry = QueueEntryModel(
-      queueEntryId: 'entry_014',
-      appointmentId: 'apt_demo_014',
-      patientId: 'patient_001',
-      patientName: 'Kamal Gunaratne',
-      tokenCode: 'A-014',
-      queuePosition: 14,
-      peopleAhead: 6,
-      status: PatientQueueStatus.waiting,
-      estimatedWaitMinutes: 24,
-      joinedAt: DateTime.now().subtract(const Duration(minutes: 45)),
-    );
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────

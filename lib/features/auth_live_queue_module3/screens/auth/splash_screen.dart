@@ -67,7 +67,7 @@ class _SplashScreenState extends State<SplashScreen>
         // No session → go to welcome/login selection
         _navigateTo(const WelcomeEntryScreen());
       } else if (role == 'admin') {
-        // Admin session → Admin Dashboard
+        // Admin session → Admin Dashboard Placeholder
         _navigateTo(const _AdminDashboardPlaceholder());
       } else if (role == 'patient' || role == 'caregiver') {
         // Patient session → Patient main (booking tab)
@@ -120,21 +120,22 @@ class _SplashScreenState extends State<SplashScreen>
                   width: 110,
                   height: 110,
                   decoration: BoxDecoration(
-                    color: AppColors.primaryLight,
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(28),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.15),
-                        blurRadius: 30,
+                        color: AppColors.primary.withValues(alpha: 0.25),
+                        blurRadius: 28,
                         offset: const Offset(0, 10),
                       ),
                     ],
                   ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.local_hospital_rounded,
-                      size: 60,
-                      color: AppColors.primary,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(28),
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      width: 110,
+                      height: 110,
+                      fit: BoxFit.cover,
                     ),
                   ),
                 ),
@@ -179,10 +180,9 @@ class _SplashScreenState extends State<SplashScreen>
   }
 }
 
-// ── Placeholder screens (other members will build the real ones) ─────────────
+// ── Placeholder screens (for standalone Module 3 execution) ─────────────────
 
 /// Temporary admin dashboard placeholder.
-/// The actual admin dashboard will be built by another team member.
 class _AdminDashboardPlaceholder extends StatelessWidget {
   const _AdminDashboardPlaceholder();
 
@@ -222,7 +222,7 @@ class _AdminDashboardPlaceholder extends StatelessWidget {
             children: [
               Container(
                 padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: AppColors.primaryLight,
                   shape: BoxShape.circle,
                 ),
@@ -260,7 +260,6 @@ class _AdminDashboardPlaceholder extends StatelessWidget {
 }
 
 /// Temporary staff dashboard placeholder.
-/// Routes to this when role is doctor/nurse/receptionist/staff.
 class _StaffDashboardPlaceholder extends StatelessWidget {
   const _StaffDashboardPlaceholder();
 
@@ -301,7 +300,7 @@ class _StaffDashboardPlaceholder extends StatelessWidget {
             children: [
               Container(
                 padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: AppColors.primaryLight,
                   shape: BoxShape.circle,
                 ),
