@@ -474,6 +474,17 @@ class LiveQueueService extends ChangeNotifier {
       }
     }
 
+    int parseTokenNum(String? tokenStr) {
+      if (tokenStr == null || tokenStr.isEmpty) return 0;
+      final match = RegExp(r'\d+').firstMatch(tokenStr);
+      if (match != null) {
+        return int.tryParse(match.group(0) ?? '') ?? 0;
+      }
+      return 0;
+    }
+
+    final servingNum = parseTokenNum(nowServing);
+
     // Build entries
     final entries = <QueueEntryModel>[];
     QueueEntryModel? mine;
@@ -489,14 +500,53 @@ class LiveQueueService extends ChangeNotifier {
       var status = base;
       int wait = 0;
 
+      final tokenCodeStr = (data['tokenCode'] ?? data['tokenNumber'] ?? data['token'] ?? '—').toString();
+      final tokenNum = parseTokenNum(tokenCodeStr);
+
+      int seqAhead = 0;
+      if (tokenNum > 0) {
+        if (servingNum <= 0) {
+          // Consultation hasn't started yet. All tokens before tokenNum are ahead.
+          seqAhead = tokenNum > 1 ? (tokenNum - 1) : 0;
+        } else {
+          // If doctor is serving token servingNum:
+          if (tokenNum > servingNum) {
+            seqAhead = tokenNum - servingNum;
+          } else {
+            seqAhead = 0;
+          }
+        }
+      }
+
       if (base == PatientQueueStatus.waiting) {
-        ahead = stillWaitingAhead;
+        // Take maximum of actual documents ahead and token sequence difference
+        ahead = seqAhead > stillWaitingAhead ? seqAhead : stillWaitingAhead;
         if (isDelayed) {
           status = PatientQueueStatus.delayed;
         } else if (ahead <= 2) {
           status = PatientQueueStatus.approaching;
+        } else {
+          status = PatientQueueStatus.waiting;
         }
-        wait = ahead * minsPerPatient + delayMinutes;
+
+        if (ahead > 0) {
+          wait = ahead * minsPerPatient + delayMinutes;
+        } else {
+          // Next in line before consultation has begun
+          wait = (servingNum <= 0) ? (minsPerPatient + delayMinutes) : delayMinutes;
+        }
+      } else if (base == PatientQueueStatus.called) {
+        ahead = 0;
+        status = PatientQueueStatus.called;
+        wait = 0;
+      } else if (base == PatientQueueStatus.completed) {
+        ahead = 0;
+        status = PatientQueueStatus.completed;
+        wait = 0;
+      } else if (base == PatientQueueStatus.missed) {
+        ahead = 0;
+        status = PatientQueueStatus.missed;
+        wait = 0;
       }
 
       final entry = QueueEntryModel(
@@ -504,7 +554,7 @@ class LiveQueueService extends ChangeNotifier {
         appointmentId: id,
         patientId: (data['patientId'] ?? '').toString(),
         patientName: (data['patientName'] ?? 'Patient').toString(),
-        tokenCode: (data['tokenCode'] ?? '—').toString(),
+        tokenCode: tokenCodeStr,
         queuePosition: i + 1,
         peopleAhead: ahead,
         status: status,
@@ -521,6 +571,14 @@ class LiveQueueService extends ChangeNotifier {
         stillWaitingAhead++;
       }
     }
+
+    final explicitTokens = (s['totalTokens'] as num?)?.toInt() ?? (s['totalPatients'] as num?)?.toInt();
+    final maxTokenFromEntries = entries.fold<int>(0, (prev, e) {
+      final n = parseTokenNum(e.tokenCode);
+      return n > prev ? n : prev;
+    });
+    final computedTotalTokens = explicitTokens ??
+        (maxTokenFromEntries > entries.length ? maxTokenFromEntries : entries.length);
 
     QueueSessionStatus sessionStatus = QueueSessionStatus.active;
     if (isDelayed) {
@@ -540,7 +598,7 @@ class LiveQueueService extends ChangeNotifier {
       roomNumber: (s['roomNumber'] ?? me['roomNumber'] ?? 'OPD Room 01').toString(),
       doctorName: (s['doctorName'] ?? 'Duty Medical Officer').toString(),
       currentTokenServing: nowServing,
-      totalTokens: entries.length,
+      totalTokens: computedTotalTokens,
       estimatedMinutesPerPatient: minsPerPatient,
       status: sessionStatus,
       delayMinutes: delayMinutes,
