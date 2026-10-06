@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../core/constants/app_colors.dart';
 import '../services/auth_service.dart';
+import '../features/auth_live_queue_module3/screens/auth/welcome_entry_screen.dart';
+import '../features/auth_live_queue_module3/services/auth_service.dart' as m3_auth;
 
 class StaffBottomNavigation extends StatelessWidget {
   final int currentIndex;
@@ -110,25 +112,76 @@ class StaffBottomNavigation extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Staff Session Active — Direct OPD Portal Mode')),
-                    );
-                  },
-                  icon: const Icon(Icons.check_circle_rounded),
-                  label: const Text('Staff Session Active'),
+                  onPressed: () => _confirmStaffLogout(context, authService),
+                  icon: const Icon(Icons.logout_rounded),
+                  label: const Text('Log Out of Staff Portal'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: AppColors.error,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Dismiss', style: TextStyle(color: AppColors.textSecondary)),
+                ),
+              ),
+              const SizedBox(height: 8),
             ],
           ),
+        );
+      },
+    );
+  }
+
+  static void _confirmStaffLogout(BuildContext sheetContext, AuthService authService) {
+    showDialog(
+      context: sheetContext,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.logout_rounded, color: AppColors.error),
+              SizedBox(width: 8),
+              Text('Log Out'),
+            ],
+          ),
+          content: const Text(
+            'Are you sure you want to end your clinical staff session and return to the main portal?',
+            style: TextStyle(fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.error,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () async {
+                Navigator.pop(dialogCtx); // close dialog
+                Navigator.pop(sheetContext); // close bottom sheet
+                await authService.signOut();
+                await m3_auth.AuthService().logout();
+                if (sheetContext.mounted) {
+                  Navigator.of(sheetContext, rootNavigator: true).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const WelcomeEntryScreen()),
+                    (route) => false,
+                  );
+                }
+              },
+              child: const Text('Log Out', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
         );
       },
     );

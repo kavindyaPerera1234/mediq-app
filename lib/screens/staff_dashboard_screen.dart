@@ -24,6 +24,8 @@ import 'receptionist_queue_monitor_screen.dart';
 import 'queue_pause_resume_screen.dart';
 import 'consultation_complete_screen.dart';
 import 'skip_patient_confirmation_screen.dart';
+import '../features/auth_live_queue_module3/screens/auth/welcome_entry_screen.dart';
+import '../features/auth_live_queue_module3/services/auth_service.dart' as m3_auth;
 
 class StaffDashboardScreen extends StatefulWidget {
   final AuthService authService;
@@ -66,6 +68,53 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
         ),
       );
     }
+  }
+
+  void _confirmLogout() {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.logout_rounded, color: AppColors.error),
+              SizedBox(width: 8),
+              Text('Log Out'),
+            ],
+          ),
+          content: const Text(
+            'Are you sure you want to end your clinical staff session and return to the login screen?',
+            style: TextStyle(fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.error,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () async {
+                Navigator.pop(dialogCtx);
+                await widget.authService.signOut();
+                await m3_auth.AuthService().logout();
+                if (mounted) {
+                  Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const WelcomeEntryScreen()),
+                    (route) => false,
+                  );
+                }
+              },
+              child: const Text('Log Out', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _openScreen(Widget screen) {
@@ -165,6 +214,16 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
                         ),
                       );
                     }),
+                    const Divider(),
+                    _buildScreenTile(
+                      'Log Out Staff Portal',
+                      Icons.logout_rounded,
+                      () {
+                        Navigator.pop(context);
+                        _confirmLogout();
+                      },
+                      tileColor: AppColors.error,
+                    ),
                   ],
                 ),
               ),
@@ -175,12 +234,16 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
     );
   }
 
-  Widget _buildScreenTile(String title, IconData icon, VoidCallback onTap) {
+  Widget _buildScreenTile(String title, IconData icon, VoidCallback onTap, {Color? tileColor}) {
     return ListTile(
-      leading: Icon(icon, color: AppColors.primary),
+      leading: Icon(icon, color: tileColor ?? AppColors.primary),
       title: Text(
         title,
-        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: 14,
+          color: tileColor ?? AppColors.textPrimary,
+        ),
       ),
       trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.textMuted),
       onTap: onTap,
@@ -206,6 +269,11 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
         title: const Text('MediQ OPD Portal'),
         automaticallyImplyLeading: false,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.logout_rounded, color: AppColors.error),
+            tooltip: 'Log Out of Staff Portal',
+            onPressed: _confirmLogout,
+          ),
           IconButton(
             icon: _isSeeding
                 ? const SizedBox(
