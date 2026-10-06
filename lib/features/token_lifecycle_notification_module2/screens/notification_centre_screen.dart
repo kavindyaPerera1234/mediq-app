@@ -3,7 +3,6 @@ import '../../../core/constants/app_colors.dart';
 import '../models/notification_model.dart';
 import 'notification_detail_screen.dart';
 import 'notification_settings_screen.dart';
-import 'qr_scanner_screen.dart';
 
 class NotificationCentreScreen extends StatelessWidget {
   const NotificationCentreScreen({
@@ -102,16 +101,6 @@ class NotificationCentreScreen extends StatelessWidget {
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.qr_code_scanner_rounded, color: AppColors.primary),
-            tooltip: 'Scan Hospital QR Code',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const QrScannerScreen()),
-              );
-            },
-          ),
           IconButton(
             icon: const Icon(
             Icons.settings_outlined,

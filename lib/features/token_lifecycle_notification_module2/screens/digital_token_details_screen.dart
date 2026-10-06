@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../auth_live_queue_module3/services/auth_service.dart';
 import 'my_appointments_screen.dart';
 
 class DigitalTokenDetailsScreen extends StatefulWidget {
@@ -26,12 +27,45 @@ class _DigitalTokenDetailsScreenState
     extends State<DigitalTokenDetailsScreen> {
   bool _isDownloading = false;
 
-  Future<DocumentSnapshot<Map<String, dynamic>>>
+  Future<DocumentSnapshot<Map<String, dynamic>>?>
       _getAppointment() async {
-    return FirebaseFirestore.instance
-        .collection('appointments')
-        .doc(widget.appointmentId)
-        .get();
+    if (widget.appointmentId.isNotEmpty) {
+      final doc = await FirebaseFirestore.instance
+          .collection('appointments')
+          .doc(widget.appointmentId)
+          .get();
+      if (doc.exists) return doc;
+
+      final byToken = await FirebaseFirestore.instance
+          .collection('appointments')
+          .where('tokenCode', isEqualTo: widget.appointmentId)
+          .limit(1)
+          .get();
+      if (byToken.docs.isNotEmpty) return byToken.docs.first;
+    }
+
+    final user = AuthService().currentUser;
+    if (user != null) {
+      final ids = <String>[];
+      if (user.nic != null && user.nic!.isNotEmpty) ids.add(user.nic!);
+      if (user.phoneNumber.isNotEmpty) ids.add(user.phoneNumber);
+      if (user.userId.isNotEmpty) ids.add(user.userId);
+
+      for (final id in ids) {
+        final q1 = await FirebaseFirestore.instance
+            .collection('appointments')
+            .where('patientId', isEqualTo: id)
+            .get();
+        if (q1.docs.isNotEmpty) return q1.docs.last;
+
+        final q2 = await FirebaseFirestore.instance
+            .collection('appointments')
+            .where('patientNic', isEqualTo: id)
+            .get();
+        if (q2.docs.isNotEmpty) return q2.docs.last;
+      }
+    }
+    return null;
   }
 
   String _createQrData({
@@ -204,7 +238,7 @@ Time: $timeSlot
       ),
 
       body: FutureBuilder<
-          DocumentSnapshot<Map<String, dynamic>>>(
+          DocumentSnapshot<Map<String, dynamic>>?>(
         future: _getAppointment(),
 
         builder: (context, snapshot) {
@@ -228,6 +262,7 @@ Time: $timeSlot
           }
 
           if (!snapshot.hasData ||
+              snapshot.data == null ||
               !snapshot.data!.exists) {
             return const Center(
               child: Text(

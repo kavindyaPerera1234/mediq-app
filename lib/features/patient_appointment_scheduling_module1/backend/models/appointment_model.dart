@@ -45,6 +45,8 @@ class AppointmentModel {
       'patientId': patientId,
       'patientName': patientName,
       'patientNic': patientNic,
+      'userId': patientId,
+      'caregiverId': isCaregiverBooking ? (patientNic.isNotEmpty ? patientNic : patientId) : null,
       'isCaregiverBooking': isCaregiverBooking,
       'relationship': relationship,
       'priority': priority,

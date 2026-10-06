@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../auth_live_queue_module3/services/auth_service.dart';
 import '../models/appointment_model.dart';
@@ -25,16 +26,28 @@ class AppointmentService {
 
       for (final id in ids) {
         final q1 = await _firestore.collection('appointments').where('patientId', isEqualTo: id).get();
-        for (final doc in q1.docs) docs[doc.id] = doc;
+        for (final doc in q1.docs) {
+          docs[doc.id] = doc;
+        }
         final q2 = await _firestore.collection('appointments').where('patientNic', isEqualTo: id).get();
-        for (final doc in q2.docs) docs[doc.id] = doc;
+        for (final doc in q2.docs) {
+          docs[doc.id] = doc;
+        }
+        final q3 = await _firestore.collection('appointments').where('userId', isEqualTo: id).get();
+        for (final doc in q3.docs) {
+          docs[doc.id] = doc;
+        }
+        final q4 = await _firestore.collection('appointments').where('caregiverId', isEqualTo: id).get();
+        for (final doc in q4.docs) {
+          docs[doc.id] = doc;
+        }
       }
 
       final list = docs.values.map((doc) => AppointmentModel.fromFirestore(doc.id, doc.data()!)).toList();
       list.sort((a, b) => b.appointmentDate.compareTo(a.appointmentDate));
       return list;
     } catch (e) {
-      print("Firestore Error: $e");
+      debugPrint("Firestore Error in getUpcomingAppointments: $e");
       return [];
     }
   }
@@ -47,15 +60,28 @@ class AppointmentService {
 
       for (final id in ids) {
         final q1 = await _firestore.collection('appointments').where('patientId', isEqualTo: id).get();
-        for (final doc in q1.docs) docs[doc.id] = doc;
+        for (final doc in q1.docs) {
+          docs[doc.id] = doc;
+        }
         final q2 = await _firestore.collection('appointments').where('patientNic', isEqualTo: id).get();
-        for (final doc in q2.docs) docs[doc.id] = doc;
+        for (final doc in q2.docs) {
+          docs[doc.id] = doc;
+        }
+        final q3 = await _firestore.collection('appointments').where('userId', isEqualTo: id).get();
+        for (final doc in q3.docs) {
+          docs[doc.id] = doc;
+        }
+        final q4 = await _firestore.collection('appointments').where('caregiverId', isEqualTo: id).get();
+        for (final doc in q4.docs) {
+          docs[doc.id] = doc;
+        }
       }
 
       final list = docs.values.map((doc) => AppointmentModel.fromFirestore(doc.id, doc.data()!)).toList();
       list.sort((a, b) => b.appointmentDate.compareTo(a.appointmentDate));
       return list;
     } catch (e) {
+      debugPrint("Firestore Error in getAppointmentHistory: $e");
       return [];
     }
   }
