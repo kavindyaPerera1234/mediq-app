@@ -150,21 +150,22 @@ class _WelcomeEntryScreenState extends State<WelcomeEntryScreen> {
                   width: 100,
                   height: 100,
                   decoration: BoxDecoration(
-                    color: AppColors.primaryLight,
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(26),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.12),
-                        blurRadius: 20,
+                        color: AppColors.primary.withValues(alpha: 0.20),
+                        blurRadius: 24,
                         offset: const Offset(0, 8),
                       ),
                     ],
                   ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.local_hospital_rounded,
-                      size: 56,
-                      color: AppColors.primary,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(26),
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      width: 100,
+                      height: 100,
+                      fit: BoxFit.cover,
                     ),
                   ),
                 ),
