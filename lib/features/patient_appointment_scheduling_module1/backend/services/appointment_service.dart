@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/appointment_model.dart';
+import '../../../auth_live_queue_module3/services/auth_service.dart';
 
 class AppointmentService {
   final FirebaseFirestore _firestore;
