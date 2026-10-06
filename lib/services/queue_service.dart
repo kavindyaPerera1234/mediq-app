@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../core/constants/app_constants.dart';
 import '../models/queue_session.dart';
 import '../models/queue_entry.dart';
-import 'seed_data_service.dart';
 
 class QueueService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -41,10 +40,6 @@ class QueueService {
     try {
       // 1. Fetch current queue session
       var sessionDoc = await _db.collection(AppConstants.queueSessionsCollection).doc(queueSessionId).get();
-      if (!sessionDoc.exists) {
-        await SeedDataService().seedDemoData();
-        sessionDoc = await _db.collection(AppConstants.queueSessionsCollection).doc(queueSessionId).get();
-      }
 
       if (!sessionDoc.exists) {
         // Fallback session doc creation
@@ -55,10 +50,11 @@ class QueueService {
           'departmentId': 'gen_med',
           'date': nowStr,
           'status': 'active',
-          'currentToken': 'A-018',
-          'currentTokenNumber': 'A-018',
-          'lastIssuedToken': 'A-023',
-          'lastIssuedTokenNumber': 'A-023',
+          'currentToken': '—',
+          'currentTokenNumber': '—',
+          'currentTokenServing': '—',
+          'lastIssuedToken': '—',
+          'lastIssuedTokenNumber': '—',
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         });
@@ -86,43 +82,51 @@ class QueueService {
         }
       }
 
+      // Also check appointments collection if no entries in queue_entries yet
       if (eligible.isEmpty) {
-        // Dynamic fallback: Create next token entry so calling next always works
-        final nowTime = DateTime.now();
-        final nowServer = FieldValue.serverTimestamp();
-        final nextTokenNum = 'A-021';
-        final newDoc = _db.collection(AppConstants.queueEntriesCollection).doc();
+        try {
+          final parts = queueSessionId.split('_');
+          final dept = parts.length >= 2 ? parts[1] : 'gen_med';
+          final appts = await _db.collection(AppConstants.appointmentsCollection)
+              .where('departmentId', isEqualTo: dept)
+              .where('status', isEqualTo: 'confirmed')
+              .get();
+          for (var aDoc in appts.docs) {
+            final aData = aDoc.data();
+            final token = (aData['tokenCode'] ?? 'A-001').toString();
+            final newEntry = QueueEntry(
+              queueEntryId: aDoc.id,
+              queueSessionId: queueSessionId,
+              appointmentId: aDoc.id,
+              patientId: (aData['patientId'] ?? '').toString(),
+              tokenNumber: token,
+              tokenCode: token,
+              status: AppConstants.statusWaiting,
+              patientName: (aData['patientName'] ?? 'Patient').toString(),
+              priority: (aData['priority'] ?? 'normal').toString(),
+              queuePosition: 1,
+            );
+            eligible.add(newEntry);
+            // Save to queue_entries
+            await _db.collection(AppConstants.queueEntriesCollection).doc(aDoc.id).set({
+              'queueSessionId': queueSessionId,
+              'appointmentId': aDoc.id,
+              'patientId': aData['patientId'],
+              'patientName': aData['patientName'],
+              'tokenNumber': token,
+              'tokenCode': token,
+              'status': AppConstants.statusWaiting,
+              'priority': aData['priority'] ?? 'normal',
+              'queuePosition': 1,
+              'createdAt': FieldValue.serverTimestamp(),
+              'updatedAt': FieldValue.serverTimestamp(),
+            }, SetOptions(merge: true));
+          }
+        } catch (_) {}
+      }
 
-        await newDoc.set({
-          'queueSessionId': queueSessionId,
-          'appointmentId': 'APT-021',
-          'patientId': 'pat-021',
-          'tokenNumber': nextTokenNum,
-          'tokenCode': nextTokenNum,
-          'status': AppConstants.statusWaiting,
-          'queuePosition': 1,
-          'estimatedWaitMinutes': 10,
-          'priority': AppConstants.priorityNormal,
-          'patientName': 'Kasun Perera',
-          'createdAt': nowServer,
-          'updatedAt': nowServer,
-        });
-
-        final newEntry = QueueEntry(
-          queueEntryId: newDoc.id,
-          queueSessionId: queueSessionId,
-          appointmentId: 'APT-021',
-          patientId: 'pat-021',
-          tokenNumber: nextTokenNum,
-          tokenCode: nextTokenNum,
-          status: AppConstants.statusWaiting,
-          queuePosition: 1,
-          estimatedWaitMinutes: 10,
-          priority: AppConstants.priorityNormal,
-          patientName: 'Kasun Perera',
-          createdAt: nowTime,
-        );
-        eligible.add(newEntry);
+      if (eligible.isEmpty) {
+        return QueueActionResult.failure('No patients currently waiting in the queue to call.');
       }
 
       // 4. Sort: Emergency priority first, then queuePosition
@@ -145,7 +149,7 @@ class QueueService {
         'updatedAt': now,
       });
 
-      // Update appointments document status for Member 1 & 2 real-time sync (PDF item 5)
+      // Update appointments document status for real-time sync
       if (nextPatient.appointmentId.isNotEmpty) {
         try {
           await _db.collection(AppConstants.appointmentsCollection).doc(nextPatient.appointmentId).update({
@@ -156,10 +160,12 @@ class QueueService {
         } catch (_) {}
       }
 
-      // 6. Update queue session current token
+      // 6. Update queue session current token across both Module 3 and Module 4 fields
       await _db.collection(AppConstants.queueSessionsCollection).doc(queueSessionId).update({
         'currentToken': nextPatient.tokenNumber,
         'currentTokenNumber': nextPatient.tokenNumber,
+        'currentTokenServing': nextPatient.tokenNumber,
+        'nowServing': nextPatient.tokenNumber,
         'updatedAt': now,
       });
 
@@ -197,23 +203,9 @@ class QueueService {
 
       return QueueActionResult.success(updatedPatient, 'Patient ${nextPatient.tokenNumber} called successfully.');
     } catch (e) {
-      final fallbackPatient = QueueEntry(
-        queueEntryId: 'QE-pat-021',
-        queueSessionId: queueSessionId,
-        appointmentId: 'APT-021',
-        patientId: 'pat-021',
-        tokenNumber: 'A-021',
-        tokenCode: 'A-021',
-        status: AppConstants.statusCalled,
-        queuePosition: 1,
-        patientName: 'Kasun Perera',
-        calledAt: DateTime.now(),
-      );
-      return QueueActionResult.success(
-        fallbackPatient,
-        'Patient A-021 called successfully.',
-      );
+      return QueueActionResult.failure('Failed to call patient: $e');
     }
+
   }
 
   /// Put a called/active patient on hold

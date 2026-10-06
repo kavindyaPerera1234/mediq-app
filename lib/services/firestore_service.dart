@@ -86,14 +86,44 @@ class FirestoreService {
       List<QueueEntry> entries = [];
       for (var doc in snapshot.docs) {
         final data = doc.data();
-        String patientName = data['patientName'] ?? 'Unknown Patient';
+        String patientName = (data['patientName'] ?? '').toString();
         if ((patientName.isEmpty || patientName == 'Unknown Patient') && data['patientId'] != null) {
-          final userDoc = await _db.collection(AppConstants.usersCollection).doc(data['patientId']).get();
-          if (userDoc.exists && userDoc.data() != null) {
-            patientName = userDoc.data()!['fullName'] ?? patientName;
-          }
+          try {
+            final userDoc = await _db.collection(AppConstants.usersCollection).doc(data['patientId']).get();
+            if (userDoc.exists && userDoc.data() != null) {
+              patientName = (userDoc.data()!['fullName'] ?? patientName).toString();
+            }
+          } catch (_) {}
         }
-        entries.add(QueueEntry.fromFirestore(doc, patientName: patientName));
+        entries.add(QueueEntry.fromFirestore(doc, patientName: patientName.isNotEmpty ? patientName : null));
+      }
+
+      // If empty for this exact sessionId, check appointments collection
+      if (entries.isEmpty) {
+        try {
+          final parts = sessionId.split('_');
+          final dept = parts.length >= 2 ? parts[1] : 'gen_med';
+          final apptsSnap = await _db
+              .collection(AppConstants.appointmentsCollection)
+              .where('departmentId', isEqualTo: dept)
+              .get();
+
+          for (var aDoc in apptsSnap.docs) {
+            final aData = aDoc.data();
+            final token = (aData['tokenCode'] ?? 'A-001').toString();
+            entries.add(QueueEntry(
+              queueEntryId: aDoc.id,
+              queueSessionId: sessionId,
+              appointmentId: aDoc.id,
+              patientId: (aData['patientId'] ?? '').toString(),
+              tokenNumber: token,
+              tokenCode: token,
+              status: (aData['status'] ?? 'waiting').toString(),
+              patientName: (aData['patientName'] ?? 'Patient $token').toString(),
+              queuePosition: 1,
+            ));
+          }
+        } catch (_) {}
       }
 
       // Sort by position or emergency priority
@@ -119,14 +149,16 @@ class FirestoreService {
     List<QueueEntry> entries = [];
     for (var doc in snapshot.docs) {
       final data = doc.data();
-      String patientName = data['patientName'] ?? '';
+      String patientName = (data['patientName'] ?? '').toString();
       if (patientName.isEmpty && data['patientId'] != null) {
-        final userDoc = await _db.collection(AppConstants.usersCollection).doc(data['patientId']).get();
-        if (userDoc.exists && userDoc.data() != null) {
-          patientName = userDoc.data()!['fullName'] ?? 'Patient';
-        }
+        try {
+          final userDoc = await _db.collection(AppConstants.usersCollection).doc(data['patientId']).get();
+          if (userDoc.exists && userDoc.data() != null) {
+            patientName = (userDoc.data()!['fullName'] ?? 'Patient').toString();
+          }
+        } catch (_) {}
       }
-      entries.add(QueueEntry.fromFirestore(doc, patientName: patientName));
+      entries.add(QueueEntry.fromFirestore(doc, patientName: patientName.isNotEmpty ? patientName : null));
     }
     return entries;
   }
@@ -138,39 +170,43 @@ class FirestoreService {
   Future<QueueEntry?> getPatientDetails(String queueEntryId) async {
     try {
       final doc = await _db.collection(AppConstants.queueEntriesCollection).doc(queueEntryId).get();
-      if (!doc.exists) return _getMockQueueEntry(queueEntryId);
-
-      final data = doc.data() ?? {};
-      String patientName = data['patientName'] ?? '';
-      if (patientName.isEmpty && data['patientId'] != null) {
-        try {
-          final userDoc = await _db.collection(AppConstants.usersCollection).doc(data['patientId']).get();
-          if (userDoc.exists && userDoc.data() != null) {
-            patientName = userDoc.data()!['fullName'] ?? 'Patient';
-          }
-        } catch (_) {}
+      if (doc.exists) {
+        final data = doc.data() ?? {};
+        String patientName = (data['patientName'] ?? '').toString();
+        if (patientName.isEmpty && data['patientId'] != null) {
+          try {
+            final userDoc = await _db.collection(AppConstants.usersCollection).doc(data['patientId']).get();
+            if (userDoc.exists && userDoc.data() != null) {
+              patientName = (userDoc.data()!['fullName'] ?? 'Patient').toString();
+            }
+          } catch (_) {}
+        }
+        return QueueEntry.fromFirestore(doc, patientName: patientName.isNotEmpty ? patientName : null);
       }
-      return QueueEntry.fromFirestore(doc, patientName: patientName);
-    } catch (_) {
-      return _getMockQueueEntry(queueEntryId);
-    }
-  }
 
-  QueueEntry _getMockQueueEntry(String queueEntryId) {
-    return QueueEntry(
-      queueEntryId: queueEntryId,
-      queueSessionId: AppConstants.defaultQueueSessionId(),
-      appointmentId: 'APT-021',
-      patientId: 'pat-021',
-      tokenNumber: 'A-021',
-      tokenCode: 'A-021',
-      status: 'called',
-      queuePosition: 1,
-      estimatedWaitMinutes: 5,
-      priority: 'normal',
-      patientName: 'Kasun Perera',
-      calledAt: DateTime.now(),
-    );
+      // Try checking appointments collection
+      final apptDoc = await _db.collection(AppConstants.appointmentsCollection).doc(queueEntryId).get();
+      if (apptDoc.exists) {
+        final aData = apptDoc.data() ?? {};
+        final token = (aData['tokenCode'] ?? 'A-001').toString();
+        return QueueEntry(
+          queueEntryId: apptDoc.id,
+          queueSessionId: AppConstants.defaultQueueSessionId(),
+          appointmentId: apptDoc.id,
+          patientId: (aData['patientId'] ?? '').toString(),
+          tokenNumber: token,
+          tokenCode: token,
+          status: (aData['status'] ?? 'waiting').toString(),
+          patientName: (aData['patientName'] ?? 'Patient').toString(),
+          priority: (aData['priority'] ?? 'normal').toString(),
+          queuePosition: 1,
+        );
+      }
+
+      return null;
+    } catch (_) {
+      return null;
+    }
   }
 
   // --- Delay Updates ---

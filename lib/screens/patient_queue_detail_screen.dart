@@ -199,7 +199,9 @@ class _PatientQueueDetailScreenState extends State<PatientQueueDetailScreen> {
                           _buildDetailRow(
                             icon: Icons.person_rounded,
                             label: 'Patient Name',
-                            value: entry.patientName ?? 'Nimali Wijesekera',
+                            value: (entry.patientName != null && entry.patientName!.isNotEmpty)
+                                ? entry.patientName!
+                                : 'Patient ${entry.tokenNumber}',
                           ),
                           const Divider(height: 24),
                           _buildDetailRow(

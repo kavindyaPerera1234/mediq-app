@@ -82,41 +82,28 @@ class _EmergencyPriorityScreenState extends State<EmergencyPriorityScreen> {
                 .toList();
 
             if (eligibleWaiting.isEmpty) {
-              eligibleWaiting = [
-                QueueEntry(
-                  queueEntryId: 'QE-pat-019',
-                  queueSessionId: effectiveSessionId,
-                  appointmentId: 'APT-019',
-                  patientId: 'pat-019',
-                  tokenNumber: 'A-019',
-                  tokenCode: 'A-019',
-                  status: 'waiting',
-                  queuePosition: 1,
-                  patientName: 'Nimali Wijesekera',
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.inbox_rounded, size: 56, color: AppColors.textMuted),
+                      SizedBox(height: 16),
+                      Text(
+                        'No waiting patients currently in queue.',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Patients who book appointments will appear here to be prioritized if needed.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
                 ),
-                QueueEntry(
-                  queueEntryId: 'QE-pat-020',
-                  queueSessionId: widget.queueSessionId,
-                  appointmentId: 'APT-020',
-                  patientId: 'pat-020',
-                  tokenNumber: 'A-020',
-                  tokenCode: 'A-020',
-                  status: 'waiting',
-                  queuePosition: 2,
-                  patientName: 'Suresh K.',
-                ),
-                QueueEntry(
-                  queueEntryId: 'QE-pat-021',
-                  queueSessionId: widget.queueSessionId,
-                  appointmentId: 'APT-021',
-                  patientId: 'pat-021',
-                  tokenNumber: 'A-021',
-                  tokenCode: 'A-021',
-                  status: 'waiting',
-                  queuePosition: 3,
-                  patientName: 'Kasun Perera',
-                ),
-              ];
+              );
             }
 
             // Ensure selected queue entry ID exists in current eligible list

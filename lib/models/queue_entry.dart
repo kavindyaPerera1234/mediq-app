@@ -48,7 +48,7 @@ class QueueEntry {
       queueSessionId: data['queueSessionId'] ?? '',
       appointmentId: data['appointmentId'] ?? '',
       patientId: data['patientId'] ?? '',
-      tokenNumber: data['tokenNumber'] ?? '',
+      tokenNumber: data['tokenNumber'] ?? data['tokenCode'] ?? '',
       tokenCode: data['tokenCode'] ?? data['tokenNumber'] ?? '',
       status: data['status'] ?? 'waiting',
       queuePosition: data['queuePosition'] ?? 0,
@@ -60,7 +60,9 @@ class QueueEntry {
       missedAt: (data['missedAt'] as Timestamp?)?.toDate(),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
-      patientName: patientName ?? data['patientName'],
+      patientName: (patientName != null && patientName.isNotEmpty && patientName != 'Unknown Patient')
+          ? patientName
+          : (data['patientName'] ?? data['name'] ?? 'Patient'),
     );
   }
 

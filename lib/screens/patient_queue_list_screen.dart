@@ -38,9 +38,12 @@ class _PatientQueueListScreenState extends State<PatientQueueListScreen>
   String _selectedPriority = 'All';
   int _currentBottomNavIndex = 1;
 
-  String get effectiveSessionId => widget.queueSessionId.isNotEmpty
-      ? widget.queueSessionId
-      : AppConstants.defaultQueueSessionId();
+  String get effectiveSessionId {
+    if (widget.queueSessionId.isNotEmpty && !widget.queueSessionId.contains('HOSP-001')) {
+      return widget.queueSessionId;
+    }
+    return AppConstants.defaultQueueSessionId('nhsl', 'gen_med');
+  }
 
   @override
   void initState() {

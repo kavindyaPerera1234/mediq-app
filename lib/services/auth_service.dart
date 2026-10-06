@@ -59,8 +59,8 @@ class AuthService {
       userId: uid,
       staffId: 'DOC-001',
       role: 'doctor',
-      hospitalId: 'HOSP-001',
-      departmentId: 'DEPT-001',
+      hospitalId: 'nhsl',
+      departmentId: 'gen_med',
       employeeNumber: 'EMP-101',
       isActive: true,
     );

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../core/constants/app_colors.dart';
-import '../core/constants/app_constants.dart';
 import '../models/queue_entry.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
@@ -128,17 +127,15 @@ class _CalledPatientStateScreenState extends State<CalledPatientStateScreen> {
             return const LoadingWidget(message: 'Loading Called Patient Details...');
           }
 
-          final entry = snapshot.data ??
-              QueueEntry(
-                queueEntryId: widget.queueEntryId,
-                queueSessionId: AppConstants.defaultQueueSessionId(),
-                appointmentId: 'APT-019',
-                patientId: 'pat-019',
-                tokenNumber: 'A-019',
-                tokenCode: 'A-019',
-                status: 'called',
-                patientName: 'Nimali Wijesekera',
-              );
+          if (snapshot.data == null) {
+            return const Center(
+              child: Text(
+                'No called patient record found.',
+                style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
+              ),
+            );
+          }
+          final entry = snapshot.data!;
 
           final calledTimeStr = entry.calledAt != null
               ? DateFormat('hh:mm a').format(entry.calledAt!)

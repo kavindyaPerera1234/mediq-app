@@ -105,6 +105,17 @@ class AppointmentService {
       // Cross-module sync: write to Module 3's queue_entries and queue_sessions
       try {
         final sessionId = '${appointment.hospitalId}_${appointment.departmentId}_${appointment.appointmentDate}';
+        
+        // Count existing queue entries to set accurate queuePosition
+        int nextPos = 1;
+        try {
+          final countSnap = await _firestore
+              .collection('queue_entries')
+              .where('queueSessionId', isEqualTo: sessionId)
+              .get();
+          nextPos = countSnap.docs.length + 1;
+        } catch (_) {}
+
         await _firestore.collection('queue_entries').doc(docRef.id).set({
           'appointmentId': docRef.id,
           'patientId': appointment.patientId.isNotEmpty ? appointment.patientId : appointment.patientNic,
@@ -113,14 +124,26 @@ class AppointmentService {
           'hospitalId': appointment.hospitalId,
           'departmentId': appointment.departmentId,
           'tokenCode': appointment.tokenCode,
+          'tokenNumber': appointment.tokenCode,
           'queueSessionId': sessionId,
           'status': 'waiting',
+          'queuePosition': nextPos,
+          'estimatedWaitMinutes': (nextPos - 1) * 4,
           'priority': appointment.priority,
           'isCaregiverBooking': appointment.isCaregiverBooking,
           'relationship': appointment.relationship,
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
+
+        // Get existing session to keep active serving token if already set
+        String activeServing = '—';
+        try {
+          final sessionDoc = await _firestore.collection('queue_sessions').doc(sessionId).get();
+          if (sessionDoc.exists) {
+            activeServing = (sessionDoc.data()?['currentToken'] ?? sessionDoc.data()?['currentTokenNumber'] ?? '—').toString();
+          }
+        } catch (_) {}
 
         await _firestore.collection('queue_sessions').doc(sessionId).set({
           'sessionId': sessionId,
@@ -131,6 +154,9 @@ class AppointmentService {
           'departmentName': appointment.departmentName,
           'date': appointment.appointmentDate,
           'status': 'active',
+          'currentToken': activeServing,
+          'currentTokenNumber': activeServing,
+          'currentTokenServing': activeServing,
           'lastIssuedToken': appointment.tokenCode,
           'lastIssuedTokenNumber': appointment.tokenCode,
           'roomNumber': appointment.roomNumber.isNotEmpty ? appointment.roomNumber : 'OPD Room 01',

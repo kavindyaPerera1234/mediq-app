@@ -455,22 +455,22 @@ class LiveQueueService extends ChangeNotifier {
     final rawSessionStatus = (s['status'] ?? 'active').toString().toLowerCase();
     final isDelayed = delayMinutes > 0 || rawSessionStatus == 'delayed';
 
-    // Now serving = whoever Module 4 called; otherwise next person not yet seen.
+    // Now serving = whoever Module 4 called / is currently in consultation
     final mapped = ordered.map((e) => _mapStatus(_statusOf(e.value))).toList();
-    int servingIdx = mapped.indexWhere((st) => st == PatientQueueStatus.called);
-    if (servingIdx < 0) servingIdx = mapped.indexWhere((st) => st == PatientQueueStatus.waiting);
-    final explicitServing = (s['currentTokenServing'] ?? s['currentToken'])?.toString();
+    final servingIdx = mapped.indexWhere((st) => st == PatientQueueStatus.called);
+    final explicitServing = (s['currentTokenServing'] ?? s['currentToken'] ?? s['currentTokenNumber'])?.toString();
     String nowServing = '—';
     if (explicitServing != null && explicitServing.isNotEmpty && explicitServing != '—') {
       nowServing = explicitServing;
     } else if (servingIdx >= 0) {
       nowServing = (ordered[servingIdx].value['tokenCode'] ?? '—').toString();
-    } else if (ordered.isNotEmpty) {
+    } else {
+      // Check if any previous patient completed
       final lastDone = mapped.lastIndexWhere((st) => st == PatientQueueStatus.completed);
       if (lastDone >= 0) {
         nowServing = (ordered[lastDone].value['tokenCode'] ?? '—').toString();
       } else {
-        nowServing = (ordered.first.value['tokenCode'] ?? 'A-001').toString();
+        nowServing = '—';
       }
     }
 

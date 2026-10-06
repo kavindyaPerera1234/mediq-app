@@ -388,17 +388,19 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
                         const SizedBox(height: 14),
                         // Big Serving Number
                         Text(
-                          session.currentTokenServing,
+                          session.currentTokenServing == '—' ? 'Not Started' : session.currentTokenServing,
                           style: GoogleFonts.inter(
-                            fontSize: 48,
+                            fontSize: session.currentTokenServing == '—' ? 36 : 48,
                             fontWeight: FontWeight.w900,
-                            color: AppColors.textPrimary,
+                            color: session.currentTokenServing == '—' ? AppColors.textSecondary : AppColors.primary,
                             letterSpacing: -1,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Doctor in consultation: ${session.doctorName}',
+                          session.currentTokenServing == '—'
+                              ? 'Waiting for doctor to call first patient'
+                              : 'Doctor in consultation: ${session.doctorName}',
                           style: GoogleFonts.inter(
                             fontSize: 13,
                             fontWeight: FontWeight.w500,

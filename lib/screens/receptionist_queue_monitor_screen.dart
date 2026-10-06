@@ -141,7 +141,7 @@ class _ReceptionistQueueMonitorScreenState extends State<ReceptionistQueueMonito
                         departmentId: dId.isNotEmpty ? dId : 'gen_med',
                         date: DateTime.now().toString().split(' ')[0],
                         status: 'active',
-                        currentTokenNumber: 'A-019',
+                        currentTokenNumber: '—',
                       );
 
                   return StreamBuilder<List<QueueEntry>>(

@@ -22,8 +22,8 @@ class QueueSession {
     required this.departmentId,
     required this.date,
     this.status = 'active',
-    this.currentTokenNumber = 'A-000',
-    this.lastIssuedTokenNumber = 'A-000',
+    this.currentTokenNumber = '—',
+    this.lastIssuedTokenNumber = '—',
     this.estimatedMinutesPerPatient = 10,
     this.delayMinutes = 0,
     this.delayReason = '',
@@ -35,8 +35,8 @@ class QueueSession {
 
   factory QueueSession.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
-    final token = data['currentTokenNumber'] ?? data['currentToken'] ?? 'A-000';
-    final lastToken = data['lastIssuedTokenNumber'] ?? data['lastIssuedToken'] ?? 'A-000';
+    final token = data['currentTokenNumber'] ?? data['currentToken'] ?? '—';
+    final lastToken = data['lastIssuedTokenNumber'] ?? data['lastIssuedToken'] ?? '—';
 
     return QueueSession(
       queueSessionId: doc.id,

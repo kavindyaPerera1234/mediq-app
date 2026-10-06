@@ -107,6 +107,8 @@ class SeedDataService {
         'status': 'active',
         'currentToken': '—',
         'currentTokenNumber': '—',
+        'currentTokenServing': '—',
+        'nowServing': '—',
         'lastIssuedToken': 'A-000',
         'lastIssuedTokenNumber': 'A-000',
         'estimatedMinutesPerPatient': 10,

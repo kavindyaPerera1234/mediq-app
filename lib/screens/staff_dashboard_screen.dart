@@ -75,14 +75,21 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
     );
   }
 
-  void _showAllScreensModal() {
+  Future<void> _showAllScreensModal() async {
     final staffProfile = widget.authService.currentStaffProfile;
-    final hId = staffProfile?.hospitalId ?? 'nhsl';
-    final dId = staffProfile?.departmentId ?? 'gen_med';
-    final dynamicSessionId = AppConstants.defaultQueueSessionId(
-      hId.isNotEmpty ? hId : 'nhsl',
-      dId.isNotEmpty ? dId : 'gen_med',
-    );
+    final rawHId = staffProfile?.hospitalId ?? '';
+    final rawDId = staffProfile?.departmentId ?? '';
+    final hId = (rawHId == 'HOSP-001' || rawHId.isEmpty) ? 'nhsl' : rawHId;
+    final dId = (rawDId == 'DEPT-001' || rawDId.isEmpty) ? 'gen_med' : rawDId;
+    final dynamicSessionId = AppConstants.defaultQueueSessionId(hId, dId);
+
+    final entries = await _firestoreService.getPatientQueue(dynamicSessionId);
+    final activeEntry = entries.isNotEmpty ? entries.first : null;
+    final sampleEntryId = activeEntry?.queueEntryId ?? '';
+    final sampleToken = activeEntry?.tokenNumber ?? 'A-001';
+    final sampleName = activeEntry?.patientName ?? 'Waiting Patient';
+
+    if (!mounted) return;
 
     showModalBottomSheet(
       context: context,
@@ -120,25 +127,41 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
                   children: [
                     _buildScreenTile('1. Staff Dashboard', Icons.dashboard_rounded, () => Navigator.pop(context)),
                     _buildScreenTile('2. Patient Queue List', Icons.format_list_bulleted_rounded, () => _openScreen(PatientQueueListScreen(authService: widget.authService, queueSessionId: dynamicSessionId))),
-                    _buildScreenTile('4. Patient Queue Detail', Icons.person_search_rounded, () => _openScreen(PatientQueueDetailScreen(authService: widget.authService, queueEntryId: 'QE-pat-019'))),
+                    _buildScreenTile('4. Patient Queue Detail', Icons.person_search_rounded, () {
+                      if (sampleEntryId.isNotEmpty) {
+                        _openScreen(PatientQueueDetailScreen(authService: widget.authService, queueEntryId: sampleEntryId));
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('No active patients in queue. Book an appointment first!')),
+                        );
+                      }
+                    }),
                     _buildScreenTile('5. Call Next Patient', Icons.campaign_rounded, () => _openScreen(CallNextPatientScreen(authService: widget.authService, queueSessionId: dynamicSessionId))),
-                    _buildScreenTile('6. Called Patient State', Icons.volume_up_rounded, () => _openScreen(CalledPatientStateScreen(authService: widget.authService, queueEntryId: 'QE-pat-019'))),
+                    _buildScreenTile('6. Called Patient State', Icons.volume_up_rounded, () {
+                      if (sampleEntryId.isNotEmpty) {
+                        _openScreen(CalledPatientStateScreen(authService: widget.authService, queueEntryId: sampleEntryId));
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('No active patients in queue. Call a patient first!')),
+                        );
+                      }
+                    }),
                     _buildScreenTile('7. Hold & Resume', Icons.pause_circle_filled_rounded, () => _openScreen(HoldAndResumeScreen(authService: widget.authService, queueSessionId: dynamicSessionId))),
                     _buildScreenTile('8. Emergency Priority', Icons.warning_rounded, () => _openScreen(EmergencyPriorityScreen(authService: widget.authService, queueSessionId: dynamicSessionId))),
                     _buildScreenTile('9. Queue Status Overview', Icons.pie_chart_rounded, () => _openScreen(QueueStatusOverviewScreen(authService: widget.authService, queueSessionId: dynamicSessionId))),
                     _buildScreenTile('10. Staff Delay Communication', Icons.access_time_filled_rounded, () => _openScreen(StaffDelayCommunicationScreen(authService: widget.authService, queueSessionId: dynamicSessionId))),
                     _buildScreenTile('11. Receptionist Queue Monitor', Icons.desktop_windows_rounded, () => _openScreen(ReceptionistQueueMonitorScreen(authService: widget.authService))),
                     _buildScreenTile('12. Queue Pause/Resume', Icons.pause_rounded, () => _openScreen(QueuePauseResumeScreen(authService: widget.authService, queueSessionId: dynamicSessionId))),
-                    _buildScreenTile('13. Consultation Complete', Icons.check_circle_rounded, () => _openScreen(ConsultationCompleteScreen(authService: widget.authService, tokenNumber: 'A-019', patientName: 'Nimali Wijesekera'))),
+                    _buildScreenTile('13. Consultation Complete', Icons.check_circle_rounded, () => _openScreen(ConsultationCompleteScreen(authService: widget.authService, tokenNumber: sampleToken, patientName: sampleName))),
                     _buildScreenTile('14. Skip Patient Confirmation', Icons.skip_next_rounded, () {
                       Navigator.pop(context);
                       showDialog(
                         context: context,
                         builder: (context) => SkipPatientConfirmationScreen(
                           authService: widget.authService,
-                          queueEntryId: 'QE-pat-020',
-                          tokenNumber: 'A-020',
-                          patientName: 'Suresh K.',
+                          queueEntryId: sampleEntryId,
+                          tokenNumber: sampleToken,
+                          patientName: sampleName,
                         ),
                       );
                     }),
@@ -169,12 +192,11 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
     final staffUser = widget.authService.currentUserModel;
     final staffProfile = widget.authService.currentStaffProfile;
 
-    final hId = staffProfile?.hospitalId ?? 'nhsl';
-    final dId = staffProfile?.departmentId ?? 'gen_med';
-    final sessionId = AppConstants.defaultQueueSessionId(
-      hId.isNotEmpty ? hId : 'nhsl',
-      dId.isNotEmpty ? dId : 'gen_med',
-    );
+    final rawHId = staffProfile?.hospitalId ?? '';
+    final rawDId = staffProfile?.departmentId ?? '';
+    final hId = (rawHId == 'HOSP-001' || rawHId.isEmpty) ? 'nhsl' : rawHId;
+    final dId = (rawDId == 'DEPT-001' || rawDId.isEmpty) ? 'gen_med' : rawDId;
+    final sessionId = AppConstants.defaultQueueSessionId(hId, dId);
 
     final staffName = staffUser?.fullName ?? 'Dr. Silva';
 
@@ -192,7 +214,7 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
                   )
                 : const Icon(Icons.cloud_upload_rounded, color: AppColors.primary),
-            tooltip: 'Seed Cloud Firestore Database',
+            tooltip: 'Seed Reference Hospital Reference Data',
             onPressed: _isSeeding ? null : _handleSeedDatabase,
           ),
           IconButton(
@@ -220,8 +242,8 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
                   departmentId: dId.isNotEmpty ? dId : 'gen_med',
                   date: DateTime.now().toString().split(' ')[0],
                   status: 'active',
-                  currentTokenNumber: 'A-018',
-                  lastIssuedTokenNumber: 'A-025',
+                  currentTokenNumber: '—',
+                  lastIssuedTokenNumber: '—',
                 );
 
             return StreamBuilder<List<QueueEntry>>(
@@ -245,7 +267,7 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
                     queueSessionId: sessionId,
                     appointmentId: '',
                     patientId: '',
-                    tokenNumber: session.currentTokenNumber.isNotEmpty ? session.currentTokenNumber : 'A-018',
+                    tokenNumber: session.currentTokenNumber,
                     tokenCode: session.currentTokenNumber,
                   ),
                 );
@@ -421,7 +443,11 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
                                       ),
                                     ),
                                     Text(
-                                      currentCalled.tokenNumber.isNotEmpty ? currentCalled.tokenNumber : session.currentTokenNumber,
+                                      (currentCalled.tokenNumber.isNotEmpty && currentCalled.tokenNumber != '—')
+                                          ? currentCalled.tokenNumber
+                                          : (session.currentTokenNumber.isNotEmpty && session.currentTokenNumber != '—'
+                                              ? session.currentTokenNumber
+                                              : '—'),
                                       style: TextStyle(
                                         fontSize: 26,
                                         fontWeight: FontWeight.w800,

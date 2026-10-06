@@ -87,7 +87,7 @@ class _CallNextPatientScreenState extends State<CallNextPatientScreen> {
                   hospitalId: 'nhsl',
                   departmentId: 'gen_med',
                   date: DateTime.now().toString().split(' ')[0],
-                  currentTokenNumber: 'A-018',
+                  currentTokenNumber: '—',
                 );
 
             final isPaused = session.status == 'paused';
@@ -129,19 +129,7 @@ class _CallNextPatientScreenState extends State<CallNextPatientScreen> {
                   return a.queuePosition.compareTo(b.queuePosition);
                 });
 
-                final QueueEntry nextInLine = waitingList.isNotEmpty
-                    ? waitingList.first
-                    : QueueEntry(
-                        queueEntryId: 'QE-pat-021',
-                        queueSessionId: widget.queueSessionId,
-                        appointmentId: 'APT-021',
-                        patientId: 'pat-021',
-                        tokenNumber: 'A-021',
-                        tokenCode: 'A-021',
-                        status: 'waiting',
-                        queuePosition: 1,
-                        patientName: 'Kasun Perera',
-                      );
+                final QueueEntry? nextInLine = waitingList.isNotEmpty ? waitingList.first : null;
 
                 return SingleChildScrollView(
                   padding: const EdgeInsets.all(20.0),
@@ -270,13 +258,13 @@ class _CallNextPatientScreenState extends State<CallNextPatientScreen> {
 
                       // Section 2: Next in Line Card
                       Card(
-                        color: (nextInLine.priority == 'emergency')
+                        color: (nextInLine?.priority == 'emergency')
                             ? AppColors.errorLight
                             : AppColors.primaryLight,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                           side: BorderSide(
-                            color: (nextInLine.priority == 'emergency')
+                            color: (nextInLine?.priority == 'emergency')
                                 ? AppColors.error
                                 : AppColors.primary,
                             width: 1.5,
@@ -299,23 +287,25 @@ class _CallNextPatientScreenState extends State<CallNextPatientScreen> {
                                       letterSpacing: 1.0,
                                     ),
                                   ),
-                                  if (nextInLine.priority == 'emergency') const EmergencyBadge(compact: true),
+                                  if (nextInLine?.priority == 'emergency') const EmergencyBadge(compact: true),
                                 ],
                               ),
                               const SizedBox(height: 12),
                               Text(
-                                nextInLine.tokenNumber,
+                                nextInLine?.tokenNumber ?? '—',
                                 style: TextStyle(
                                   fontSize: 40,
                                   fontWeight: FontWeight.w800,
-                                  color: (nextInLine.priority == 'emergency')
+                                  color: (nextInLine?.priority == 'emergency')
                                       ? AppColors.error
                                       : AppColors.primaryDark,
                                 ),
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                nextInLine.patientName ?? 'Kasun Perera',
+                                nextInLine != null
+                                    ? (nextInLine.patientName ?? 'Patient ${nextInLine.tokenNumber}')
+                                    : 'No patients currently waiting',
                                 style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
@@ -324,7 +314,9 @@ class _CallNextPatientScreenState extends State<CallNextPatientScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'General Medicine OPD • Position #${nextInLine.queuePosition}',
+                                nextInLine != null
+                                    ? 'General Medicine OPD • Position #${nextInLine.queuePosition}'
+                                    : 'New bookings will automatically appear here',
                                 style: const TextStyle(
                                   fontSize: 13,
                                   color: AppColors.textSecondary,
@@ -338,10 +330,10 @@ class _CallNextPatientScreenState extends State<CallNextPatientScreen> {
 
                       // Call Next Patient Primary Button
                       PrimaryButton(
-                        label: 'CALL NEXT PATIENT',
+                        label: nextInLine == null ? 'NO PATIENTS IN QUEUE' : 'CALL NEXT PATIENT',
                         icon: Icons.campaign_rounded,
                         height: 54,
-                        onPressed: (isPaused || _isCalling)
+                        onPressed: (isPaused || _isCalling || nextInLine == null)
                             ? null
                             : _handleCallNext,
                         isLoading: _isCalling,
