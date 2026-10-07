@@ -166,6 +166,21 @@ class _WelcomeEntryScreenState extends State<WelcomeEntryScreen> {
                       width: 100,
                       height: 100,
                       fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(26),
+                          ),
+                          child: const Icon(
+                            Icons.local_hospital_rounded,
+                            size: 48,
+                            color: Colors.white,
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ),
