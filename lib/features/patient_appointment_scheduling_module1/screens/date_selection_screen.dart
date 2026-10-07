@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_accessibility.dart';
+import '../../../core/constants/app_translations.dart';
 import '../backend/backend.dart';
 import 'time_slot_selection_screen.dart';
 
@@ -20,8 +21,8 @@ class DateSelectionScreen extends StatefulWidget {
     required this.hospital,
     required this.clinic,
     this.isCaregiverBooking = false,
-    this.patientName = 'Sandeepani Perera',
-    this.patientNic = '200164801234',
+    this.patientName = 'Patient',
+    this.patientNic = 'N/A',
     this.relationship = 'Self',
     this.priority = 'normal',
   });
@@ -65,15 +66,19 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
   Widget build(BuildContext context) {
     final formattedDate = DateFormat('EEEE, d MMMM yyyy').format(_selectedDay);
 
-    return ValueListenableBuilder<bool>(
-      valueListenable: AppAccessibility.isHighContrastMode,
-      builder: (context, isDark, _) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([
+        AppAccessibility.isHighContrastMode,
+        AppAccessibility.currentLanguage,
+      ]),
+      builder: (context, _) {
+        final isDark = AppAccessibility.isHighContrastMode.value;
         return Scaffold(
           backgroundColor: AppColors.pageBg,
           appBar: AppBar(
-            title: const Text(
-              'Select Appointment Date',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            title: Text(
+              AppTranslations.tr('chooseDate'),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
             backgroundColor: AppColors.appBarBg,
             foregroundColor: Colors.white,
@@ -104,7 +109,7 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
                           const SizedBox(height: 16),
 
                           Text(
-                            'Choose Clinic Date',
+                            AppTranslations.tr('chooseDate'),
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -113,7 +118,7 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Select an available date on the OPD calendar for consultation.',
+                            AppTranslations.tr('chooseDateSubtitle'),
                             style: TextStyle(fontSize: 13, color: AppColors.bodyText, height: 1.3),
                           ),
                           const SizedBox(height: 16),
@@ -226,7 +231,7 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
                             child: Column(
                               children: [
                                 Text(
-                                  'SELECTED APPOINTMENT DATE',
+                                  AppTranslations.tr('selectedDateHeader'),
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
@@ -294,7 +299,7 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Step 4 of 5: Date Selection',
+                AppTranslations.tr('step4Title'),
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
@@ -302,7 +307,7 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
                 ),
               ),
               Text(
-                'Next: Time Slot',
+                AppTranslations.tr('nextSlot'),
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
@@ -455,7 +460,7 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  'Continue to Time Slots',
+                  AppTranslations.tr('continueToSlots'),
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,

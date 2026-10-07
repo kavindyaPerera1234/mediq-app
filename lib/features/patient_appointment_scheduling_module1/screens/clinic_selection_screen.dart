@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_accessibility.dart';
+import '../../../../core/constants/app_translations.dart';
 import '../backend/backend.dart';
 import 'date_selection_screen.dart';
 
@@ -16,23 +17,27 @@ class ClinicSelectionScreen extends StatelessWidget {
     super.key,
     required this.hospital,
     this.isCaregiverBooking = false,
-    this.patientName = 'Sandeepani Perera',
-    this.patientNic = '200164801234',
+    this.patientName = 'Patient',
+    this.patientNic = 'N/A',
     this.relationship = 'Self',
     this.priority = 'normal',
   });
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: AppAccessibility.isHighContrastMode,
-      builder: (context, isDark, _) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([
+        AppAccessibility.isHighContrastMode,
+        AppAccessibility.currentLanguage,
+      ]),
+      builder: (context, _) {
+        final isDark = AppAccessibility.isHighContrastMode.value;
         return Scaffold(
           backgroundColor: AppColors.pageBg,
           appBar: AppBar(
-            title: const Text(
-              'Select OPD Clinic',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            title: Text(
+              AppTranslations.tr('availableDepartments'),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
             backgroundColor: AppColors.appBarBg,
             foregroundColor: Colors.white,
@@ -63,7 +68,7 @@ class ClinicSelectionScreen extends StatelessWidget {
                           const SizedBox(height: 16),
 
                           Text(
-                            'Available OPD Departments',
+                            AppTranslations.tr('availableDepartments'),
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -72,7 +77,7 @@ class ClinicSelectionScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Select the relevant medical specialty clinic for your consultation.',
+                            AppTranslations.tr('availableDepartmentsSubtitle'),
                             style: TextStyle(fontSize: 13, color: AppColors.bodyText, height: 1.3),
                           ),
                           const SizedBox(height: 16),
@@ -117,7 +122,7 @@ class ClinicSelectionScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Step 3 of 5: OPD Clinic Selection',
+                AppTranslations.tr('step3Title'),
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
@@ -125,7 +130,7 @@ class ClinicSelectionScreen extends StatelessWidget {
                 ),
               ),
               Text(
-                'Next: Select Date',
+                AppTranslations.tr('nextDate'),
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
@@ -215,7 +220,7 @@ class ClinicSelectionScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        'SELECTED HOSPITAL',
+                        AppTranslations.tr('selectedHospital'),
                         style: TextStyle(
                           fontSize: 9.5,
                           fontWeight: FontWeight.bold,

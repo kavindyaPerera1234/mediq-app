@@ -124,7 +124,7 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Who is this appointment for?',
+                            AppTranslations.tr('whoIsAppointmentFor'),
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -133,7 +133,7 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            'Please choose an option below to proceed with government OPD booking.',
+                            AppTranslations.tr('chooseOptionBelow'),
                             style: TextStyle(fontSize: 13, color: AppColors.bodyText, height: 1.4),
                           ),
                           const SizedBox(height: 20),
@@ -141,8 +141,8 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
                           // Option 1: Myself
                           _buildOptionCard(
                             id: 'myself',
-                            title: 'Booking for Myself',
-                            subtitle: 'I am the primary patient receiving OPD consultation.',
+                            title: AppTranslations.tr('myself'),
+                            subtitle: AppTranslations.tr('myselfDesc'),
                             icon: Icons.person_rounded,
                           ),
 
@@ -151,8 +151,8 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
                           // Option 2: Someone Else (Caregiver Mode)
                           _buildOptionCard(
                             id: 'someone_else',
-                            title: 'Booking for Someone Else',
-                            subtitle: 'I am a caregiver booking for a parent, child, or dependent.',
+                            title: AppTranslations.tr('someoneElse'),
+                            subtitle: AppTranslations.tr('someoneElseDesc'),
                             icon: Icons.family_restroom_rounded,
                           ),
 
@@ -183,6 +183,13 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
 
   // Ministry of Health Sri Lanka Official Trust Banner
   Widget _buildTrustBanner() {
+    final lang = AppAccessibility.currentLanguage.value;
+    final bannerText = lang == 'si'
+        ? 'සෞඛ්‍ය අමාත්‍යාංශය • නොමිලේ OPD E-Channeling සේවාව'
+        : (lang == 'ta'
+            ? 'சுகாதார அமைச்சு • இலவச OPD மின்-பதிவு சேவை'
+            : 'Ministry of Health Sri Lanka • Free OPD E-Channeling');
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -196,7 +203,7 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
           Icon(Icons.health_and_safety_outlined, size: 16, color: AppColors.accentColor),
           const SizedBox(width: 8),
           Text(
-            'Ministry of Health Sri Lanka • Free OPD E-Channeling',
+            bannerText,
             style: TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w600,
@@ -211,6 +218,9 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
 
   // Segmented 5-Step Progress Stepper
   Widget _buildSegmentedStepper() {
+    final lang = AppAccessibility.currentLanguage.value;
+    final nextHospital = lang == 'si' ? 'ඊළඟ: රෝහල' : (lang == 'ta' ? 'அடுத்தது: மருத்துவமனை' : 'Next: Hospital');
+
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
       decoration: BoxDecoration(
@@ -224,7 +234,7 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Step 1 of 5: Patient Details',
+                AppTranslations.tr('step1Title'),
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
@@ -232,7 +242,7 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
                 ),
               ),
               Text(
-                'Next: Hospital',
+                nextHospital,
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
@@ -280,6 +290,13 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
 
   // Placeholder prompt when nothing is selected yet
   Widget _buildSelectionPrompt() {
+    final lang = AppAccessibility.currentLanguage.value;
+    final promptText = lang == 'si'
+        ? 'රෝගියාගේ විස්තර ඇතුළත් කිරීමට කරුණාකර ඉහත විකල්ප දෙකෙන් එකක් තෝරන්න.'
+        : (lang == 'ta'
+            ? 'தொடர மேலே உள்ள இரண்டு விருப்பங்களில் ஒன்றைத் தேர்ந்தெடுக்கவும்.'
+            : 'Select one of the two options above to enter patient details and proceed.');
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -293,7 +310,7 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
           const SizedBox(width: 14),
           Expanded(
             child: Text(
-              'Select one of the two options above to enter patient details and proceed.',
+              promptText,
               style: TextStyle(fontSize: 13, color: AppColors.bodyText, height: 1.4),
             ),
           ),
@@ -386,6 +403,22 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
 
   // Pre-filled Card for Primary Patient (Myself)
   Widget _buildMyselfProfileCard() {
+    final lang = AppAccessibility.currentLanguage.value;
+    final verifiedTitle = lang == 'si' ? 'තහවුරු කළ රෝගී විස්තර' : (lang == 'ta' ? 'சரிபார்க்கப்பட்ட சுயவிவர விவரங்கள்' : 'Verified Profile Details');
+    final nameLabel = lang == 'si' ? 'සම්පූර්ණ නම:' : (lang == 'ta' ? 'முழு பெயர்:' : 'Full Name:');
+    final nicLabel = lang == 'si' ? 'හැඳුනුම්පත් අංකය (NIC):' : (lang == 'ta' ? 'அடையாள அட்டை (NIC):' : 'National ID (NIC):');
+    final phoneLabel = lang == 'si' ? 'දුරකථන අංකය:' : (lang == 'ta' ? 'தொலைபேசி எண்:' : 'Mobile Phone:');
+    final noticeText = lang == 'si'
+        ? 'සායන ටෝකනය සහ පෝලිම් SMS පණිවිඩ ඔබගේ ලියාපදිංචි දුරකථන අංකයට යවනු ලැබේ.'
+        : (lang == 'ta'
+            ? 'சந்திப்பு டோக்கன் மற்றும் வரிசை SMS உங்கள் தொலைபேசிக்கு அனுப்பப்படும்.'
+            : 'Appointment token & queue SMS will be sent to your registered mobile number.');
+    final editHint = lang == 'si'
+        ? 'පැතිකඩ විස්තර ඔබගේ NIC ගිණුමට සම්බන්ධ කර ඇත.'
+        : (lang == 'ta'
+            ? 'சுயவிவர விவரங்கள் உங்கள் NIC உடன் இணைக்கப்பட்டுள்ளன.'
+            : 'Profile details are linked to your NIC account.');
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -411,7 +444,7 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
                   const Icon(Icons.verified_user_rounded, color: AppColors.statusGreen, size: 20),
                   const SizedBox(width: 8),
                   Text(
-                    'Verified Profile Details',
+                    verifiedTitle,
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -424,9 +457,9 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
               TextButton(
                 onPressed: () {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Profile details are linked to your NIC account.'),
-                      duration: Duration(seconds: 1),
+                    SnackBar(
+                      content: Text(editHint),
+                      duration: const Duration(seconds: 1),
                     ),
                   );
                 },
@@ -435,7 +468,7 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
                   minimumSize: const Size(40, 24),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                child: Text('Edit', style: TextStyle(fontSize: 12, color: AppColors.accentColor, fontWeight: FontWeight.bold)),
+                child: Text(AppTranslations.tr('editProfile'), style: TextStyle(fontSize: 12, color: AppColors.accentColor, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -443,17 +476,17 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
           ValueListenableBuilder<PatientProfileModel>(
             valueListenable: ProfileService.activeProfileNotifier,
             builder: (context, activeProfile, _) {
-              final selfName = activeProfile.fullName.isNotEmpty ? activeProfile.fullName : 'Sandeepani Perera';
-              final selfNic = activeProfile.nic.isNotEmpty ? activeProfile.nic : '200164801234';
-              final selfPhone = activeProfile.phone.isNotEmpty ? activeProfile.phone : '+94 77 123 4567';
+              final selfName = activeProfile.fullName.isNotEmpty ? activeProfile.fullName : 'Patient';
+              final selfNic = activeProfile.nic.isNotEmpty ? activeProfile.nic : 'N/A';
+              final selfPhone = activeProfile.phone.isNotEmpty ? activeProfile.phone : '';
 
               return Column(
                 children: [
-                  _buildInfoRow('Full Name:', selfName),
+                  _buildInfoRow(nameLabel, selfName),
                   const SizedBox(height: 10),
-                  _buildInfoRow('National ID (NIC):', selfNic),
+                  _buildInfoRow(nicLabel, selfNic),
                   const SizedBox(height: 10),
-                  _buildInfoRow('Mobile Phone:', selfPhone),
+                  _buildInfoRow(phoneLabel, selfPhone),
                 ],
               );
             },
@@ -471,7 +504,7 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Appointment token & queue SMS will be sent to your registered mobile number.',
+                    noticeText,
                     style: TextStyle(fontSize: 12, color: AppColors.accentColor, height: 1.3),
                   ),
                 ),
@@ -495,6 +528,9 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
 
   // Dynamic Caregiver Form
   Widget _buildCaregiverForm() {
+    final lang = AppAccessibility.currentLanguage.value;
+    final depTitle = lang == 'si' ? 'රෝගියාගේ තොරතුරු (යැපෙන්නා)' : (lang == 'ta' ? 'நோயாளி தகவல் (குடும்ப உறுப்பினர்)' : 'Patient Information (Dependent)');
+
     return Form(
       key: _formKey,
       child: Container(
@@ -519,7 +555,7 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
                 const Icon(Icons.edit_note_rounded, color: AppColors.statusOrange, size: 22),
                 const SizedBox(width: 8),
                 Text(
-                  'Patient Information (Dependent)',
+                  depTitle,
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -553,7 +589,7 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
                           Icon(Icons.family_restroom_rounded, size: 16, color: AppColors.accentColor),
                           const SizedBox(width: 6),
                           Text(
-                            'Saved Family Dependents (Tap to auto-fill)',
+                            AppTranslations.tr('savedDependents'),
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
@@ -624,7 +660,7 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
               },
             ),
 
-            Text('Patient Full Name *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.headingText)),
+            Text(AppTranslations.tr('patientFullName'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.headingText)),
             const SizedBox(height: 6),
             TextFormField(
               controller: _nameController,
@@ -634,7 +670,7 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
             ),
             const SizedBox(height: 14),
 
-            Text('NIC / Birth Certificate No *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.headingText)),
+            Text(AppTranslations.tr('nicOrBirthCert'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.headingText)),
             const SizedBox(height: 6),
             TextFormField(
               controller: _nicController,
@@ -644,7 +680,7 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
             ),
             const SizedBox(height: 14),
 
-            Text('Relationship to Patient *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.headingText)),
+            Text(AppTranslations.tr('relationship'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.headingText)),
             const SizedBox(height: 6),
             DropdownButtonFormField<String>(
               value: _selectedRelationship,
@@ -661,16 +697,16 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
             ),
             const SizedBox(height: 16),
 
-            Text('Special Priority Category', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.headingText)),
+            Text(AppTranslations.tr('specialPriority'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.headingText)),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
-                _buildPriorityChip('normal', 'Standard', Icons.accessibility_new),
-                _buildPriorityChip('elderly', 'Elderly (60+)', Icons.elderly),
-                _buildPriorityChip('disabled', 'Wheelchair', Icons.accessible),
-                _buildPriorityChip('pregnant', 'Maternity', Icons.pregnant_woman),
+                _buildPriorityChip('normal', AppTranslations.tr('standardPriority'), Icons.accessibility_new),
+                _buildPriorityChip('elderly', AppTranslations.tr('elderlyPriority'), Icons.elderly),
+                _buildPriorityChip('disabled', AppTranslations.tr('wheelchairPriority'), Icons.accessible),
+                _buildPriorityChip('pregnant', AppTranslations.tr('maternityPriority'), Icons.pregnant_woman),
               ],
             ),
           ],
@@ -759,7 +795,7 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  'Continue to Hospital Selection',
+                  AppTranslations.tr('continueToHospital'),
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,

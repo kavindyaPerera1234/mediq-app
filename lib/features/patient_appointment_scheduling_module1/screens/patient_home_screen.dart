@@ -112,7 +112,9 @@ class PatientHomeScreen extends StatelessWidget {
 
                     // 3. Quick Actions Grid
                     Text(
-                      'Quick Services',
+                      AppAccessibility.currentLanguage.value == 'si'
+                          ? 'ක්ෂණික සේවාවන්'
+                          : (AppAccessibility.currentLanguage.value == 'ta' ? 'விரைவு சேவைகள்' : 'Quick Services'),
                       style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.headingText),
                     ),
                     const SizedBox(height: 10),
@@ -121,11 +123,11 @@ class PatientHomeScreen extends StatelessWidget {
 
                     // 4. Ministry of Health Guidelines
                     Text(
-                      'OPD Patient Guidelines',
+                      AppTranslations.tr('hospitalGuidelines'),
                       style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.headingText),
                     ),
                     const SizedBox(height: 10),
-                    _buildGuidelinesCard(),
+                    _buildGuidelinesCard(AppAccessibility.currentLanguage.value),
                     const SizedBox(height: 24),
                   ],
                 ),
@@ -559,7 +561,25 @@ class PatientHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildGuidelinesCard() {
+  Widget _buildGuidelinesCard(String lang) {
+    String g1;
+    String g2;
+    String g3;
+
+    if (lang == 'si') {
+      g1 = 'OPD වේලාවන්: උදෑසන 8:00 – 12:00 | පස්වරු 12:00 – 2:00';
+      g2 = 'කරුණාකර පැමිණෙන විට ඔබගේ මුල් හැඳුනුම්පත (NIC) සහ සායන පොත ඉදිරිපත් කරන්න.';
+      g3 = 'වැඩිහිටියන් (60+) සහ ආබාධිත රෝගීන් සඳහා විශේෂ ප්‍රමුඛතා පෝලිම් පහසුකම් ඇත.';
+    } else if (lang == 'ta') {
+      g1 = 'OPD நேரம்: காலை 8:00 – 12:00 | மதியம் 12:00 – 2:00';
+      g2 = 'வருகையின் போது உங்கள் அசல் NIC மற்றும் கிளினிக் புத்தகத்தை சமர்ப்பிக்கவும்.';
+      g3 = 'மூத்த குடிமக்கள் (60+) மற்றும் மாற்றுத்திறனாளிகளுக்கு முன்னுரிமை வரிசை உள்ளது.';
+    } else {
+      g1 = 'OPD Hours: Morning 8:00 AM – 12:00 PM | Afternoon 12:00 PM – 2:00 PM';
+      g2 = 'Please present your Original NIC & Clinic Book upon arrival.';
+      g3 = 'Priority triage lanes available for Senior Citizens (60+) & Disabled patients.';
+    }
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -571,17 +591,17 @@ class PatientHomeScreen extends StatelessWidget {
         children: [
           _buildGuidelineRow(
             icon: Icons.schedule_rounded,
-            title: 'OPD Hours: Morning 8:00 AM – 12:00 PM | Afternoon 12:00 PM – 2:00 PM',
+            title: g1,
           ),
           Divider(height: 14, color: AppColors.cardBorder),
           _buildGuidelineRow(
             icon: Icons.badge_outlined,
-            title: 'Please present your Original NIC & Clinic Book upon arrival.',
+            title: g2,
           ),
           Divider(height: 14, color: AppColors.cardBorder),
           _buildGuidelineRow(
             icon: Icons.elderly_rounded,
-            title: 'Priority triage lanes available for Senior Citizens (60+) & Disabled patients.',
+            title: g3,
           ),
         ],
       ),

@@ -81,15 +81,19 @@ class PatientProfileModel {
     final data = doc.data() as Map<String, dynamic>? ?? {};
     return PatientProfileModel(
       patientId: doc.id,
-      fullName: data['fullName'] ?? 'Sandeepani Perera',
-      nic: data['nic'] ?? '200164801234',
-      phone: data['phone'] ?? '+94 77 123 4567',
-      email: data['email'] ?? 'sandeepani@gmail.com',
+      fullName: (data['fullName'] != null && data['fullName'].toString().isNotEmpty)
+          ? data['fullName'].toString()
+          : 'Patient',
+      nic: (data['nic'] != null && data['nic'].toString().isNotEmpty)
+          ? data['nic'].toString()
+          : (doc.id.isNotEmpty ? doc.id : 'N/A'),
+      phone: (data['phone'] ?? data['phoneNumber'] ?? '').toString(),
+      email: (data['email'] ?? '').toString(),
       bloodGroup: data['bloodGroup'] ?? 'O+',
-      dateOfBirth: data['dateOfBirth'] ?? '2001-08-15',
-      gender: data['gender'] ?? 'Female',
-      emergencyContactName: data['emergencyContactName'] ?? 'Sunil Perera',
-      emergencyContactPhone: data['emergencyContactPhone'] ?? '+94 77 987 6543',
+      dateOfBirth: data['dateOfBirth'] ?? '1995-01-01',
+      gender: data['gender'] ?? 'Not Specified',
+      emergencyContactName: data['emergencyContactName'] ?? '',
+      emergencyContactPhone: data['emergencyContactPhone'] ?? '',
       isSeniorModeEnabled: data['isSeniorModeEnabled'] ?? false,
       photoUrl: data['photoUrl'] ?? '',
     );
@@ -97,16 +101,16 @@ class PatientProfileModel {
 
   static PatientProfileModel defaultProfile() {
     return const PatientProfileModel(
-      patientId: '200164801234',
-      fullName: 'Sandeepani Perera',
-      nic: '200164801234',
-      phone: '+94 77 123 4567',
-      email: 'sandeepani@gmail.com',
+      patientId: 'patient_default',
+      fullName: 'Patient',
+      nic: 'N/A',
+      phone: '',
+      email: '',
       bloodGroup: 'O+',
-      dateOfBirth: '2001-08-15',
-      gender: 'Female',
-      emergencyContactName: 'Sunil Perera',
-      emergencyContactPhone: '+94 77 987 6543',
+      dateOfBirth: '1995-01-01',
+      gender: 'Not Specified',
+      emergencyContactName: '',
+      emergencyContactPhone: '',
       isSeniorModeEnabled: false,
       photoUrl: '',
     );

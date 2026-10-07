@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_accessibility.dart';
+import '../../../core/constants/app_translations.dart';
 import '../backend/backend.dart';
 import 'appointment_review_screen.dart';
 
@@ -189,15 +190,19 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
     final morningSlots = _slots.where((s) => s.session == 'morning').toList();
     final afternoonSlots = _slots.where((s) => s.session == 'afternoon').toList();
 
-    return ValueListenableBuilder<bool>(
-      valueListenable: AppAccessibility.isHighContrastMode,
-      builder: (context, isDark, _) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([
+        AppAccessibility.isHighContrastMode,
+        AppAccessibility.currentLanguage,
+      ]),
+      builder: (context, _) {
+        final isDark = AppAccessibility.isHighContrastMode.value;
         return Scaffold(
           backgroundColor: AppColors.pageBg,
           appBar: AppBar(
-            title: const Text(
-              'Select Time Slot',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            title: Text(
+              AppTranslations.tr('step5Title'),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
             backgroundColor: AppColors.appBarBg,
             foregroundColor: Colors.white,
@@ -240,7 +245,7 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
-                                    'Slots are capped at 25 patients to minimize clinic waiting hall delays.',
+                                    AppTranslations.tr('slotCappingNotice'),
                                     style: TextStyle(fontSize: 12, color: AppColors.accentColor, fontWeight: FontWeight.w500),
                                   ),
                                 ),
@@ -252,7 +257,7 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
                           // 1. Morning Session Header
                           _buildSessionHeader(
                             icon: Icons.wb_sunny_rounded,
-                            title: 'Morning Session',
+                            title: AppTranslations.tr('morningSession'),
                             subtitle: '08:00 AM - 12:00 PM',
                             color: Colors.orange.shade700,
                           ),
@@ -266,7 +271,7 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
                           // 2. Afternoon Session Header
                           _buildSessionHeader(
                             icon: Icons.wb_twilight_rounded,
-                            title: 'Afternoon Session',
+                            title: AppTranslations.tr('afternoonSession'),
                             subtitle: '12:00 PM - 02:00 PM',
                             color: Colors.blueGrey.shade700,
                           ),
@@ -288,9 +293,9 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceAround,
                               children: [
-                                _buildLegendItem(AppColors.statusGreen, 'Available'),
-                                _buildLegendItem(AppColors.statusOrange, 'Filling Fast'),
-                                _buildLegendItem(AppColors.bodyText, 'Full / Locked'),
+                                _buildLegendItem(AppColors.statusGreen, AppTranslations.tr('available')),
+                                _buildLegendItem(AppColors.statusOrange, AppTranslations.tr('fillingFast')),
+                                _buildLegendItem(AppColors.bodyText, AppTranslations.tr('fullLocked')),
                               ],
                             ),
                           ),
@@ -506,7 +511,7 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Step 5 of 5: Time Slot Selection',
+                AppTranslations.tr('step5Title'),
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
@@ -514,7 +519,7 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
                 ),
               ),
               Text(
-                'Next: Review & Confirm',
+                AppTranslations.tr('nextReview'),
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
@@ -672,7 +677,7 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  'Review Appointment',
+                  AppTranslations.tr('reviewAppointment'),
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,

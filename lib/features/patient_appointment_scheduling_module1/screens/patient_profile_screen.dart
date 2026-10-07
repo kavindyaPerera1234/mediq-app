@@ -6,6 +6,8 @@ import '../../../core/constants/app_translations.dart';
 import '../../../core/services/voice_guidance_service.dart';
 import '../backend/backend.dart';
 import 'senior_mode_settings_screen.dart';
+import '../../auth_live_queue_module3/screens/auth/welcome_entry_screen.dart';
+import '../../auth_live_queue_module3/services/auth_service.dart';
 
 class PatientProfileScreen extends StatefulWidget {
   const PatientProfileScreen({super.key});
@@ -35,7 +37,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
   }
 
   Future<void> _loadProfile() async {
-    final profile = await _profileService.getPatientProfile(_currentPatientNic);
+    final profile = await _profileService.syncWithCurrentUser();
     if (mounted) {
       setState(() {
         _profile = profile;
@@ -630,9 +632,11 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
       animation: Listenable.merge([
         AppAccessibility.isHighContrastMode,
         AppAccessibility.currentLanguage,
+        ProfileService.activeProfileNotifier,
       ]),
       builder: (context, _) {
         final isDark = AppAccessibility.isHighContrastMode.value;
+        _profile = ProfileService.activeProfileNotifier.value;
 
         if (_isLoading) {
           return Scaffold(
@@ -698,8 +702,6 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                       _buildCaregiversSection()
                     else ...[
                       _buildLanguageSelectorCard(isDark),
-                      const SizedBox(height: 14),
-                      _buildSeniorModeBannerTile(),
                       const SizedBox(height: 16),
                       _buildLogoutCard(context),
                     ],
@@ -715,15 +717,22 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
   }
 
   Future<void> _confirmLogout(BuildContext context) async {
+    final isSi = AppAccessibility.currentLanguage.value == 'si';
+    final isTa = AppAccessibility.currentLanguage.value == 'ta';
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Log Out'),
-        content: const Text('Are you sure you want to sign out of MediQ?'),
+        title: Text(isSi ? 'පද්ධතියෙන් ඉවත් වන්න' : (isTa ? 'வெளியேறு' : 'Log Out')),
+        content: Text(
+          isSi
+              ? 'ඔබට MediQ පද්ධතියෙන් ඉවත් වීමට අවශ්‍ය බව සහතිකද?'
+              : (isTa ? 'MediQ இலிருந்து வெளியேற விரும்புகிறீர்களா?' : 'Are you sure you want to sign out of MediQ?'),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(isSi ? 'අවලංගු කරන්න' : (isTa ? 'ரத்து' : 'Cancel')),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -731,29 +740,36 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
               foregroundColor: Colors.white,
             ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Log Out'),
+            child: Text(isSi ? 'ඉවත් වන්න' : (isTa ? 'வெளியேறு' : 'Log Out')),
           ),
         ],
       ),
     );
 
     if (confirm == true && context.mounted) {
+      await AuthService().logout();
       await _profileService.signOut();
       if (!context.mounted) return;
-      setState(() {
-        _profile = ProfileService.activeProfileNotifier.value;
-      });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Successfully signed out of MediQ.'),
+        SnackBar(
+          content: Text(isSi ? 'සාර්ථකව ඉවත් විය.' : (isTa ? 'வெற்றிகரமாக வெளியேறியது.' : 'Successfully signed out of MediQ.')),
           backgroundColor: AppColors.statusGreen,
-          duration: Duration(seconds: 2),
+          duration: const Duration(seconds: 2),
         ),
+      );
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const WelcomeEntryScreen()),
+        (route) => false,
       );
     }
   }
 
   Widget _buildLogoutCard(BuildContext context) {
+    final isSi = AppAccessibility.currentLanguage.value == 'si';
+    final isTa = AppAccessibility.currentLanguage.value == 'ta';
+    final logoutText = isSi ? 'ගිණුමෙන් ඉවත් වන්න (Log Out)' : (isTa ? 'வெளியேறு (Log Out)' : 'Log Out of MediQ');
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -774,9 +790,9 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               icon: const Icon(Icons.logout_rounded, color: AppColors.statusRed),
-              label: const Text(
-                'Log Out of MediQ',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              label: Text(
+                logoutText,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               ),
               onPressed: () => _confirmLogout(context),
             ),
@@ -886,7 +902,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
         children: [
           _buildTabItem(0, AppTranslations.tr('navAppointments'), Icons.confirmation_number_outlined),
           _buildTabItem(1, AppTranslations.tr('patientDependents'), Icons.family_restroom_rounded),
-          _buildTabItem(2, 'Settings', Icons.tune_rounded),
+          _buildTabItem(2, AppTranslations.tr('settings'), Icons.tune_rounded),
         ],
       ),
     );
@@ -943,55 +959,6 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
     );
   }
 
-  Widget _buildSeniorModeBannerTile() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.cardSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.cardBorder),
-      ),
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const SeniorModeSettingsScreen()),
-          );
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppColors.statusOrange.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.accessibility_new_rounded, color: AppColors.statusOrange, size: 22),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    AppTranslations.tr('accessibility'),
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.headingText),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'High Contrast, Large Text, Trilingual & Voice Guidance',
-                    style: TextStyle(fontSize: 11, color: AppColors.bodyText),
-                  ),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right_rounded, color: AppColors.bodyText, size: 20),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildProfileHeaderCard() {
     return Container(

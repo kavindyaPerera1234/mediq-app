@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/patient_profile_model.dart';
+import '../../../auth_live_queue_module3/services/auth_service.dart';
 
 class ProfileService {
   final FirebaseFirestore _firestore;
@@ -15,12 +16,38 @@ class ProfileService {
   static final ValueNotifier<PatientProfileModel> activeProfileNotifier =
       ValueNotifier<PatientProfileModel>(PatientProfileModel.defaultProfile());
 
-  /// Sync active profile with the currently authenticated Firebase user
+  /// Sync active profile with the currently authenticated user
   Future<PatientProfileModel> syncWithCurrentUser() async {
     try {
+      // 1. Check AuthService current user first (instant memory cache)
+      final authUser = AuthService().currentUser;
+      if (authUser != null && authUser.fullName.isNotEmpty) {
+        final nic = (authUser.nic != null && authUser.nic!.isNotEmpty) ? authUser.nic! : '';
+        final profileDocId = (nic.isNotEmpty && nic != 'N/A') ? nic : authUser.userId;
+        try {
+          final profileDoc = await _profilesRef.doc(profileDocId).get();
+          if (profileDoc.exists) {
+            final profile = PatientProfileModel.fromFirestore(profileDoc);
+            activeProfileNotifier.value = profile;
+            return profile;
+          }
+        } catch (_) {}
+
+        final newProfile = PatientProfileModel(
+          patientId: profileDocId,
+          fullName: authUser.fullName,
+          nic: (nic.isNotEmpty && nic != 'N/A') ? nic : (authUser.userId.length > 8 ? authUser.userId.substring(0, 8).toUpperCase() : authUser.userId),
+          phone: authUser.phoneNumber,
+          email: authUser.email ?? '',
+          bloodGroup: 'O+',
+        );
+        activeProfileNotifier.value = newProfile;
+        return newProfile;
+      }
+
+      // 2. Query Firebase Auth & Firestore users/{uid}
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        // Query users collection for user info
         final userDoc = await _firestore.collection('users').doc(user.uid).get();
         if (userDoc.exists) {
           final data = userDoc.data()!;
@@ -41,7 +68,7 @@ class ProfileService {
             final newProfile = PatientProfileModel(
               patientId: profileDocId,
               fullName: fullName,
-              nic: nic.isNotEmpty ? nic : user.uid.substring(0, 8).toUpperCase(),
+              nic: (nic.isNotEmpty && nic != 'N/A') ? nic : user.uid.substring(0, 8).toUpperCase(),
               phone: phone,
               email: email,
               bloodGroup: (data['bloodGroup'] ?? 'O+').toString(),
@@ -49,6 +76,17 @@ class ProfileService {
             activeProfileNotifier.value = newProfile;
             return newProfile;
           }
+        } else if (user.displayName != null && user.displayName!.isNotEmpty) {
+          final newProfile = PatientProfileModel(
+            patientId: user.uid,
+            fullName: user.displayName!,
+            nic: user.uid.substring(0, 8).toUpperCase(),
+            phone: user.phoneNumber ?? '',
+            email: user.email ?? '',
+            bloodGroup: 'O+',
+          );
+          activeProfileNotifier.value = newProfile;
+          return newProfile;
         }
       }
     } catch (e) {

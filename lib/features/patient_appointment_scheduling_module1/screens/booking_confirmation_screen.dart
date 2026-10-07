@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_accessibility.dart';
+import '../../../core/constants/app_translations.dart';
 import '../backend/backend.dart';
 import 'patient_main_screen.dart';
 
@@ -24,8 +25,8 @@ class BookingConfirmationScreen extends StatelessWidget {
     required this.selectedDate,
     required this.selectedTimeSlot,
     required this.tokenNumber,
-    this.patientName = 'Sandeepani Perera',
-    this.patientNic = '200164801234',
+    this.patientName = 'Patient',
+    this.patientNic = 'N/A',
     this.isCaregiverBooking = false,
     this.relationship = 'Self',
     this.priority = 'normal',
@@ -35,15 +36,16 @@ class BookingConfirmationScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final formattedDate = DateFormat('EEEE, d MMMM yyyy').format(selectedDate);
 
-    return ValueListenableBuilder<bool>(
-      valueListenable: AppAccessibility.isHighContrastMode,
-      builder: (context, isDark, _) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([AppAccessibility.isHighContrastMode, AppAccessibility.currentLanguage]),
+      builder: (context, _) {
+        final isDark = AppAccessibility.isHighContrastMode.value;
         return Scaffold(
           backgroundColor: AppColors.pageBg,
           appBar: AppBar(
-            title: const Text(
-              'Appointment Confirmed',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            title: Text(
+              AppTranslations.tr('appointmentConfirmed'),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
             backgroundColor: AppColors.appBarBg,
             foregroundColor: Colors.white,
@@ -80,7 +82,7 @@ class BookingConfirmationScreen extends StatelessWidget {
 
                           // 2. Success Headings
                           Text(
-                            'Appointment Confirmed!',
+                            AppTranslations.tr('appointmentConfirmed'),
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
@@ -89,7 +91,7 @@ class BookingConfirmationScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Your OPD digital appointment token has been recorded.',
+                            AppTranslations.tr('confirmedSubtitle'),
                             textAlign: TextAlign.center,
                             style: TextStyle(fontSize: 13, color: AppColors.bodyText),
                           ),
@@ -125,7 +127,7 @@ class BookingConfirmationScreen extends StatelessWidget {
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
                                           Text(
-                                            'OPD QUEUE TOKEN',
+                                            AppTranslations.tr('tokenPass').toUpperCase(),
                                             style: TextStyle(
                                               fontSize: 11,
                                               fontWeight: FontWeight.bold,
@@ -139,9 +141,9 @@ class BookingConfirmationScreen extends StatelessWidget {
                                               color: AppColors.statusGreen.withValues(alpha: 0.15),
                                               borderRadius: BorderRadius.circular(6),
                                             ),
-                                            child: const Text(
-                                              '● ACTIVE',
-                                              style: TextStyle(
+                                            child: Text(
+                                              AppTranslations.tr('activeStatus'),
+                                              style: const TextStyle(
                                                 fontSize: 10,
                                                 fontWeight: FontWeight.bold,
                                                 color: AppColors.statusGreen,
@@ -193,15 +195,15 @@ class BookingConfirmationScreen extends StatelessWidget {
                                   padding: const EdgeInsets.all(18),
                                   child: Column(
                                     children: [
-                                      _buildDetailRow('Patient', patientName),
+                                      _buildDetailRow(AppTranslations.tr('patientInfo'), patientName),
                                       const SizedBox(height: 10),
-                                      _buildDetailRow('NIC Number', patientNic),
+                                      _buildDetailRow(AppTranslations.tr('nicOrBirthCert').replaceAll(' *', ''), patientNic),
                                       const SizedBox(height: 10),
-                                      _buildDetailRow('Hospital', hospital.name),
+                                      _buildDetailRow(AppTranslations.tr('chooseHospital'), hospital.name),
                                       const SizedBox(height: 10),
-                                      _buildDetailRow('Appointment Date', formattedDate),
+                                      _buildDetailRow(AppTranslations.tr('selectedDateHeader'), formattedDate),
                                       const SizedBox(height: 10),
-                                      _buildDetailRow('Allocated Slot', selectedTimeSlot),
+                                      _buildDetailRow(AppTranslations.tr('allocatedSlot'), selectedTimeSlot),
                                     ],
                                   ),
                                 ),
@@ -223,7 +225,7 @@ class BookingConfirmationScreen extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Hospital Arrival Guidance',
+                                  AppTranslations.tr('arrivalGuidance'),
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.bold,
@@ -232,17 +234,17 @@ class BookingConfirmationScreen extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
-                                  '• Please arrive at least 15 minutes before your time slot.',
+                                  "• ${AppTranslations.tr('guideline1')}",
                                   style: TextStyle(fontSize: 12, color: AppColors.bodyText, height: 1.3),
                                 ),
                                 const SizedBox(height: 3),
                                 Text(
-                                  '• Present this token screen to the OPD Nurse at Room counter.',
+                                  "• ${AppTranslations.tr('guideline2')}",
                                   style: TextStyle(fontSize: 12, color: AppColors.bodyText, height: 1.3),
                                 ),
                                 const SizedBox(height: 3),
                                 Text(
-                                  '• If delayed, your appointment can be tracked live in Member 3 Queue Tracker.',
+                                  "• ${AppTranslations.tr('guideline3')}",
                                   style: TextStyle(fontSize: 12, color: AppColors.bodyText, height: 1.3),
                                 ),
                               ],
@@ -279,7 +281,7 @@ class BookingConfirmationScreen extends StatelessWidget {
                                   height: 48,
                                   child: OutlinedButton.icon(
                                     icon: const Icon(Icons.download_rounded, size: 18),
-                                    label: const Text('Save Pass', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                    label: Text(AppTranslations.tr('savePass'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                                     style: OutlinedButton.styleFrom(
                                       foregroundColor: AppColors.accentColor,
                                       side: BorderSide(color: AppColors.accentColor),
@@ -316,8 +318,8 @@ class BookingConfirmationScreen extends StatelessWidget {
                                       elevation: 0,
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                     ),
-                                    child: const Text(
-                                      'My Profile',
+                                    child: Text(
+                                      AppTranslations.tr('myProfile'),
                                       style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                                     ),
                                   ),
@@ -348,7 +350,7 @@ class BookingConfirmationScreen extends StatelessWidget {
                                 elevation: 0,
                               ),
                               child: Text(
-                                'Back to Hospital Home',
+                                AppTranslations.tr('backToHome'),
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,

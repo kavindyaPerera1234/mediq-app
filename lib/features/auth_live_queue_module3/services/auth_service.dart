@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/localization/app_language.dart' as core_lang;
+import '../../patient_appointment_scheduling_module1/backend/services/profile_service.dart';
 import '../../patient_appointment_scheduling_module1/screens/patient_main_screen.dart';
 import '../screens/auth/splash_screen.dart';
 import 'live_queue_service.dart';
@@ -50,6 +52,10 @@ class AuthService extends ChangeNotifier {
 
       if (doc.exists) {
         _currentUser = UserModel.fromMap(doc.data()!, id: doc.id);
+        if (_currentUser!.preferredLanguage.isNotEmpty) {
+          core_lang.AppLanguage.setLanguage(_currentUser!.preferredLanguage);
+        }
+        ProfileService().syncWithCurrentUser();
         LiveQueueService().refresh();
         notifyListeners();
         return _currentUser!.role.name; // 'admin', 'patient', 'doctor', etc.
@@ -138,6 +144,10 @@ class AuthService extends ChangeNotifier {
 
       if (doc.exists) {
         _currentUser = UserModel.fromMap(doc.data()!, id: doc.id);
+        if (_currentUser!.preferredLanguage.isNotEmpty) {
+          core_lang.AppLanguage.setLanguage(_currentUser!.preferredLanguage);
+        }
+        ProfileService().syncWithCurrentUser();
         if (!_currentUser!.isActive) {
           await _auth.signOut();
           _currentUser = null;
@@ -410,6 +420,10 @@ class AuthService extends ChangeNotifier {
       );
     } else {
       // Patient or caregiver -> Module 1 Patient Dashboard
+      if (_currentUser != null && _currentUser!.preferredLanguage.isNotEmpty) {
+        core_lang.AppLanguage.setLanguage(_currentUser!.preferredLanguage);
+      }
+      ProfileService().syncWithCurrentUser();
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const PatientMainScreen(initialIndex: 0)),

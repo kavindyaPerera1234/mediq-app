@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_accessibility.dart';
+import '../../../core/constants/app_translations.dart';
 import '../../../core/services/voice_guidance_service.dart';
+import '../../auth_live_queue_module3/services/auth_service.dart';
 import '../backend/backend.dart';
 import 'booking_confirmation_screen.dart';
 
@@ -24,8 +26,8 @@ class AppointmentReviewScreen extends StatefulWidget {
     required this.selectedDate,
     required this.selectedTimeSlot,
     this.isCaregiverBooking = false,
-    this.patientName = 'Sandeepani Perera',
-    this.patientNic = '200164801234',
+    this.patientName = 'Patient',
+    this.patientNic = 'N/A',
     this.relationship = 'Self',
     this.priority = 'normal',
   });
@@ -50,6 +52,8 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
       departmentId: widget.clinic.id,
       appointmentDate: appDate,
     );
+
+    final currentUserId = AuthService().currentUser?.userId ?? 'user_patient';
 
     final appointment = AppointmentModel(
       id: '',
@@ -76,7 +80,7 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
     if (widget.isCaregiverBooking) {
       await _caregiverService.addCaregiverPatient(CaregiverPatientModel(
         id: '',
-        caregiverUserId: 'user_sandeepani_001',
+        caregiverUserId: currentUserId,
         patientName: widget.patientName,
         patientNic: widget.patientNic,
         relationship: widget.relationship,
@@ -118,15 +122,16 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
   Widget build(BuildContext context) {
     final formattedDate = DateFormat('EEEE, d MMMM yyyy').format(widget.selectedDate);
 
-    return ValueListenableBuilder<bool>(
-      valueListenable: AppAccessibility.isHighContrastMode,
-      builder: (context, isDark, _) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([AppAccessibility.isHighContrastMode, AppAccessibility.currentLanguage]),
+      builder: (context, _) {
+        final isDark = AppAccessibility.isHighContrastMode.value;
         return Scaffold(
           backgroundColor: AppColors.pageBg,
           appBar: AppBar(
-            title: const Text(
-              'Review Appointment',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            title: Text(
+              AppTranslations.tr('reviewTitle'),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
             backgroundColor: AppColors.appBarBg,
             foregroundColor: Colors.white,
@@ -166,7 +171,7 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Ministry of Health Sri Lanka',
+                                        AppTranslations.tr('ministryBanner'),
                                         style: TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.bold,
@@ -175,7 +180,7 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
-                                        'Please review your OPD clinic appointment details carefully before final submission.',
+                                        AppTranslations.tr('ministryBannerDesc'),
                                         style: TextStyle(fontSize: 11, color: AppColors.bodyText),
                                       ),
                                     ],
@@ -188,25 +193,25 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
 
                           // 1. Patient Details Card
                           _buildSectionCard(
-                            title: 'Patient Information',
+                            title: AppTranslations.tr('patientInfo'),
                             icon: Icons.person_rounded,
                             children: [
-                              _buildDetailRow('Patient Full Name', widget.patientName),
+                              _buildDetailRow(AppTranslations.tr('patientFullName').replaceAll(' *', ''), widget.patientName),
                               Divider(height: 18, color: AppColors.cardBorder),
-                              _buildDetailRow('National ID (NIC)', widget.patientNic),
+                              _buildDetailRow(AppTranslations.tr('nicOrBirthCert').replaceAll(' *', ''), widget.patientNic),
                               Divider(height: 18, color: AppColors.cardBorder),
                               _buildDetailRow(
-                                'Booking Type',
+                                AppTranslations.tr('whoIsAppointmentFor').replaceAll('?', ''),
                                 widget.isCaregiverBooking
-                                    ? 'Caregiver (${widget.relationship})'
-                                    : 'Self Booking',
+                                    ? '${AppTranslations.tr('someoneElse')} (${widget.relationship})'
+                                    : AppTranslations.tr('myself'),
                               ),
                               Divider(height: 18, color: AppColors.cardBorder),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Triage Priority',
+                                    AppTranslations.tr('specialPriority'),
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: AppColors.bodyText,
@@ -222,19 +227,19 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
 
                           // 2. Clinical Booking Details Card
                           _buildSectionCard(
-                            title: 'Hospital & Clinic Details',
+                            title: AppTranslations.tr('hospitalDetails'),
                             icon: Icons.local_hospital_rounded,
                             children: [
-                              _buildDetailRow('Hospital', widget.hospital.name),
+                              _buildDetailRow(AppTranslations.tr('chooseHospital'), widget.hospital.name),
                               Divider(height: 18, color: AppColors.cardBorder),
                               _buildDetailRow(
-                                'OPD Specialty Clinic',
+                                AppTranslations.tr('availableDepartments'),
                                 '${widget.clinic.name} (${widget.clinic.roomNumber})',
                               ),
                               Divider(height: 18, color: AppColors.cardBorder),
-                              _buildDetailRow('Consultation Date', formattedDate),
+                              _buildDetailRow(AppTranslations.tr('selectedDateHeader'), formattedDate),
                               Divider(height: 18, color: AppColors.cardBorder),
-                              _buildDetailRow('Staggered Time Slot', widget.selectedTimeSlot),
+                              _buildDetailRow(AppTranslations.tr('allocatedSlot'), widget.selectedTimeSlot),
                             ],
                           ),
                           const SizedBox(height: 16),
@@ -256,7 +261,7 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
                                     const Icon(Icons.info_outline_rounded, color: AppColors.statusOrange, size: 18),
                                     const SizedBox(width: 8),
                                     Text(
-                                      'Important Arrival Guidance',
+                                      AppTranslations.tr('arrivalGuidance'),
                                       style: TextStyle(
                                         fontSize: 13,
                                         fontWeight: FontWeight.bold,
@@ -266,9 +271,9 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
                                   ],
                                 ),
                                 const SizedBox(height: 8),
-                                _buildGuidelineItem('Arrive at the hospital 15 minutes before your slot.'),
-                                _buildGuidelineItem('Present your digital token QR pass at OPD Room Counter.'),
-                                _buildGuidelineItem('Bring your original National ID (NIC) or Health Clinic Card.'),
+                                _buildGuidelineItem(AppTranslations.tr('guideline1')),
+                                _buildGuidelineItem(AppTranslations.tr('guideline2')),
+                                _buildGuidelineItem(AppTranslations.tr('guideline3')),
                               ],
                             ),
                           ),
@@ -365,20 +370,20 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
   Widget _buildPriorityBadge(String priority) {
     Color badgeColor = AppColors.statusGreen;
     Color textColor = AppColors.statusGreen;
-    String label = 'STANDARD';
+    String label = AppTranslations.tr('standardPriority').toUpperCase();
 
     if (priority == 'elderly') {
       badgeColor = AppColors.statusOrange;
       textColor = AppColors.statusOrange;
-      label = 'ELDERLY 60+';
+      label = AppTranslations.tr('elderlyPriority').toUpperCase();
     } else if (priority == 'wheelchair') {
       badgeColor = AppColors.primary;
       textColor = AppColors.primary;
-      label = 'WHEELCHAIR';
+      label = AppTranslations.tr('wheelchairPriority').toUpperCase();
     } else if (priority == 'maternity') {
       badgeColor = Colors.purple;
       textColor = Colors.purple;
-      label = 'MATERNITY';
+      label = AppTranslations.tr('maternityPriority').toUpperCase();
     }
 
     return Container(
@@ -460,7 +465,7 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
                       Icon(Icons.check_circle_rounded, size: 20, color: AppColors.isDark ? Colors.black : Colors.white),
                       const SizedBox(width: 8),
                       Text(
-                        'Confirm Appointment',
+                        AppTranslations.tr('confirmAppointment'),
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
