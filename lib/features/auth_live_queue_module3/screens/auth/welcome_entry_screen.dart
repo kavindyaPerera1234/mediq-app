@@ -15,7 +15,19 @@ class WelcomeEntryScreen extends StatefulWidget {
 }
 
 class _WelcomeEntryScreenState extends State<WelcomeEntryScreen> {
-  AppLanguage _selectedLanguage = AppLanguage.english;
+  late AppLanguage _selectedLanguage;
+
+  @override
+  void initState() {
+    super.initState();
+    if (core_lang.AppLanguage.isSinhala) {
+      _selectedLanguage = AppLanguage.sinhala;
+    } else if (core_lang.AppLanguage.isTamil) {
+      _selectedLanguage = AppLanguage.tamil;
+    } else {
+      _selectedLanguage = AppLanguage.english;
+    }
+  }
 
   // ── Localised strings ──────────────────────────────────────────────────────
   String get _subtitle {

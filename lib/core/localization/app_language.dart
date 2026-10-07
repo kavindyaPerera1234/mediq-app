@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/app_accessibility.dart';
 
 /// Global language controller for MediQ App supporting English, Simple Sinhala, and Tamil.
 class AppLanguage {
@@ -14,6 +15,9 @@ class AppLanguage {
     if (langCode == 'en' || langCode == 'si' || langCode == 'ta') {
       if (currentLanguage.value != langCode) {
         currentLanguage.value = langCode;
+      }
+      if (AppAccessibility.currentLanguage.value != langCode) {
+        AppAccessibility.setLanguage(langCode);
       }
     }
   }

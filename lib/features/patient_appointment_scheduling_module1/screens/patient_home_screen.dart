@@ -189,11 +189,11 @@ class PatientHomeScreen extends StatelessWidget {
     final lang = AppAccessibility.currentLanguage.value;
     String greeting;
     if (lang == 'si') {
-      greeting = 'ආයුබෝවන්, $firstName 👋';
+      greeting = 'ආයුබෝවන්, $firstName';
     } else if (lang == 'ta') {
-      greeting = 'வணக்கம், $firstName 👋';
+      greeting = 'வணக்கம், $firstName';
     } else {
-      greeting = 'Welcome, $firstName 👋';
+      greeting = 'Welcome, $firstName';
     }
 
     final idSubtitle = (patientNic.isNotEmpty && patientNic != 'N/A')
@@ -226,9 +226,19 @@ class PatientHomeScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  greeting,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.headingText),
+                Row(
+                  children: [
+                    Text(
+                      greeting,
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.headingText),
+                    ),
+                    const SizedBox(width: 6),
+                    const Icon(
+                      Icons.waving_hand_rounded,
+                      color: Color(0xFFFFB300),
+                      size: 19,
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 2),
                 Text(
