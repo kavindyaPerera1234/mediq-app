@@ -304,48 +304,62 @@ class _LoginScreenState extends State<LoginScreen> {
                 // Action Links Row (OTP Toggle & Forgot Password)
                 Padding(
                   padding: const EdgeInsets.only(top: 8.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      if (!_isStaff)
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8.0,
+                      runSpacing: 4.0,
+                      children: [
+                        if (!_isStaff)
+                          TextButton(
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _useOtpLogin = !_useOtpLogin;
+                                _errorMessage = null;
+                              });
+                            },
+                            child: Text(
+                              _useOtpLogin ? S.btnLoginWithPassword : S.btnLoginWithOtp,
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+
                         TextButton(
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
                           onPressed: () {
-                            setState(() {
-                              _useOtpLogin = !_useOtpLogin;
-                              _errorMessage = null;
-                            });
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const ForgotPasswordScreen(),
+                              ),
+                            );
                           },
                           child: Text(
-                            _useOtpLogin ? S.btnLoginWithPassword : S.btnLoginWithOtp,
+                            S.btnForgotPassword,
                             style: GoogleFonts.inter(
                               fontSize: 13,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w600,
                               color: AppColors.primary,
                             ),
                           ),
-                        )
-                      else
-                        const SizedBox.shrink(),
-
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const ForgotPasswordScreen(),
-                            ),
-                          );
-                        },
-                        child: Text(
-                          S.btnForgotPassword,
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.primary,
-                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
 
