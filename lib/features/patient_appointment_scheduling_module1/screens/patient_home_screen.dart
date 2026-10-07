@@ -5,6 +5,8 @@ import '../../../core/constants/app_accessibility.dart';
 import '../../../core/constants/app_translations.dart';
 import '../backend/backend.dart';
 import 'senior_mode_settings_screen.dart';
+import '../../auth_live_queue_module3/screens/auth/welcome_entry_screen.dart';
+import '../../auth_live_queue_module3/services/auth_service.dart';
 
 class PatientHomeScreen extends StatelessWidget {
   final ValueChanged<int> onNavigateTab;
@@ -159,6 +161,7 @@ class PatientHomeScreen extends StatelessWidget {
     );
 
     if (confirm == true && context.mounted) {
+      await AuthService().logout();
       await ProfileService().signOut();
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -167,6 +170,11 @@ class PatientHomeScreen extends StatelessWidget {
           backgroundColor: AppColors.statusGreen,
           duration: Duration(seconds: 2),
         ),
+      );
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const WelcomeEntryScreen()),
+        (route) => false,
       );
     }
   }
@@ -181,11 +189,11 @@ class PatientHomeScreen extends StatelessWidget {
     final lang = AppAccessibility.currentLanguage.value;
     String greeting;
     if (lang == 'si') {
-      greeting = 'ආයුබෝවන්, $firstName 🌿';
+      greeting = 'ආයුබෝවන්, $firstName 👋';
     } else if (lang == 'ta') {
-      greeting = 'வணக்கம், $firstName 🌿';
+      greeting = 'வணக்கம், $firstName 👋';
     } else {
-      greeting = 'Welcome, $firstName 🌿';
+      greeting = 'Welcome, $firstName 👋';
     }
 
     final idSubtitle = (patientNic.isNotEmpty && patientNic != 'N/A')
