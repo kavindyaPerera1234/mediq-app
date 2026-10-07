@@ -255,8 +255,9 @@ class _WelcomeEntryScreenState extends State<WelcomeEntryScreen> {
                 ),
                 child: Text(
                   _signInLabel,
+                  textAlign: TextAlign.center,
                   style: GoogleFonts.inter(
-                    fontSize: 17,
+                    fontSize: _selectedLanguage == AppLanguage.tamil ? 14.5 : 16.5,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -284,8 +285,9 @@ class _WelcomeEntryScreenState extends State<WelcomeEntryScreen> {
                 ),
                 child: Text(
                   _registerLabel,
+                  textAlign: TextAlign.center,
                   style: GoogleFonts.inter(
-                    fontSize: 17,
+                    fontSize: _selectedLanguage == AppLanguage.tamil ? 14.5 : 16.5,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -307,8 +309,9 @@ class _WelcomeEntryScreenState extends State<WelcomeEntryScreen> {
                   icon: const Icon(Icons.badge_outlined, size: 20, color: AppColors.textSecondary),
                   label: Text(
                     _staffLabel,
+                    textAlign: TextAlign.center,
                     style: GoogleFonts.inter(
-                      fontSize: 14,
+                      fontSize: _selectedLanguage == AppLanguage.tamil ? 13 : 14,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textSecondary,
                       decoration: TextDecoration.underline,
