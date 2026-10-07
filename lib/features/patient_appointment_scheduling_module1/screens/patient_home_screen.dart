@@ -345,50 +345,106 @@ class PatientHomeScreen extends StatelessWidget {
   }
 
   Widget _buildNoActiveTokenCard() {
+    final lang = AppAccessibility.currentLanguage.value;
+    String title;
+    String subtitle;
+    String buttonText;
+
+    if (lang == 'si') {
+      title = 'අද දින සඳහා සායන වෙන්කිරීම් නොමැත';
+      subtitle = 'පෝලිම්වල නොරැඳී ඩිජිටල් ටෝකනයක් ලබාගැනීමට පහසුවෙන් සායනයක් වෙන්කරවා ගන්න.';
+      buttonText = 'නව සායනයක් වෙන්කරවා ගැනීම';
+    } else if (lang == 'ta') {
+      title = 'இன்று செயலில் உள்ள சந்திப்புகள் இல்லை';
+      subtitle = 'வரிசையில் காத்திருக்காமல் டிஜிட்டல் டோக்கனைப் பெற எளிதாக பதிவு செய்யவும்.';
+      buttonText = 'புதிய சந்திப்பை பதிவு செய்யவும்';
+    } else {
+      title = 'No Active Appointments Today';
+      subtitle = 'Book your government OPD clinic slot in 5 easy steps and get a digital pass.';
+      buttonText = 'Book OPD Appointment';
+    }
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppColors.cardSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.cardBorder),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.15),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.chipBg,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.event_available_rounded, color: AppColors.accentColor, size: 24),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'No Active Appointment Today',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.headingText),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  'Book a government hospital OPD slot in 5 easy steps.',
-                  style: TextStyle(fontSize: 11, color: AppColors.bodyText),
+                child: const Icon(
+                  Icons.calendar_today_rounded,
+                  color: AppColors.primary,
+                  size: 22,
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.headingText,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.bodyText,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () => onNavigateTab(1), // Go to Book Appointment
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accentColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => onNavigateTab(1),
+              icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
+              label: Text(
+                buttonText,
+                style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                elevation: 1,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
             ),
-            child: Text(AppTranslations.tr('bookNewOpd'), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
