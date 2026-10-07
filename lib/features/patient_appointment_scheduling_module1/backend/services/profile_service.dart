@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/patient_profile_model.dart';
 
 class ProfileService {
@@ -13,6 +14,48 @@ class ProfileService {
   /// Reactive active profile notifier accessible across Module 1 screens
   static final ValueNotifier<PatientProfileModel> activeProfileNotifier =
       ValueNotifier<PatientProfileModel>(PatientProfileModel.defaultProfile());
+
+  /// Sync active profile with the currently authenticated Firebase user
+  Future<PatientProfileModel> syncWithCurrentUser() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        // Query users collection for user info
+        final userDoc = await _firestore.collection('users').doc(user.uid).get();
+        if (userDoc.exists) {
+          final data = userDoc.data()!;
+          final fullName = (data['fullName'] ?? '').toString();
+          final nic = (data['nic'] ?? '').toString();
+          final phone = (data['phoneNumber'] ?? data['phone'] ?? '').toString();
+          final email = (data['email'] ?? user.email ?? '').toString();
+
+          final profileDocId = (nic.isNotEmpty && nic != 'N/A') ? nic : user.uid;
+          final profileDoc = await _profilesRef.doc(profileDocId).get();
+          if (profileDoc.exists) {
+            final profile = PatientProfileModel.fromFirestore(profileDoc);
+            activeProfileNotifier.value = profile;
+            return profile;
+          }
+
+          if (fullName.isNotEmpty) {
+            final newProfile = PatientProfileModel(
+              patientId: profileDocId,
+              fullName: fullName,
+              nic: nic.isNotEmpty ? nic : user.uid.substring(0, 8).toUpperCase(),
+              phone: phone,
+              email: email,
+              bloodGroup: (data['bloodGroup'] ?? 'O+').toString(),
+            );
+            activeProfileNotifier.value = newProfile;
+            return newProfile;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('ProfileService: syncWithCurrentUser error: $e');
+    }
+    return activeProfileNotifier.value;
+  }
 
   /// Sign out current patient and reset active profile
   Future<void> signOut() async {

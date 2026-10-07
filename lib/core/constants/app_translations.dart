@@ -6,7 +6,7 @@ class AppTranslations {
     'en': {
       'appName': 'MediQ',
       'navHome': 'Home',
-      'navAppointments': 'Book OPD',
+      'navAppointments': 'Appointments',
       'navQueue': 'Live Queue',
       'navAlerts': 'SMS & Alerts',
       'navProfile': 'Profile',
@@ -123,7 +123,7 @@ class AppTranslations {
     'si': {
       'appName': 'MediQ',
       'navHome': 'මුල් පිටුව',
-      'navAppointments': 'සායන වෙන්කිරීම',
+      'navAppointments': 'සායන',
       'navQueue': 'පෝලිම',
       'navAlerts': 'දැනුම්දීම්',
       'navProfile': 'පැතිකඩ',
@@ -240,7 +240,7 @@ class AppTranslations {
     'ta': {
       'appName': 'MediQ',
       'navHome': 'முகப்பு',
-      'navAppointments': 'OPD பதிவு',
+      'navAppointments': 'சந்திப்புகள்',
       'navQueue': 'வரிசை',
       'navAlerts': 'எச்சரிக்கைகள்',
       'navProfile': 'சுயவிவரம்',

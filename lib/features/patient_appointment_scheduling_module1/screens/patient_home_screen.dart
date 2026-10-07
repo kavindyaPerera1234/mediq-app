@@ -124,11 +124,7 @@ class PatientHomeScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     _buildGuidelinesCard(),
-                    const SizedBox(height: 16),
-
-                    // 5. Senior Accessibility Quick Access
-                    _buildSeniorModeBanner(context),
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
@@ -179,8 +175,22 @@ class PatientHomeScreen extends StatelessWidget {
     final profile = ProfileService.activeProfileNotifier.value;
     final fullName = profile.fullName;
     final firstName = fullName.trim().split(' ').first;
-    final initial = firstName.isNotEmpty ? firstName[0].toUpperCase() : 'S';
+    final initial = firstName.isNotEmpty ? firstName[0].toUpperCase() : 'P';
     final patientNic = profile.nic;
+
+    final lang = AppAccessibility.currentLanguage.value;
+    String greeting;
+    if (lang == 'si') {
+      greeting = 'ආයුබෝවන්, $firstName 🌿';
+    } else if (lang == 'ta') {
+      greeting = 'வணக்கம், $firstName 🌿';
+    } else {
+      greeting = 'Welcome, $firstName 🌿';
+    }
+
+    final idSubtitle = (patientNic.isNotEmpty && patientNic != 'N/A')
+        ? 'NIC: $patientNic • Blood: ${profile.bloodGroup}'
+        : (profile.phone.isNotEmpty ? 'Phone: ${profile.phone}' : 'Blood: ${profile.bloodGroup}');
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -209,12 +219,12 @@ class PatientHomeScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Ayubowan, $firstName 🌿',
+                  greeting,
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.headingText),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'NIC: $patientNic • Blood: ${profile.bloodGroup}',
+                  idSubtitle,
                   style: TextStyle(fontSize: 12, color: AppColors.bodyText),
                 ),
               ],
@@ -516,54 +526,6 @@ class PatientHomeScreen extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildSeniorModeBanner(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.chipBg,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.cardBorder),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppColors.cardSurface,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.accessibility_new_rounded, color: AppColors.accentColor, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  AppTranslations.tr('accessibility'),
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.headingText),
-                ),
-                Text(
-                  'Large font sizes, high contrast & voice guidance',
-                  style: TextStyle(fontSize: 10.5, color: AppColors.bodyText),
-                ),
-              ],
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SeniorModeSettingsScreen()),
-              );
-            },
-            child: Text('Open', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.accentColor)),
-          ),
-        ],
-      ),
     );
   }
 }

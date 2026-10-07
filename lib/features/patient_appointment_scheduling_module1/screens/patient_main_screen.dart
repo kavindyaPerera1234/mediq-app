@@ -5,6 +5,7 @@ import 'caregiver_setup_screen.dart';
 import 'patient_home_screen.dart';
 import 'patient_profile_screen.dart';
 import '../../auth_live_queue_module3/screens/queue/live_queue_main_screen.dart';
+import '../backend/backend.dart';
 
 class PatientMainScreen extends StatefulWidget {
   final int initialIndex;
@@ -21,6 +22,7 @@ class _PatientMainScreenState extends State<PatientMainScreen> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+    ProfileService().syncWithCurrentUser();
   }
 
   @override
