@@ -232,10 +232,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               const SizedBox(height: 12),
 
               // Control Cards
-              // Card 1: Module 1 — Hospital & OPD Clinic Console
+              // Card 1: Hospital & OPD Clinic Console
               _managementCard(
                 icon: Icons.local_hospital_rounded,
-                title: 'Hospital & OPD Clinic Console (Module 1)',
+                title: 'Hospital & OPD Clinic Console',
                 subtitle: 'Configure hospitals, clinic rooms & daily 25-patient appointment slot caps',
                 color: AppColors.primary,
                 onTap: () {
@@ -246,10 +246,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 },
               ),
 
-              // Card 2: Module 3 — User Registry & Role Management
+              // Card 2: User Registry & Role Management
               _managementCard(
                 icon: Icons.manage_accounts_rounded,
-                title: 'User Registry & Role Management (Module 3)',
+                title: 'User Registry & Role Management',
                 subtitle: 'Manage doctors, nurses, receptionists, patient accounts & deactivations',
                 color: Colors.purple,
                 onTap: () {
@@ -262,10 +262,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 },
               ),
 
-              // Card 3: Module 3 — Master Live Queue Console
+              // Card 3: Master Live Queue Console
               _managementCard(
                 icon: Icons.monitor_heart_rounded,
-                title: 'Master Live Queue Console (Module 3)',
+                title: 'Master Live Queue Console',
                 subtitle: 'Real-time token control, queue pause/resume, triage & delay broadcasts',
                 color: const Color(0xFF0284C7),
                 onTap: () {
