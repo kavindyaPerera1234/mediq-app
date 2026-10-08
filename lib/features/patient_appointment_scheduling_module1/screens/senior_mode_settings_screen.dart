@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_accessibility.dart';
+import '../../../core/constants/app_translations.dart';
+import '../../../core/services/voice_guidance_service.dart';
+import '../backend/backend.dart';
 
 class SeniorModeSettingsScreen extends StatefulWidget {
   const SeniorModeSettingsScreen({super.key});
@@ -10,230 +14,446 @@ class SeniorModeSettingsScreen extends StatefulWidget {
 }
 
 class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
-  // Toggle states matching our Figma design
-  bool _largeTextMode = true; // Active in Figma!
+  final ProfileService _profileService = ProfileService();
+  final String _patientNic = '200164801234';
+
+  bool _largeTextMode = true;
   bool _highContrastMode = false;
   bool _simplifiedNav = false;
   bool _voiceGuidance = false;
 
   @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final settings = await _profileService.getAccessibilitySettings(_patientNic);
+    if (mounted) {
+      setState(() {
+        _largeTextMode = settings['largeTextMode'] ?? true;
+        _highContrastMode = settings['highContrastMode'] ?? false;
+        _simplifiedNav = settings['simplifiedNav'] ?? false;
+        _voiceGuidance = settings['voiceGuidance'] ?? false;
+      });
+      AppAccessibility.setLargeTextMode(_largeTextMode);
+      AppAccessibility.setHighContrastMode(_highContrastMode);
+      AppAccessibility.setSimplifiedNav(_simplifiedNav);
+      AppAccessibility.setVoiceGuidance(_voiceGuidance);
+    }
+  }
+
+  Future<void> _updateSetting({
+    bool? largeText,
+    bool? highContrast,
+    bool? simplified,
+    bool? voice,
+  }) async {
+    setState(() {
+      if (largeText != null) {
+        _largeTextMode = largeText;
+        AppAccessibility.setLargeTextMode(largeText);
+      }
+      if (highContrast != null) {
+        _highContrastMode = highContrast;
+        AppAccessibility.setHighContrastMode(highContrast);
+      }
+      if (simplified != null) {
+        _simplifiedNav = simplified;
+        AppAccessibility.setSimplifiedNav(simplified);
+      }
+      if (voice != null) {
+        _voiceGuidance = voice;
+        AppAccessibility.setVoiceGuidance(voice);
+      }
+    });
+
+    if (voice == true) {
+      VoiceGuidanceService.speak(
+        "Voice Guidance is activated. OPD tokens and screen navigation will be announced aloud.",
+        context: context,
+      );
+    } else if (voice == false) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Voice Guidance disabled."),
+          duration: Duration(milliseconds: 1500),
+        ),
+      );
+    }
+
+    await _profileService.saveAccessibilitySettings(
+      patientNic: _patientNic,
+      largeTextMode: _largeTextMode,
+      highContrastMode: _highContrastMode,
+      simplifiedNav: _simplifiedNav,
+      voiceGuidance: _voiceGuidance,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: Container(
-          margin: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.border),
+    return AnimatedBuilder(
+      animation: Listenable.merge([
+        AppAccessibility.isHighContrastMode,
+        AppAccessibility.currentLanguage,
+      ]),
+      builder: (context, _) {
+        final isDark = _highContrastMode;
+
+        return Scaffold(
+          backgroundColor: isDark ? const Color(0xFF0B132B) : AppColors.background,
+          appBar: AppBar(
+            title: Text(
+              AppTranslations.tr('accessibility'),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+            backgroundColor: isDark ? const Color(0xFF1C2541) : AppColors.primary,
+            foregroundColor: Colors.white,
+            centerTitle: true,
+            elevation: isDark ? 1 : 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            ),
           ),
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary, size: 18),
-            onPressed: () => Navigator.pop(context),
+          body: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 1. Header Title & Subtitle
+                    Text(
+                      AppTranslations.tr('accessibility'),
+                      style: GoogleFonts.inter(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Senior & Accessibility options apply instantly across the whole application',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: isDark ? const Color(0xFF94A3B8) : AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+
+                    // 2. Trilingual Language Selector Card
+                    _buildLanguageSelector(isDark),
+                    const SizedBox(height: 16),
+
+                    // 3. Toggle 1: Large Text Mode
+                    _buildToggleCard(
+                      title: AppTranslations.tr('largeText'),
+                      subtitle: AppTranslations.tr('largeTextDesc'),
+                      icon: Icons.text_fields_outlined,
+                      isActive: _largeTextMode,
+                      onChanged: (val) => _updateSetting(largeText: val),
+                      isDark: isDark,
+                    ),
+                    const SizedBox(height: 12),
+
+                    // 4. Toggle 2: High Contrast Mode
+                    _buildToggleCard(
+                      title: AppTranslations.tr('highContrast'),
+                      subtitle: AppTranslations.tr('highContrastDesc'),
+                      icon: Icons.contrast_outlined,
+                      isActive: _highContrastMode,
+                      onChanged: (val) => _updateSetting(highContrast: val),
+                      isDark: isDark,
+                    ),
+                    const SizedBox(height: 12),
+
+                    // 5. Toggle 3: Simplified Navigation
+                    _buildToggleCard(
+                      title: AppTranslations.tr('simplifiedNav'),
+                      subtitle: AppTranslations.tr('simplifiedNavDesc'),
+                      icon: Icons.grid_view_outlined,
+                      isActive: _simplifiedNav,
+                      onChanged: (val) => _updateSetting(simplified: val),
+                      isDark: isDark,
+                    ),
+                    const SizedBox(height: 12),
+
+                    // 6. Toggle 4: Voice Guidance
+                    _buildToggleCard(
+                      title: AppTranslations.tr('voiceGuidance'),
+                      subtitle: AppTranslations.tr('voiceGuidanceDesc'),
+                      icon: Icons.volume_up_outlined,
+                      isActive: _voiceGuidance,
+                      onChanged: (val) => _updateSetting(voice: val),
+                      isDark: isDark,
+                    ),
+                    const SizedBox(height: 20),
+
+                // 6. Live Preview Comparison Box
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1C2541) : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: isDark ? const Color(0xFF3A506B) : AppColors.border),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 6,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'LIVE PREVIEW (SENIOR MODE ADAPTATION)',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? const Color(0xFF94A3B8) : AppColors.textSecondary,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      Row(
+                        children: [
+                          // Standard Size Box
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF0B132B) : const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: isDark ? const Color(0xFF3A506B) : AppColors.border),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Standard',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      color: isDark ? const Color(0xFF94A3B8) : AppColors.textSecondary,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'A-024',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.white : AppColors.textPrimary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+
+                          // Enlarged Size Box (Active Highlight)
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: _largeTextMode
+                                    ? (isDark ? const Color(0xFF243356) : AppColors.primaryLight.withValues(alpha: 0.5))
+                                    : (isDark ? const Color(0xFF0B132B) : const Color(0xFFF8FAFC)),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: _largeTextMode
+                                      ? (isDark ? const Color(0xFF38BDF8) : AppColors.primary)
+                                      : (isDark ? const Color(0xFF3A506B) : AppColors.border),
+                                  width: _largeTextMode ? 1.5 : 1,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Senior Mode',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: _largeTextMode
+                                          ? (isDark ? const Color(0xFF38BDF8) : AppColors.primary)
+                                          : (isDark ? const Color(0xFF94A3B8) : AppColors.textSecondary),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'A-024',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w800,
+                                      color: _largeTextMode
+                                          ? (isDark ? const Color(0xFF38BDF8) : AppColors.primary)
+                                          : (isDark ? Colors.white : AppColors.textPrimary),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
         ),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    );
+  },
+);
+  }
+
+  Widget _buildLanguageSelector(bool isDark) {
+    final currentLang = AppAccessibility.currentLanguage.value;
+    final options = [
+      {'code': 'en', 'label': 'English', 'flag': '🇬🇧'},
+      {'code': 'si', 'label': 'සිංහල', 'flag': '🇱🇰'},
+      {'code': 'ta', 'label': 'தமிழ்', 'flag': '🇱🇰'},
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1C2541) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? const Color(0xFF38BDF8) : AppColors.primaryLight,
+          width: 1.5,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              // 1. Header Title & Subtitle
-              Text(
-                'Accessibility',
-                style: GoogleFonts.inter(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Senior & Accessibility Options',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // 2. Toggle 1: Large Text Mode (Active State)
-              _buildToggleCard(
-                title: 'Large Text Mode',
-                subtitle: 'Enlarges all labels & numbers',
-                icon: Icons.text_fields_outlined,
-                isActive: _largeTextMode,
-                onChanged: (val) {
-                  setState(() {
-                    _largeTextMode = val;
-                  });
-                },
-              ),
-              const SizedBox(height: 14),
-
-              // 3. Toggle 2: High Contrast Mode
-              _buildToggleCard(
-                title: 'High Contrast Mode',
-                subtitle: 'Crisp black & white elements',
-                icon: Icons.contrast_outlined,
-                isActive: _highContrastMode,
-                onChanged: (val) {
-                  setState(() {
-                    _highContrastMode = val;
-                  });
-                },
-              ),
-              const SizedBox(height: 14),
-
-              // 4. Toggle 3: Simplified Navigation
-              _buildToggleCard(
-                title: 'Simplified Navigation',
-                subtitle: 'Bigger buttons, no complex menus',
-                icon: Icons.grid_view_outlined,
-                isActive: _simplifiedNav,
-                onChanged: (val) {
-                  setState(() {
-                    _simplifiedNav = val;
-                  });
-                },
-              ),
-              const SizedBox(height: 14),
-
-              // 5. Toggle 4: Voice Guidance
-              _buildToggleCard(
-                title: 'Voice Guidance',
-                subtitle: 'Announce token changes aloud',
-                icon: Icons.volume_up_outlined,
-                isActive: _voiceGuidance,
-                onChanged: (val) {
-                  setState(() {
-                    _voiceGuidance = val;
-                  });
-                },
-              ),
-              const SizedBox(height: 28),
-
-              // 6. Live Preview Card (Figma Large Text Comparison Box)
               Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(18),
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.02),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
+                  color: isDark ? const Color(0xFF243356) : AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(8),
                 ),
+                child: Icon(
+                  Icons.language_rounded,
+                  color: isDark ? const Color(0xFF38BDF8) : AppColors.primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'PREVIEW (LARGE TEXT MODE)',
+                      AppTranslations.tr('language'),
                       style: GoogleFonts.inter(
-                        fontSize: 11,
+                        fontSize: 15,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.textSecondary,
-                        letterSpacing: 0.5,
+                        color: isDark ? Colors.white : AppColors.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 14),
-
-                    Row(
-                      children: [
-                        // Standard Size Box
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: AppColors.border),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Standard Size',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    color: AppColors.textSecondary,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  'A-024',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.textPrimary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-
-                        // Enlarged Size Box (Active Highlight)
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: _largeTextMode
-                                  ? AppColors.primaryLight.withOpacity(0.5)
-                                  : const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: _largeTextMode
-                                    ? AppColors.primary
-                                    : AppColors.border,
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Enlarged Size',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: _largeTextMode
-                                        ? AppColors.primary
-                                        : AppColors.textSecondary,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'A-024',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 26, // Big 26px bold font!
-                                    fontWeight: FontWeight.w800,
-                                    color: _largeTextMode
-                                        ? AppColors.primary
-                                        : AppColors.textPrimary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
+                    Text(
+                      AppTranslations.tr('selectLanguage'),
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: isDark ? const Color(0xFF94A3B8) : AppColors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
             ],
           ),
-        ),
+          const SizedBox(height: 14),
+          Row(
+            children: options.map((opt) {
+              final isSelected = currentLang == opt['code'];
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                  child: InkWell(
+                    onTap: () {
+                      AppAccessibility.setLanguage(opt['code']!);
+                      if (opt['code'] == 'si') {
+                        VoiceGuidanceService.speak('භාෂාව සිංහල ලෙස වෙනස් කරන ලදී', context: context);
+                      } else if (opt['code'] == 'ta') {
+                        VoiceGuidanceService.speak('மொழி தமிழில் மாற்றப்பட்டது', context: context);
+                      } else {
+                        VoiceGuidanceService.speak('Language switched to English', context: context);
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? (isDark ? const Color(0xFF38BDF8) : AppColors.primary)
+                            : (isDark ? const Color(0xFF0B132B) : const Color(0xFFF1F5F9)),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isSelected
+                              ? (isDark ? const Color(0xFF38BDF8) : AppColors.primary)
+                              : (isDark ? const Color(0xFF3A506B) : AppColors.border),
+                          width: isSelected ? 2 : 1,
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            opt['flag']!,
+                            style: const TextStyle(fontSize: 18),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            opt['label']!,
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                              color: isSelected
+                                  ? Colors.white
+                                  : (isDark ? const Color(0xFF94A3B8) : AppColors.textPrimary),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
       ),
     );
   }
@@ -244,14 +464,17 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
     required IconData icon,
     required bool isActive,
     required ValueChanged<bool> onChanged,
+    required bool isDark,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1C2541) : Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isActive ? AppColors.borderActive : AppColors.border,
+          color: isActive
+              ? (isDark ? const Color(0xFF38BDF8) : AppColors.borderActive)
+              : (isDark ? const Color(0xFF3A506B) : AppColors.border),
           width: isActive ? 1.5 : 1,
         ),
       ),
@@ -263,13 +486,15 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
             height: 42,
             decoration: BoxDecoration(
               color: isActive
-                  ? AppColors.primaryLight
-                  : const Color(0xFFF1F5F9),
+                  ? (isDark ? const Color(0xFF243356) : AppColors.primaryLight)
+                  : (isDark ? const Color(0xFF0B132B) : const Color(0xFFF1F5F9)),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               icon,
-              color: isActive ? AppColors.primary : AppColors.textSecondary,
+              color: isActive
+                  ? (isDark ? const Color(0xFF38BDF8) : AppColors.primary)
+                  : (isDark ? const Color(0xFF94A3B8) : AppColors.textSecondary),
               size: 22,
             ),
           ),
@@ -285,7 +510,7 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                   style: GoogleFonts.inter(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                    color: isDark ? Colors.white : AppColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -293,8 +518,10 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                   subtitle,
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: AppColors.textSecondary,
+                    color: isDark ? const Color(0xFF94A3B8) : AppColors.textSecondary,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -305,9 +532,9 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
             value: isActive,
             onChanged: onChanged,
             activeColor: Colors.white,
-            activeTrackColor: AppColors.primary,
+            activeTrackColor: isDark ? const Color(0xFF38BDF8) : AppColors.primary,
             inactiveThumbColor: Colors.white,
-            inactiveTrackColor: const Color(0xFFCBD5E1),
+            inactiveTrackColor: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
           ),
         ],
       ),
