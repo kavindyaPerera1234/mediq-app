@@ -75,38 +75,18 @@ class HospitalAdminDashboard extends StatelessWidget {
                                   'Ministry of Health Sri Lanka',
                                   style: TextStyle(
                                     color: Colors.white,
-                                    fontSize: 14,
+                                    fontSize: 15,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
                                 Text(
-                                  'Module 1: Hospital & OPD Slot Configuration',
+                                  'Hospital & OPD Slot Configuration Console',
                                   style: TextStyle(color: Colors.white70, fontSize: 12),
                                 ),
                               ],
                             ),
                           ),
                         ],
-                      ),
-                      const SizedBox(height: 14),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: AppColors.statusGreen.withValues(alpha: 0.25),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.statusGreen.withValues(alpha: 0.4)),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.check_circle_rounded, size: 14, color: AppColors.statusGreen),
-                            SizedBox(width: 6),
-                            Text(
-                              'SLIIT IT3060 Evaluation Admin Mode Active',
-                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
-                            ),
-                          ],
-                        ),
                       ),
                     ],
                   ),

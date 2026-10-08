@@ -3,7 +3,6 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_accessibility.dart';
 import '../../../../core/constants/app_translations.dart';
 import 'hospital_selection_screen.dart';
-import '../admin/screens/hospital_admin_dashboard.dart';
 import '../backend/backend.dart';
 
 class CaregiverSetupScreen extends StatefulWidget {
@@ -94,18 +93,6 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
             foregroundColor: Colors.white,
             centerTitle: true,
             elevation: isDark ? 1 : 0,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.admin_panel_settings_outlined),
-                tooltip: 'Module 1 Hospital Admin Console',
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const HospitalAdminDashboard()),
-                  );
-                },
-              ),
-            ],
           ),
           body: Center(
             child: ConstrainedBox(
