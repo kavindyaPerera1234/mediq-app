@@ -4,26 +4,42 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'core/constants/app_colors.dart';
 import 'core/constants/app_accessibility.dart';
+import 'services/auth_service.dart';
+import 'services/seed_data_service.dart';
 import 'features/auth_live_queue_module3/screens/auth/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Safe Firebase Initialization
+
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
     debugPrint("Firebase initialized successfully!");
+
+    // Auto-seed initial demo data into Firestore project (mediq-opd)
+    SeedDataService().seedDemoData().catchError((e) {
+      debugPrint('Firestore Seeding Note: $e');
+      return false;
+    });
   } catch (e) {
     debugPrint("Firebase initialization notice: $e");
   }
 
-  runApp(const MediQApp());
+  // Load authenticated user profile
+  final authService = AuthService();
+  await authService.loadCurrentStaffProfile();
+
+  runApp(MediQApp(authService: authService));
 }
 
 class MediQApp extends StatelessWidget {
-  const MediQApp({super.key});
+  final AuthService? authService;
+
+  const MediQApp({
+    super.key,
+    this.authService,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -42,14 +58,12 @@ class MediQApp extends StatelessWidget {
         return MaterialApp(
           title: 'MediQ - OPD Queue Management',
           debugShowCheckedModeBanner: false,
-          // Eliminates theme transition lerp crashes completely
           themeAnimationDuration: Duration.zero,
           theme: isHighContrast ? _buildHighContrastTheme() : _buildStandardTheme(),
           builder: (context, child) {
             final mediaQuery = MediaQuery.of(context);
             return MediaQuery(
               data: mediaQuery.copyWith(
-                // 1.22x provides genuine senior readability without layout overflow
                 textScaler: isLargeText
                     ? const TextScaler.linear(1.22)
                     : const TextScaler.linear(1.0),
@@ -86,7 +100,6 @@ class MediQApp extends StatelessWidget {
   }
 
   static ThemeData _buildHighContrastTheme() {
-    // Soothing, eye-friendly high contrast dark slate theme (NO harsh neon orange)
     return ThemeData(
       brightness: Brightness.dark,
       scaffoldBackgroundColor: const Color(0xFF0F172A),

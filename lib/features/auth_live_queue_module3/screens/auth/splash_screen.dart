@@ -4,6 +4,8 @@ import '../../../../core/constants/app_colors.dart';
 import '../../services/auth_service.dart';
 import '../../../patient_appointment_scheduling_module1/screens/patient_main_screen.dart';
 import 'welcome_entry_screen.dart';
+import '../../../../screens/staff_dashboard_screen.dart';
+import '../../../../features/admin_dashboard/screens/admin_dashboard_screen.dart';
 
 /// Splash screen that checks Firebase Auth session on launch.
 ///
@@ -67,14 +69,14 @@ class _SplashScreenState extends State<SplashScreen>
         // No session → go to welcome/login selection
         _navigateTo(const WelcomeEntryScreen());
       } else if (role == 'admin') {
-        // Admin session → Admin Dashboard Placeholder
-        _navigateTo(const _AdminDashboardPlaceholder());
+        // Admin session → Admin Dashboard Screen
+        _navigateTo(AdminDashboardScreen(authService: authService));
       } else if (role == 'patient' || role == 'caregiver') {
         // Patient session → Patient main (booking tab)
         _navigateTo(const PatientMainScreen());
       } else {
         // Staff session (doctor, nurse, receptionist, staff)
-        _navigateTo(const _StaffDashboardPlaceholder());
+        _navigateTo(StaffDashboardScreen(authService: authService));
       }
     } catch (e) {
       debugPrint("Splash session check error: $e");

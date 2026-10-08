@@ -48,6 +48,12 @@ class AppColors {
   static const Color statusOrange = Color(0xFFEA580C);
   static const Color statusOrangeLight = Color(0xFFFFEDD5);
   static const Color warning = Color(0xFFEA580C);
+  static const Color warningLight = Color(0xFFFEF3C7);
+
+  static const Color info = Color(0xFF2563EB);
+  static const Color infoLight = Color(0xFFDBEAFE);
+  static const Color neutral = Color(0xFF64748B);
+  static const Color neutralLight = Color(0xFFF1F5F9);
 
   // Slot Capping Helpers
   static const Color slotAvailable = Color(0xFFDCFCE7);
