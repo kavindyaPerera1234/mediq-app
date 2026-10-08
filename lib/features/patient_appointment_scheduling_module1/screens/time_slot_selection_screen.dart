@@ -45,8 +45,8 @@ class TimeSlotSelectionScreen extends StatefulWidget {
     required this.clinic,
     required this.selectedDate,
     this.isCaregiverBooking = false,
-    this.patientName = 'Sandeepani Perera',
-    this.patientNic = '200164801234',
+    this.patientName = 'Patient',
+    this.patientNic = '',
     this.relationship = 'Self',
     this.priority = 'normal',
   });

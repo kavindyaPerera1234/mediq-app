@@ -842,21 +842,6 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
             elevation: isDark ? 1 : 0,
             actions: [
               IconButton(
-                icon: const Icon(Icons.settings_outlined),
-                tooltip: AppTranslations.tr('accessibility'),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const SeniorModeSettingsScreen()),
-                  );
-                },
-              ),
-              IconButton(
-                icon: const Icon(Icons.edit_outlined),
-                tooltip: AppTranslations.tr('editProfile'),
-                onPressed: _showEditProfileDialog,
-              ),
-              IconButton(
                 icon: const Icon(Icons.logout_rounded),
                 tooltip: 'Logout',
                 onPressed: () => _confirmLogout(context),
@@ -885,6 +870,8 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     else if (_selectedProfileTab == 1)
                       _buildCaregiversSection()
                     else ...[
+                      _buildSeniorAccessibilityCard(isDark),
+                      const SizedBox(height: 16),
                       _buildLanguageSelectorCard(isDark),
                       const SizedBox(height: 16),
                       _buildLogoutCard(context),
@@ -980,6 +967,212 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
               ),
               onPressed: () => _confirmLogout(context),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSeniorAccessibilityCard(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cardSurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: AppColors.chipBg,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.accessibility_new_rounded, color: AppColors.accentColor, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AppTranslations.tr('accessibility'),
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.headingText),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Senior & Accessibility Preferences',
+                      style: TextStyle(fontSize: 11, color: AppColors.bodyText),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Divider(color: AppColors.cardBorder),
+          const SizedBox(height: 8),
+
+          // Quick Toggle 1: Large Text Mode
+          _buildQuickAccessToggle(
+            title: AppTranslations.tr('largeText'),
+            subtitle: '1.22x magnified fonts across app',
+            icon: Icons.text_fields_rounded,
+            value: AppAccessibility.isLargeTextMode.value,
+            onChanged: (val) {
+              AppAccessibility.setLargeTextMode(val);
+              _profileService.saveAccessibilitySettings(
+                patientNic: _currentPatientNic,
+                largeTextMode: val,
+                highContrastMode: AppAccessibility.isHighContrastMode.value,
+                simplifiedNav: AppAccessibility.isSimplifiedNav.value,
+                voiceGuidance: AppAccessibility.isVoiceGuidance.value,
+              );
+            },
+          ),
+          const SizedBox(height: 8),
+
+          // Quick Toggle 2: High Contrast Mode
+          _buildQuickAccessToggle(
+            title: AppTranslations.tr('highContrast'),
+            subtitle: 'Dark medical contrast theme',
+            icon: Icons.contrast_rounded,
+            value: AppAccessibility.isHighContrastMode.value,
+            onChanged: (val) {
+              AppAccessibility.setHighContrastMode(val);
+              _profileService.saveAccessibilitySettings(
+                patientNic: _currentPatientNic,
+                largeTextMode: AppAccessibility.isLargeTextMode.value,
+                highContrastMode: val,
+                simplifiedNav: AppAccessibility.isSimplifiedNav.value,
+                voiceGuidance: AppAccessibility.isVoiceGuidance.value,
+              );
+            },
+          ),
+          const SizedBox(height: 8),
+
+          // Quick Toggle 3: Simplified Navigation
+          _buildQuickAccessToggle(
+            title: AppTranslations.tr('simplifiedNav'),
+            subtitle: '3-tab essential senior navigation',
+            icon: Icons.grid_view_rounded,
+            value: AppAccessibility.isSimplifiedNav.value,
+            onChanged: (val) {
+              AppAccessibility.setSimplifiedNav(val);
+              _profileService.saveAccessibilitySettings(
+                patientNic: _currentPatientNic,
+                largeTextMode: AppAccessibility.isLargeTextMode.value,
+                highContrastMode: AppAccessibility.isHighContrastMode.value,
+                simplifiedNav: val,
+                voiceGuidance: AppAccessibility.isVoiceGuidance.value,
+              );
+            },
+          ),
+          const SizedBox(height: 8),
+
+          // Quick Toggle 4: Voice Guidance
+          _buildQuickAccessToggle(
+            title: AppTranslations.tr('voiceGuidance'),
+            subtitle: 'Spoken announcements for tokens',
+            icon: Icons.volume_up_rounded,
+            value: AppAccessibility.isVoiceGuidance.value,
+            onChanged: (val) {
+              AppAccessibility.setVoiceGuidance(val);
+              if (val) {
+                VoiceGuidanceService.speak(
+                  AppAccessibility.currentLanguage.value == 'si'
+                      ? 'හඬ මඟපෙන්වීම සක්‍රිය කරන ලදී'
+                      : 'Voice Guidance is activated',
+                  context: context,
+                );
+              }
+              _profileService.saveAccessibilitySettings(
+                patientNic: _currentPatientNic,
+                largeTextMode: AppAccessibility.isLargeTextMode.value,
+                highContrastMode: AppAccessibility.isHighContrastMode.value,
+                simplifiedNav: AppAccessibility.isSimplifiedNav.value,
+                voiceGuidance: val,
+              );
+            },
+          ),
+          const SizedBox(height: 14),
+
+          // Direct Launcher button to Senior Mode Settings Screen
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                elevation: 0,
+              ),
+              icon: const Icon(Icons.settings_suggest_rounded, size: 18),
+              label: const Text(
+                'Open Full Senior Mode Console',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SeniorModeSettingsScreen()),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickAccessToggle({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.innerCardBg,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: value ? AppColors.accentColor : AppColors.bodyText),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.headingText,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: TextStyle(fontSize: 10.5, color: AppColors.bodyText),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: value,
+            activeColor: AppColors.accentColor,
+            onChanged: onChanged,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
         ],
       ),
@@ -1386,22 +1579,33 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Icon(Icons.family_restroom_rounded, color: AppColors.accentColor, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    AppTranslations.tr('patientDependents'),
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.headingText),
-                  ),
-                ],
+              Icon(Icons.family_restroom_rounded, color: AppColors.accentColor, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  AppTranslations.tr('patientDependents'),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.headingText),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              TextButton.icon(
-                icon: Icon(Icons.add_rounded, size: 16, color: AppColors.accentColor),
-                label: Text(AppTranslations.tr('addDependent'), style: TextStyle(fontSize: 12, color: AppColors.accentColor)),
-                onPressed: _showAddCaregiverDialog,
+              InkWell(
+                onTap: _showAddCaregiverDialog,
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.add_circle_outline_rounded, size: 15, color: AppColors.accentColor),
+                      const SizedBox(width: 4),
+                      Text(
+                        AppTranslations.tr('addDependent'),
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.accentColor),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
@@ -1413,7 +1617,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
           const SizedBox(height: 12),
 
           StreamBuilder<List<CaregiverPatientModel>>(
-            stream: _caregiverService.streamCaregiverPatients(_currentUserId),
+            stream: _caregiverService.streamCaregiverPatients(_currentUserId, patientNic: _currentPatientNic),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2)));
@@ -1609,9 +1813,12 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
             children: [
               const Icon(Icons.confirmation_number_outlined, color: AppColors.statusOrange, size: 20),
               const SizedBox(width: 8),
-              Text(
-                'My Active OPD Tokens & Appointments',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.headingText),
+              Expanded(
+                child: Text(
+                  'My Active OPD Tokens & Appointments',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.headingText),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),

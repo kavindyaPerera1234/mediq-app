@@ -27,7 +27,8 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
   String? _selectedDependentNic;
   final List<String> _relationships = ['Father', 'Mother', 'Child', 'Spouse', 'Other'];
   final CaregiverService _caregiverService = CaregiverService();
-  final String _currentUserId = 'user_sandeepani_001';
+  String get _currentUserId => ProfileService.activeProfileNotifier.value.patientId;
+  String get _currentPatientNic => ProfileService.activeProfileNotifier.value.nic;
 
   @override
   void dispose() {
@@ -55,8 +56,8 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
     }
 
     final activeProfile = ProfileService.activeProfileNotifier.value;
-    final selfName = activeProfile.fullName.isNotEmpty ? activeProfile.fullName : 'Sandeepani Perera';
-    final selfNic = activeProfile.nic.isNotEmpty ? activeProfile.nic : '200164801234';
+    final selfName = activeProfile.fullName.isNotEmpty ? activeProfile.fullName : 'Patient';
+    final selfNic = (activeProfile.nic.isNotEmpty && activeProfile.nic != 'N/A') ? activeProfile.nic : '';
 
     Navigator.push(
       context,
@@ -568,7 +569,7 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
 
             // Quick Select from Registered Dependents
             StreamBuilder<List<CaregiverPatientModel>>(
-              stream: _caregiverService.streamCaregiverPatients(_currentUserId),
+              stream: _caregiverService.streamCaregiverPatients(_currentUserId, patientNic: _currentPatientNic),
               builder: (context, snapshot) {
                 final dependents = snapshot.data ?? [];
                 if (dependents.isEmpty) return const SizedBox.shrink();
