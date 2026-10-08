@@ -17,15 +17,42 @@ class HospitalAdminService {
     required bool isActive,
   }) async {
     try {
-      await _firestore.collection('hospitals').doc(id).set({
+      final docRef = _firestore.collection('hospitals').doc(id);
+      await docRef.set({
+        'id': id,
         'hospitalId': id,
         'name': name,
         'district': district,
         'address': address,
+        'location': address.isNotEmpty ? '$district • $address' : district,
         'phone': phone,
         'isActive': isActive,
+        'isOpdAvailable': isActive,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
+
+      // Also ensure at least one default department exists in 'departments' collection for this hospital
+      final deptQuery = await _firestore
+          .collection('departments')
+          .where('hospitalName', isEqualTo: name)
+          .limit(1)
+          .get();
+
+      if (deptQuery.docs.isEmpty) {
+        final cleanId = id.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_').toLowerCase();
+        await _firestore.collection('departments').doc('dept_gen_$cleanId').set({
+          'departmentId': 'dept_gen_$cleanId',
+          'name': 'General Medicine OPD',
+          'hospitalId': id,
+          'hospitalName': name,
+          'roomNumber': 'OPD Room 01',
+          'operatingHours': '8:00 AM - 12:00 PM',
+          'capacityLimit': 25,
+          'isActive': isActive,
+          'createdAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
+
       return true;
     } catch (e) {
       debugPrint('HospitalAdminService: saveHospital error $e');

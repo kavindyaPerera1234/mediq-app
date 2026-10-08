@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../backend/backend.dart';
 
@@ -28,9 +30,37 @@ class ManageHospitalsScreen extends StatefulWidget {
 }
 
 class _ManageHospitalsScreenState extends State<ManageHospitalsScreen> {
-  final List<HospitalItem> _hospitals = [
+  static const List<String> sriLankaDistricts = [
+    'Colombo',
+    'Gampaha',
+    'Kalutara',
+    'Kandy',
+    'Matale',
+    'Nuwara Eliya',
+    'Galle',
+    'Matara',
+    'Hambantota',
+    'Jaffna',
+    'Kilinochchi',
+    'Mannar',
+    'Vavuniya',
+    'Mullaitivu',
+    'Batticaloa',
+    'Ampara',
+    'Trincomalee',
+    'Kurunegala',
+    'Puttalam',
+    'Anuradhapura',
+    'Polonnaruwa',
+    'Badulla',
+    'Monaragala',
+    'Ratnapura',
+    'Kegalle',
+  ];
+
+  final List<HospitalItem> _defaultHospitals = [
     HospitalItem(
-      id: 'hosp_nhsl',
+      id: 'nhsl',
       name: 'National Hospital of Sri Lanka (NHSL)',
       district: 'Colombo',
       address: 'Regent Street, Colombo 10',
@@ -38,7 +68,7 @@ class _ManageHospitalsScreenState extends State<ManageHospitalsScreen> {
       isActive: true,
     ),
     HospitalItem(
-      id: 'hosp_csth',
+      id: 'csth',
       name: 'Colombo South Teaching Hospital (Kalubowila)',
       district: 'Colombo',
       address: 'Hospital Road, Kalubowila',
@@ -46,7 +76,7 @@ class _ManageHospitalsScreenState extends State<ManageHospitalsScreen> {
       isActive: true,
     ),
     HospitalItem(
-      id: 'hosp_lrh',
+      id: 'lrh',
       name: 'Lady Ridgeway Hospital for Children (LRH)',
       district: 'Colombo',
       address: 'Dr. Danister De Silva Mawatha, Colombo 08',
@@ -54,7 +84,7 @@ class _ManageHospitalsScreenState extends State<ManageHospitalsScreen> {
       isActive: true,
     ),
     HospitalItem(
-      id: 'hosp_cnth',
+      id: 'cnth',
       name: 'Colombo North Teaching Hospital (Ragama)',
       district: 'Gampaha',
       address: 'Ragama Road, Ragama',
@@ -63,13 +93,78 @@ class _ManageHospitalsScreenState extends State<ManageHospitalsScreen> {
     ),
   ];
 
+  List<HospitalItem> _hospitals = [];
+  bool _isLoading = true;
+  StreamSubscription<QuerySnapshot>? _hospitalsSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _hospitals = List.from(_defaultHospitals);
+    _listenToHospitals();
+  }
+
+  @override
+  void dispose() {
+    _hospitalsSub?.cancel();
+    super.dispose();
+  }
+
+  void _listenToHospitals() {
+    _hospitalsSub = FirebaseFirestore.instance
+        .collection('hospitals')
+        .snapshots()
+        .listen((snapshot) {
+      final Map<String, HospitalItem> map = {
+        for (var h in _defaultHospitals) h.id: h,
+      };
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        final id = doc.id;
+        final name = (data['name'] ?? '').toString().trim();
+        if (name.isEmpty) continue;
+        final district = (data['district'] ?? 'Colombo').toString();
+        final address = (data['address'] ?? data['location'] ?? '').toString();
+        final phone = (data['phone'] ?? '').toString();
+        final isActive = data['isActive'] == true || data['isOpdAvailable'] == true;
+
+        map[id] = HospitalItem(
+          id: id,
+          name: name,
+          district: district,
+          address: address,
+          phone: phone,
+          isActive: isActive,
+        );
+      }
+
+      if (mounted) {
+        setState(() {
+          _hospitals = map.values.toList();
+          _isLoading = false;
+        });
+      }
+    }, onError: (e) {
+      debugPrint('Error listening to hospitals: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    });
+  }
+
   void _showAddEditHospitalDialog([HospitalItem? existing]) {
     final isEditing = existing != null;
     final nameController = TextEditingController(text: existing?.name ?? '');
-    final districtController = TextEditingController(text: existing?.district ?? 'Colombo');
+    String selectedDistrict = (existing != null && sriLankaDistricts.contains(existing.district))
+        ? existing.district
+        : 'Colombo';
     final addressController = TextEditingController(text: existing?.address ?? '');
     final phoneController = TextEditingController(text: existing?.phone ?? '');
     bool isActive = existing?.isActive ?? true;
+    bool isSubmitting = false;
 
     showModalBottomSheet(
       context: context,
@@ -85,9 +180,9 @@ class _ManageHospitalsScreenState extends State<ManageHospitalsScreen> {
                 top: 20,
                 bottom: MediaQuery.of(context).viewInsets.bottom + 20,
               ),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: AppColors.surface,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
               ),
               child: SingleChildScrollView(
                 child: Column(
@@ -97,9 +192,26 @@ class _ManageHospitalsScreenState extends State<ManageHospitalsScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          isEditing ? 'Edit Hospital' : 'Register New Hospital',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                isEditing ? Icons.edit_location_alt_rounded : Icons.add_business_rounded,
+                                color: AppColors.primary,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              isEditing ? 'Edit Hospital' : 'Register New Hospital',
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                            ),
+                          ],
                         ),
                         IconButton(
                           icon: const Icon(Icons.close_rounded),
@@ -115,25 +227,57 @@ class _ManageHospitalsScreenState extends State<ManageHospitalsScreen> {
                     const SizedBox(height: 6),
                     TextField(
                       controller: nameController,
+                      style: const TextStyle(fontSize: 14, color: AppColors.textDark),
                       decoration: InputDecoration(
                         hintText: 'e.g. Teaching Hospital Kandy',
+                        hintStyle: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+                        prefixIcon: const Icon(Icons.local_hospital_outlined, size: 18, color: AppColors.primary),
                         filled: true,
                         fillColor: AppColors.background,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
                       ),
                     ),
                     const SizedBox(height: 14),
 
-                    // District
-                    const Text('District', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                    // District Dropdown Selector (User Friendly)
+                    const Text('District (Sri Lanka)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
                     const SizedBox(height: 6),
-                    TextField(
-                      controller: districtController,
-                      decoration: InputDecoration(
-                        hintText: 'e.g. Colombo, Kandy, Galle',
-                        filled: true,
-                        fillColor: AppColors.background,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: selectedDistrict,
+                          isExpanded: true,
+                          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primary),
+                          dropdownColor: AppColors.surface,
+                          style: const TextStyle(fontSize: 14, color: AppColors.textDark, fontWeight: FontWeight.w500),
+                          items: sriLankaDistricts.map((district) {
+                            return DropdownMenuItem<String>(
+                              value: district,
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.location_city_rounded, size: 16, color: AppColors.textMuted),
+                                  const SizedBox(width: 8),
+                                  Text(district, style: const TextStyle(color: AppColors.textDark)),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setModalState(() {
+                                selectedDistrict = val;
+                              });
+                            }
+                          },
+                        ),
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -143,26 +287,36 @@ class _ManageHospitalsScreenState extends State<ManageHospitalsScreen> {
                     const SizedBox(height: 6),
                     TextField(
                       controller: addressController,
+                      style: const TextStyle(fontSize: 14, color: AppColors.textDark),
                       decoration: InputDecoration(
                         hintText: 'e.g. William Gopallawa Mawatha, Kandy',
+                        hintStyle: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+                        prefixIcon: const Icon(Icons.location_on_outlined, size: 18, color: AppColors.primary),
                         filled: true,
                         fillColor: AppColors.background,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
                       ),
                     ),
                     const SizedBox(height: 14),
 
                     // Phone Hotline
-                    const Text('OPD Hotline', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                    const Text('OPD Hotline Phone', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
                     const SizedBox(height: 6),
                     TextField(
                       controller: phoneController,
                       keyboardType: TextInputType.phone,
+                      style: const TextStyle(fontSize: 14, color: AppColors.textDark),
                       decoration: InputDecoration(
                         hintText: 'e.g. 081-2222261',
+                        hintStyle: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+                        prefixIcon: const Icon(Icons.phone_outlined, size: 18, color: AppColors.primary),
                         filled: true,
                         fillColor: AppColors.background,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -171,7 +325,13 @@ class _ManageHospitalsScreenState extends State<ManageHospitalsScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Active for OPD Bookings', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                        const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Active for OPD Bookings', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                            Text('Visible to patients on mobile app', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                          ],
+                        ),
                         Switch(
                           value: isActive,
                           activeColor: AppColors.statusGreen,
@@ -193,58 +353,67 @@ class _ManageHospitalsScreenState extends State<ManageHospitalsScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
+                          elevation: 0,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
-                        onPressed: () async {
-                          final name = nameController.text.trim();
-                          final district = districtController.text.trim();
-                          final address = addressController.text.trim();
-                          final phone = phoneController.text.trim();
+                        onPressed: isSubmitting
+                            ? null
+                            : () async {
+                                final name = nameController.text.trim();
+                                final district = selectedDistrict;
+                                final address = addressController.text.trim();
+                                final phone = phoneController.text.trim();
 
-                          if (name.isEmpty) return;
+                                if (name.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Please enter the hospital name.'),
+                                      backgroundColor: AppColors.statusOrange,
+                                    ),
+                                  );
+                                  return;
+                                }
 
-                          if (isEditing) {
-                            setState(() {
-                              existing.name = name;
-                              existing.district = district;
-                              existing.address = address;
-                              existing.phone = phone;
-                              existing.isActive = isActive;
-                            });
-                          } else {
-                            final newHosp = HospitalItem(
-                              id: 'hosp_${DateTime.now().millisecondsSinceEpoch}',
-                              name: name,
-                              district: district,
-                              address: address,
-                              phone: phone,
-                              isActive: isActive,
-                            );
-                            setState(() {
-                              _hospitals.add(newHosp);
-                            });
-                          }
+                                setModalState(() {
+                                  isSubmitting = true;
+                                });
 
-                          // Save via dedicated HospitalAdminService
-                          await HospitalAdminService().saveHospital(
-                            id: existing?.id ?? 'hosp_${DateTime.now().millisecondsSinceEpoch}',
-                            name: name,
-                            district: district,
-                            address: address,
-                            phone: phone,
-                            isActive: isActive,
-                          );
+                                final hospitalId = existing?.id ?? 'hosp_${DateTime.now().millisecondsSinceEpoch}';
 
-                          if (!context.mounted) return;
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(isEditing ? 'Hospital updated successfully' : 'Hospital registered successfully'),
-                              backgroundColor: AppColors.statusGreen,
-                            ),
-                          );
-                        },
-                        child: Text(isEditing ? 'Save Changes' : 'Register Hospital'),
+                                // 1. Save directly to Cloud Firestore
+                                final success = await HospitalAdminService().saveHospital(
+                                  id: hospitalId,
+                                  name: name,
+                                  district: district,
+                                  address: address,
+                                  phone: phone,
+                                  isActive: isActive,
+                                );
+
+                                if (!context.mounted) return;
+                                Navigator.pop(context);
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      success
+                                          ? (isEditing ? '$name updated successfully!' : '$name registered successfully!')
+                                          : 'Failed to save hospital to Firestore.',
+                                    ),
+                                    backgroundColor: success ? AppColors.statusGreen : AppColors.error,
+                                  ),
+                                );
+                              },
+                        child: isSubmitting
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            : Text(
+                                isEditing ? 'Save Changes' : 'Register Hospital',
+                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                              ),
                       ),
                     ),
                   ],
@@ -280,124 +449,140 @@ class _ManageHospitalsScreenState extends State<ManageHospitalsScreen> {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_rounded),
-        label: const Text('Add Hospital'),
+        label: const Text('Add Hospital', style: TextStyle(fontWeight: FontWeight.bold)),
         onPressed: () => _showAddEditHospitalDialog(),
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
-          child: ListView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
-            itemCount: _hospitals.length,
-            itemBuilder: (context, index) {
-              final hosp = _hospitals[index];
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.border),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.textDark.withValues(alpha: 0.02),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(10),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          : Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 520),
+                child: ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+                  itemCount: _hospitals.length,
+                  itemBuilder: (context, index) {
+                    final hosp = _hospitals[index];
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.border),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.textDark.withValues(alpha: 0.02),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
                           ),
-                          child: const Icon(Icons.local_hospital_rounded, color: AppColors.primary, size: 22),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                hosp.name,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.textDark,
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Icons.local_hospital_rounded, color: AppColors.primary, size: 22),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      hosp.name,
+                                      style: const TextStyle(
+                                        fontSize: 14.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.textDark,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.location_on_outlined, size: 14, color: AppColors.textMuted),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            hosp.address.isNotEmpty
+                                                ? '${hosp.district} • ${hosp.address}'
+                                                : hosp.district,
+                                            style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.phone_outlined, size: 14, color: AppColors.textMuted),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            hosp.phone.isNotEmpty ? hosp.phone : 'Not provided',
+                                            style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  const Icon(Icons.location_on_outlined, size: 14, color: AppColors.textMuted),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '${hosp.district} • ${hosp.address}',
-                                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  const Icon(Icons.phone_outlined, size: 14, color: AppColors.textMuted),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    hosp.phone,
-                                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                                  ),
-                                ],
+                              IconButton(
+                                icon: const Icon(Icons.edit_outlined, size: 20, color: AppColors.primary),
+                                tooltip: 'Edit Hospital',
+                                onPressed: () => _showAddEditHospitalDialog(hosp),
                               ),
                             ],
                           ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.edit_outlined, size: 20, color: AppColors.primary),
-                          onPressed: () => _showAddEditHospitalDialog(hosp),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: hosp.isActive
-                                ? AppColors.statusGreen.withValues(alpha: 0.12)
-                                : AppColors.error.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(6),
+                          const SizedBox(height: 10),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: hosp.isActive
+                                      ? AppColors.statusGreen.withValues(alpha: 0.12)
+                                      : AppColors.error.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  hosp.isActive ? '● OPD ACTIVE' : '● CLOSED / INACTIVE',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: hosp.isActive ? AppColors.statusGreen : AppColors.error,
+                                  ),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () => _showAddEditHospitalDialog(hosp),
+                                child: const Text(
+                                  'Edit Settings →',
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
+                                ),
+                              ),
+                            ],
                           ),
-                          child: Text(
-                            hosp.isActive ? '● OPD ACTIVE' : '● CLOSED / INACTIVE',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: hosp.isActive ? AppColors.statusGreen : AppColors.error,
-                            ),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () => _showAddEditHospitalDialog(hosp),
-                          child: const Text('Edit Settings →', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
-        ),
-      ),
+              ),
+            ),
     );
   }
 }

@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_accessibility.dart';
 import '../../../../core/constants/app_translations.dart';
@@ -30,11 +32,122 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
   late List<GovernmentHospital> _filteredHospitals;
   final TextEditingController _searchController = TextEditingController();
 
+  StreamSubscription<QuerySnapshot>? _hospitalsSub;
+  StreamSubscription<QuerySnapshot>? _departmentsSub;
+  final Map<String, List<OpdClinic>> _hospitalClinics = {};
+
   @override
   void initState() {
     super.initState();
     _allHospitals = GovernmentHospital.getSampleHospitals();
     _filteredHospitals = List.from(_allHospitals);
+    _startRealtimeListeners();
+  }
+
+  void _startRealtimeListeners() {
+    // 1. Listen to departments collection for custom clinics
+    _departmentsSub = FirebaseFirestore.instance
+        .collection('departments')
+        .snapshots()
+        .listen((snapshot) {
+      final Map<String, List<OpdClinic>> clinicMap = {};
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        if (data['isActive'] == false) continue;
+
+        final hospName = (data['hospitalName'] ?? '').toString().trim().toLowerCase();
+        final hospId = (data['hospitalId'] ?? '').toString().trim().toLowerCase();
+        final deptId = doc.id;
+        final name = (data['name'] ?? 'OPD Clinic').toString();
+        final room = (data['roomNumber'] ?? 'OPD Room 01').toString();
+        final hours = (data['operatingHours'] ?? '8:00 AM - 12:00 PM').toString();
+
+        IconData icon = Icons.medical_services_outlined;
+        final lowerName = name.toLowerCase();
+        if (lowerName.contains('pediatric') || lowerName.contains('child')) {
+          icon = Icons.child_care_outlined;
+        } else if (lowerName.contains('ortho') || lowerName.contains('bone')) {
+          icon = Icons.accessibility_new_outlined;
+        } else if (lowerName.contains('ent') || lowerName.contains('ear')) {
+          icon = Icons.hearing_outlined;
+        } else if (lowerName.contains('derma') || lowerName.contains('skin')) {
+          icon = Icons.healing_outlined;
+        } else if (lowerName.contains('cardio') || lowerName.contains('heart')) {
+          icon = Icons.favorite_outline_rounded;
+        }
+
+        final clinic = OpdClinic(
+          id: deptId,
+          name: name,
+          hours: hours,
+          icon: icon,
+          isOpen: true,
+          roomNumber: room,
+        );
+
+        if (hospName.isNotEmpty) {
+          clinicMap.putIfAbsent(hospName, () => []).add(clinic);
+        }
+        if (hospId.isNotEmpty) {
+          clinicMap.putIfAbsent(hospId, () => []).add(clinic);
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _hospitalClinics.clear();
+          _hospitalClinics.addAll(clinicMap);
+          _mergeHospitals();
+        });
+      }
+    });
+
+    // 2. Listen to hospitals collection for dynamic government hospitals
+    _hospitalsSub = FirebaseFirestore.instance
+        .collection('hospitals')
+        .snapshots()
+        .listen((snapshot) {
+      if (mounted) {
+        setState(() {
+          _mergeHospitals(snapshot.docs);
+        });
+      }
+    });
+  }
+
+  void _mergeHospitals([List<QueryDocumentSnapshot<Map<String, dynamic>>>? firestoreDocs]) {
+    final Map<String, GovernmentHospital> map = {
+      for (var h in GovernmentHospital.getSampleHospitals()) h.id.toLowerCase(): h,
+    };
+
+    if (firestoreDocs != null) {
+      for (var doc in firestoreDocs) {
+        final data = doc.data();
+        final id = doc.id.toLowerCase();
+        final name = (data['name'] ?? '').toString().trim();
+        if (name.isEmpty) continue;
+
+        final isActive = data['isActive'] == true || data['isOpdAvailable'] == true;
+        if (!isActive) {
+          map.remove(id);
+          continue;
+        }
+
+        // Check for attached custom clinics
+        final customClinics = _hospitalClinics[name.toLowerCase()] ??
+            _hospitalClinics[id] ??
+            _hospitalClinics[(data['hospitalId'] ?? '').toString().toLowerCase()];
+
+        map[id] = GovernmentHospital.fromMap(
+          data,
+          doc.id,
+          customClinics: customClinics,
+        );
+      }
+    }
+
+    _allHospitals = map.values.where((h) => h.isOpdAvailable).toList();
+    _filterHospitals(_searchController.text);
   }
 
   void _filterHospitals(String query) {
@@ -42,10 +155,12 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
       if (query.isEmpty) {
         _filteredHospitals = List.from(_allHospitals);
       } else {
+        final q = query.toLowerCase().trim();
         _filteredHospitals = _allHospitals
             .where((h) =>
-                h.name.toLowerCase().contains(query.toLowerCase()) ||
-                h.location.toLowerCase().contains(query.toLowerCase()))
+                h.name.toLowerCase().contains(q) ||
+                h.location.toLowerCase().contains(q) ||
+                h.district.toLowerCase().contains(q))
             .toList();
       }
     });
@@ -53,6 +168,8 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
 
   @override
   void dispose() {
+    _hospitalsSub?.cancel();
+    _departmentsSub?.cancel();
     _searchController.dispose();
     super.dispose();
   }
