@@ -6,6 +6,8 @@ import '../../../core/constants/app_accessibility.dart';
 import '../../../core/constants/app_translations.dart';
 import '../backend/backend.dart';
 import 'senior_mode_settings_screen.dart';
+import 'caregiver_setup_screen.dart';
+import 'patient_profile_screen.dart';
 import '../../auth_live_queue_module3/screens/auth/welcome_entry_screen.dart';
 import '../../auth_live_queue_module3/services/auth_service.dart';
 import '../../token_lifecycle_notification_module2/screens/digital_token_details_screen.dart';
@@ -106,7 +108,7 @@ class PatientHomeScreen extends StatelessWidget {
                         if (activeAppointments.isNotEmpty) {
                           return _buildActiveTokenCard(context, activeAppointments.first);
                         } else {
-                          return _buildNoActiveTokenCard();
+                          return _buildNoActiveTokenCard(context);
                         }
                       },
                     ),
@@ -120,7 +122,7 @@ class PatientHomeScreen extends StatelessWidget {
                       style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.headingText),
                     ),
                     const SizedBox(height: 10),
-                    _buildQuickActionsGrid(),
+                    _buildQuickActionsGrid(context),
                     const SizedBox(height: 20),
 
                     // 4. Ministry of Health Guidelines
@@ -403,7 +405,7 @@ class PatientHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildNoActiveTokenCard() {
+  Widget _buildNoActiveTokenCard(BuildContext context) {
     final lang = AppAccessibility.currentLanguage.value;
     String title;
     String subtitle;
@@ -488,7 +490,12 @@ class PatientHomeScreen extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () => onNavigateTab(1),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CaregiverSetupScreen()),
+                );
+              },
               icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
               label: Text(
                 buttonText,
@@ -510,7 +517,7 @@ class PatientHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildQuickActionsGrid() {
+  Widget _buildQuickActionsGrid(BuildContext context) {
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -524,7 +531,12 @@ class PatientHomeScreen extends StatelessWidget {
           subtitle: 'Choose hospital & time',
           icon: Icons.calendar_month_rounded,
           color: AppColors.accentColor,
-          onTap: () => onNavigateTab(1),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CaregiverSetupScreen()),
+            );
+          },
         ),
         _buildActionCard(
           title: AppTranslations.tr('trackLiveQueue'),
@@ -545,7 +557,10 @@ class PatientHomeScreen extends StatelessWidget {
           subtitle: 'Caregiver management',
           icon: Icons.person_pin_rounded,
           color: Colors.purple.shade400,
-          onTap: () => onNavigateTab(4),
+          onTap: () {
+            PatientProfileScreen.selectedTabNotifier.value = 1;
+            onNavigateTab(4);
+          },
         ),
       ],
     );

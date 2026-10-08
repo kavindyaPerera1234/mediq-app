@@ -13,7 +13,10 @@ import '../../auth_live_queue_module3/screens/auth/welcome_entry_screen.dart';
 import '../../auth_live_queue_module3/services/auth_service.dart';
 
 class PatientProfileScreen extends StatefulWidget {
-  const PatientProfileScreen({super.key});
+  final int initialProfileTab;
+  static final ValueNotifier<int> selectedTabNotifier = ValueNotifier<int>(0);
+
+  const PatientProfileScreen({super.key, this.initialProfileTab = 0});
 
   @override
   State<PatientProfileScreen> createState() => _PatientProfileScreenState();
@@ -35,8 +38,35 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialProfileTab != 0) {
+      PatientProfileScreen.selectedTabNotifier.value = widget.initialProfileTab;
+    }
+    _selectedProfileTab = PatientProfileScreen.selectedTabNotifier.value;
+    PatientProfileScreen.selectedTabNotifier.addListener(_onTabNotifierChanged);
     _profile = ProfileService.activeProfileNotifier.value;
     _loadProfile();
+  }
+
+  void _onTabNotifierChanged() {
+    if (mounted && _selectedProfileTab != PatientProfileScreen.selectedTabNotifier.value) {
+      setState(() {
+        _selectedProfileTab = PatientProfileScreen.selectedTabNotifier.value;
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant PatientProfileScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialProfileTab != oldWidget.initialProfileTab) {
+      PatientProfileScreen.selectedTabNotifier.value = widget.initialProfileTab;
+    }
+  }
+
+  @override
+  void dispose() {
+    PatientProfileScreen.selectedTabNotifier.removeListener(_onTabNotifierChanged);
+    super.dispose();
   }
 
   Future<void> _loadProfile() async {
@@ -1583,7 +1613,10 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
     final isSelected = _selectedProfileTab == index;
     return Expanded(
       child: InkWell(
-        onTap: () => setState(() => _selectedProfileTab = index),
+        onTap: () {
+          PatientProfileScreen.selectedTabNotifier.value = index;
+          setState(() => _selectedProfileTab = index);
+        },
         borderRadius: BorderRadius.circular(10),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
