@@ -113,30 +113,45 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
     ),
   ];
 
-  bool _timesMatch(String a, String b) {
-    if (a.trim() == b.trim()) return true;
+  int? _getSlotIndex(String s) {
+    final clean = s.toLowerCase().replaceAll(' ', '');
+    if (clean.contains('slot_1') || clean.contains('slot1')) return 0;
+    if (clean.contains('slot_2') || clean.contains('slot2')) return 1;
+    if (clean.contains('slot_3') || clean.contains('slot3')) return 2;
+    if (clean.contains('slot_4') || clean.contains('slot4')) return 3;
+    if (clean.contains('slot_5') || clean.contains('slot5')) return 4;
+    if (clean.contains('slot_6') || clean.contains('slot6')) return 5;
 
-    String simplify(String s) {
-      String clean = s.replaceAll(' ', '').toUpperCase();
-      // Remove AM/PM before the dash (e.g. '12:00PM-01:00PM' -> '12:00-01:00PM')
-      clean = clean.replaceAll(RegExp(r'(AM|PM)-'), '-');
-      // Normalize single vs double digit hours (e.g. '-01:00' -> '-1:00', '08:00' -> '8:00')
-      clean = clean.replaceAll(RegExp(r'(^|-)0'), r'$1');
-      return clean;
+    // Slot 0: 08:00 - 09:00
+    if ((clean.contains('08:') || clean.contains('8:') || clean.contains('8-') || clean.contains('08-')) &&
+        (clean.contains('09:') || clean.contains('9:') || clean.contains('-9') || clean.contains('-09'))) {
+      return 0;
+    }
+    // Slot 1: 09:00 - 10:00
+    if ((clean.contains('09:') || clean.contains('9:') || clean.contains('9-') || clean.contains('09-')) &&
+        clean.contains('10')) {
+      return 1;
+    }
+    // Slot 2: 10:00 - 11:00
+    if (clean.contains('10') && clean.contains('11')) return 2;
+    // Slot 3: 11:00 - 12:00
+    if (clean.contains('11') && clean.contains('12')) return 3;
+    // Slot 4: 12:00 - 01:00 PM (or 13:00)
+    if (clean.contains('12') && (clean.contains('1:') || clean.contains('01:') || clean.contains('-1') || clean.contains('-01') || clean.contains('13') || clean.contains('1pm') || clean.contains('01pm'))) {
+      return 4;
+    }
+    // Slot 5: 01:00 - 02:00 PM (or 14:00)
+    if ((clean.contains('1:') || clean.contains('01:') || clean.contains('1-') || clean.contains('01-') || clean.contains('13') || clean.contains('1pm') || clean.contains('01pm')) &&
+        (clean.contains('2:') || clean.contains('02:') || clean.contains('-2') || clean.contains('-02') || clean.contains('14') || clean.contains('2pm') || clean.contains('02pm'))) {
+      return 5;
     }
 
-    return simplify(a) == simplify(b);
+    return null;
   }
 
   List<OpdTimeSlot> get _slots {
     return _baseSlots.map((base) {
-      int count = 0;
-      for (final entry in _realBookedCounts.entries) {
-        if (_timesMatch(entry.key, base.displayTime)) {
-          count += entry.value;
-        }
-      }
-
+      final count = _realBookedCounts[base.id] ?? 0;
       final capacity = _slotCapacities[base.id] ?? _slotCapacities[base.displayTime] ?? base.maxCapacity;
       final isClosed = _closedSlots[base.id] == true || _closedSlots[base.displayTime] == true || base.isClosed;
 
@@ -166,6 +181,7 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
 
   void _startRealtimeListeners() {
     final formattedDate = DateFormat('yyyy-MM-dd').format(widget.selectedDate);
+    final altDate = '${widget.selectedDate.year}-${widget.selectedDate.month}-${widget.selectedDate.day}';
 
     _appointmentsSub?.cancel();
     _slotsSub?.cancel();
@@ -173,12 +189,13 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
     // 1. Live stream of appointments for this date
     _appointmentsSub = FirebaseFirestore.instance
         .collection('appointments')
-        .where('appointmentDate', isEqualTo: formattedDate)
+        .where('appointmentDate', whereIn: [formattedDate, altDate])
         .snapshots()
         .listen((querySnapshot) {
       final Map<String, int> counts = {};
 
       final currentHospId = widget.hospital.id.toLowerCase();
+      final currentHospName = widget.hospital.name.toLowerCase();
       final currentDeptId = widget.clinic.id.toLowerCase();
       final currentDeptName = widget.clinic.name.toLowerCase();
 
@@ -191,28 +208,52 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
         final appDeptId = (data['departmentId'] ?? data['clinicId'] ?? '').toString().toLowerCase();
         final appDeptName = (data['departmentName'] ?? data['clinicName'] ?? '').toString().toLowerCase();
 
-        // Check hospital match
+        // 1. Hospital match:
         final bool isHospitalMatch = appHospitalId.isEmpty ||
+            appHospitalName.isEmpty ||
             appHospitalId == currentHospId ||
             currentHospId.contains(appHospitalId) ||
             appHospitalId.contains(currentHospId) ||
-            (appHospitalName.isNotEmpty && (appHospitalName.contains('colombo south') || appHospitalName.contains('teaching hospital')));
+            appHospitalName == currentHospName ||
+            currentHospName.contains(appHospitalName) ||
+            appHospitalName.contains(currentHospName) ||
+            (currentHospName.contains('national') && (appHospitalName.contains('national') || appHospitalId.contains('nhsl') || appHospitalId.contains('hosp-001') || appHospitalId.contains('hosp_02'))) ||
+            (currentHospName.contains('colombo south') && (appHospitalName.contains('colombo south') || appHospitalId.contains('csth') || appHospitalName.contains('kalubowila'))) ||
+            (currentHospName.contains('teaching') && appHospitalName.contains('teaching')) ||
+            (currentHospName.contains('ridgeway') && (appHospitalName.contains('ridgeway') || appHospitalId.contains('lrh'))) ||
+            (currentHospName.contains('castle') && (appHospitalName.contains('castle') || appHospitalId.contains('cshw')));
 
-        // Check clinic match
-        final bool isClinicMatch = appDeptId == currentDeptId ||
+        // 2. Clinic match:
+        final bool isClinicMatch = appDeptId.isEmpty ||
+            appDeptName.isEmpty ||
+            appDeptId == currentDeptId ||
             appDeptId.contains(currentDeptId) ||
             currentDeptId.contains(appDeptId) ||
-            (currentDeptName.contains('general') && (appDeptName.contains('general') || appDeptId.contains('gen_med'))) ||
-            (currentDeptName.contains('ortho') && (appDeptName.contains('ortho') || appDeptId.contains('ortho'))) ||
-            (currentDeptName.contains('ent') && (appDeptName.contains('ent') || appDeptId.contains('ent'))) ||
-            (currentDeptName.contains('pedia') && (appDeptName.contains('pedia') || appDeptId.contains('pedia'))) ||
-            (currentDeptName.contains('derma') && (appDeptName.contains('derma') || appDeptId.contains('derma')));
+            appDeptName == currentDeptName ||
+            currentDeptName.contains(appDeptName) ||
+            appDeptName.contains(currentDeptName) ||
+            (currentDeptName.contains('derma') && (appDeptName.contains('derma') || appDeptName.contains('skin') || appDeptId.contains('derma') || appDeptId.contains('dep-004'))) ||
+            (currentDeptName.contains('skin') && (appDeptName.contains('skin') || appDeptName.contains('derma') || appDeptId.contains('derma'))) ||
+            (currentDeptName.contains('general') && (appDeptName.contains('general') || appDeptId.contains('gen_med') || appDeptId.contains('dep-001'))) ||
+            (currentDeptName.contains('ortho') && (appDeptName.contains('ortho') || appDeptId.contains('ortho') || appDeptId.contains('bone'))) ||
+            (currentDeptName.contains('ent') && (appDeptName.contains('ent') || appDeptId.contains('ent') || appDeptId.contains('ear'))) ||
+            (currentDeptName.contains('pedia') && (appDeptName.contains('pedia') || appDeptId.contains('pedia') || appDeptId.contains('child')));
 
         if (!isHospitalMatch || !isClinicMatch) continue;
 
-        final slotTime = (data['timeSlot'] as String? ?? '').trim();
-        if (slotTime.isNotEmpty) {
-          counts[slotTime] = (counts[slotTime] ?? 0) + 1;
+        String slotTime = (data['timeSlot'] as String? ?? '').trim();
+        if (slotTime.isEmpty) {
+          final sTime = (data['startTime'] as String? ?? '').trim();
+          final eTime = (data['endTime'] as String? ?? '').trim();
+          if (sTime.isNotEmpty && eTime.isNotEmpty) {
+            slotTime = '$sTime - $eTime';
+          }
+        }
+
+        final slotIdx = _getSlotIndex(slotTime.isNotEmpty ? slotTime : (data['slotId'] ?? ''));
+        if (slotIdx != null && slotIdx >= 0 && slotIdx < _baseSlots.length) {
+          final baseSlotId = _baseSlots[slotIdx].id;
+          counts[baseSlotId] = (counts[baseSlotId] ?? 0) + 1;
         }
       }
 
@@ -298,6 +339,7 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
+        settings: const RouteSettings(name: 'AppointmentReview'),
         builder: (context) => AppointmentReviewScreen(
           hospital: widget.hospital,
           clinic: widget.clinic,
@@ -683,18 +725,62 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
           ),
           const SizedBox(height: 10),
 
-          // 5 Segments
+          // 5 Segments with interactive navigation
           Row(
             children: [
-              _buildStepSegment(isActive: false, isCompleted: true),
+              _buildStepSegment(
+                step: 1,
+                label: 'Patient',
+                isActive: false,
+                isCompleted: true,
+                onTap: () {
+                  Navigator.of(context).popUntil((route) => route.settings.name == 'CaregiverSetup' || route.isFirst);
+                },
+              ),
               const SizedBox(width: 6),
-              _buildStepSegment(isActive: false, isCompleted: true),
+              _buildStepSegment(
+                step: 2,
+                label: 'Hospital',
+                isActive: false,
+                isCompleted: true,
+                onTap: () {
+                  int count = 0;
+                  Navigator.of(context).popUntil((route) {
+                    return route.settings.name == 'HospitalSelection' || count++ == 3;
+                  });
+                },
+              ),
               const SizedBox(width: 6),
-              _buildStepSegment(isActive: false, isCompleted: true),
+              _buildStepSegment(
+                step: 3,
+                label: 'Clinic',
+                isActive: false,
+                isCompleted: true,
+                onTap: () {
+                  int count = 0;
+                  Navigator.of(context).popUntil((route) {
+                    return route.settings.name == 'ClinicSelection' || count++ == 2;
+                  });
+                },
+              ),
               const SizedBox(width: 6),
-              _buildStepSegment(isActive: false, isCompleted: true),
+              _buildStepSegment(
+                step: 4,
+                label: 'Date',
+                isActive: false,
+                isCompleted: true,
+                onTap: () {
+                  Navigator.of(context).pop();
+                },
+              ),
               const SizedBox(width: 6),
-              _buildStepSegment(isActive: true, isCompleted: false),
+              _buildStepSegment(
+                step: 5,
+                label: 'Slot',
+                isActive: true,
+                isCompleted: false,
+                onTap: null,
+              ),
             ],
           ),
         ],
@@ -702,17 +788,50 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
     );
   }
 
-  Widget _buildStepSegment({required bool isActive, required bool isCompleted}) {
+  Widget _buildStepSegment({
+    required int step,
+    required String label,
+    required bool isActive,
+    required bool isCompleted,
+    VoidCallback? onTap,
+  }) {
+    final color = isActive
+        ? AppColors.accentColor
+        : isCompleted
+            ? AppColors.statusGreen
+            : AppColors.cardBorder;
+
     return Expanded(
-      child: Container(
-        height: 6,
-        decoration: BoxDecoration(
-          color: isActive
-              ? AppColors.accentColor
-              : isCompleted
-                  ? AppColors.statusGreen
-                  : AppColors.cardBorder,
-          borderRadius: BorderRadius.circular(3),
+      child: Tooltip(
+        message: 'Step $step: $label${isCompleted ? ' (Tap to edit)' : ''}',
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(4),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Column(
+              children: [
+                Container(
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$step. $label',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: isActive || isCompleted ? FontWeight.bold : FontWeight.normal,
+                    color: isActive ? AppColors.accentColor : (isCompleted ? AppColors.headingText : AppColors.bodyText),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

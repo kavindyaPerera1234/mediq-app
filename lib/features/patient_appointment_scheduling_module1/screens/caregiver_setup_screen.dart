@@ -62,6 +62,7 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
+        settings: const RouteSettings(name: 'HospitalSelection'),
         builder: (context) => HospitalSelectionScreen(
           isCaregiverBooking: _bookingMode == 'someone_else',
           patientName: _bookingMode == 'someone_else' ? _nameController.text.trim() : selfName,
@@ -257,15 +258,15 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
           // 5 Clean Distinct Segments
           Row(
             children: [
-              _buildStepSegment(isActive: true, isCompleted: false),
+              _buildStepSegment(step: 1, label: 'Patient', isActive: true, isCompleted: false),
               const SizedBox(width: 6),
-              _buildStepSegment(isActive: false, isCompleted: false),
+              _buildStepSegment(step: 2, label: 'Hospital', isActive: false, isCompleted: false),
               const SizedBox(width: 6),
-              _buildStepSegment(isActive: false, isCompleted: false),
+              _buildStepSegment(step: 3, label: 'Clinic', isActive: false, isCompleted: false),
               const SizedBox(width: 6),
-              _buildStepSegment(isActive: false, isCompleted: false),
+              _buildStepSegment(step: 4, label: 'Date', isActive: false, isCompleted: false),
               const SizedBox(width: 6),
-              _buildStepSegment(isActive: false, isCompleted: false),
+              _buildStepSegment(step: 5, label: 'Slot', isActive: false, isCompleted: false),
             ],
           ),
         ],
@@ -273,17 +274,42 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
     );
   }
 
-  Widget _buildStepSegment({required bool isActive, required bool isCompleted}) {
+  Widget _buildStepSegment({
+    required int step,
+    required String label,
+    required bool isActive,
+    required bool isCompleted,
+  }) {
+    final color = isActive
+        ? AppColors.accentColor
+        : isCompleted
+            ? AppColors.statusGreen
+            : AppColors.cardBorder;
+
     return Expanded(
-      child: Container(
-        height: 6,
-        decoration: BoxDecoration(
-          color: isActive
-              ? AppColors.accentColor
-              : isCompleted
-                  ? AppColors.statusGreen
-                  : AppColors.cardBorder,
-          borderRadius: BorderRadius.circular(3),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Column(
+          children: [
+            Container(
+              height: 6,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '$step. $label',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                color: isActive ? AppColors.accentColor : AppColors.bodyText,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ),
       ),
     );

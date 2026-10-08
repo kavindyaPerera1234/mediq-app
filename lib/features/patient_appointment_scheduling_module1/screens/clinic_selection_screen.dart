@@ -54,7 +54,7 @@ class ClinicSelectionScreen extends StatelessWidget {
               child: Column(
                 children: [
                   // Segmented 5-Step Stepper (Step 3 of 5)
-                  _buildSegmentedStepper(),
+                  _buildSegmentedStepper(context),
 
                   Expanded(
                     child: Padding(
@@ -108,7 +108,7 @@ class ClinicSelectionScreen extends StatelessWidget {
   }
 
   // Segmented 5-Step Stepper (Steps 1 & 2 Green, Step 3 Blue Active, Steps 4 & 5 Grey)
-  Widget _buildSegmentedStepper() {
+  Widget _buildSegmentedStepper(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
       decoration: BoxDecoration(
@@ -141,18 +141,52 @@ class ClinicSelectionScreen extends StatelessWidget {
           ),
           const SizedBox(height: 10),
 
-          // 5 Segments
+          // 5 Segments with interactive navigation
           Row(
             children: [
-              _buildStepSegment(isActive: false, isCompleted: true),
+              _buildStepSegment(
+                step: 1,
+                label: 'Patient',
+                isActive: false,
+                isCompleted: true,
+                onTap: () {
+                  Navigator.of(context).popUntil((route) => route.settings.name == 'CaregiverSetup' || route.isFirst);
+                },
+              ),
               const SizedBox(width: 6),
-              _buildStepSegment(isActive: false, isCompleted: true),
+              _buildStepSegment(
+                step: 2,
+                label: 'Hospital',
+                isActive: false,
+                isCompleted: true,
+                onTap: () {
+                  Navigator.of(context).pop();
+                },
+              ),
               const SizedBox(width: 6),
-              _buildStepSegment(isActive: true, isCompleted: false),
+              _buildStepSegment(
+                step: 3,
+                label: 'Clinic',
+                isActive: true,
+                isCompleted: false,
+                onTap: null,
+              ),
               const SizedBox(width: 6),
-              _buildStepSegment(isActive: false, isCompleted: false),
+              _buildStepSegment(
+                step: 4,
+                label: 'Date',
+                isActive: false,
+                isCompleted: false,
+                onTap: null,
+              ),
               const SizedBox(width: 6),
-              _buildStepSegment(isActive: false, isCompleted: false),
+              _buildStepSegment(
+                step: 5,
+                label: 'Slot',
+                isActive: false,
+                isCompleted: false,
+                onTap: null,
+              ),
             ],
           ),
         ],
@@ -160,17 +194,50 @@ class ClinicSelectionScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStepSegment({required bool isActive, required bool isCompleted}) {
+  Widget _buildStepSegment({
+    required int step,
+    required String label,
+    required bool isActive,
+    required bool isCompleted,
+    VoidCallback? onTap,
+  }) {
+    final color = isActive
+        ? AppColors.accentColor
+        : isCompleted
+            ? AppColors.statusGreen
+            : AppColors.cardBorder;
+
     return Expanded(
-      child: Container(
-        height: 6,
-        decoration: BoxDecoration(
-          color: isActive
-              ? AppColors.accentColor
-              : isCompleted
-                  ? AppColors.statusGreen
-                  : AppColors.cardBorder,
-          borderRadius: BorderRadius.circular(3),
+      child: Tooltip(
+        message: 'Step $step: $label${isCompleted ? ' (Tap to edit)' : ''}',
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(4),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Column(
+              children: [
+                Container(
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$step. $label',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: isActive || isCompleted ? FontWeight.bold : FontWeight.normal,
+                    color: isActive ? AppColors.accentColor : (isCompleted ? AppColors.headingText : AppColors.bodyText),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -264,6 +331,7 @@ class ClinicSelectionScreen extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
+            settings: const RouteSettings(name: 'DateSelection'),
             builder: (context) => DateSelectionScreen(
               hospital: hospital,
               clinic: clinic,
