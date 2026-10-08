@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class AppointmentModel {
   final String id;
 
@@ -50,76 +52,64 @@ class AppointmentModel {
   });
 
   factory AppointmentModel.fromFirestore(
-        String id,
-        Map<String, dynamic> data,
-    ) {
-        return AppointmentModel(
-          id: id,
-          patientId: data['patientId'] ?? '',
+    String id,
+    Map<String, dynamic> data,
+  ) {
+    return AppointmentModel(
+      id: id,
+      patientId: data['patientId'] ?? data['userId'] ?? '',
+      caregiverId: data['caregiverId'],
+      caregiverPatientId: data['caregiverPatientId'],
+      hospitalId: data['hospitalId'] ?? '',
+      departmentId: data['departmentId'] ?? data['clinicId'] ?? '',
+      slotId: data['slotId'] ?? '',
+      patientName: data['patientName'] ?? '',
+      appointmentDate: data['appointmentDate'] ?? '',
+      startTime: data['startTime'] ?? '',
+      endTime: data['endTime'] ?? '',
+      status: data['status'] ?? 'confirmed',
+      hospitalName: data['hospitalName'] ?? '',
+      departmentName: data['departmentName'] ?? data['clinicName'] ?? '',
+      tokenCode: data['tokenCode'] ?? data['tokenNumber'] ?? '',
+      timeSlot: data['timeSlot'] ?? '',
+      createdAt: _parseTimestamp(data['createdAt']),
+      updatedAt: _parseTimestamp(data['updatedAt']),
+      cancelledAt: _parseTimestamp(data['cancelledAt']),
+      completedAt: _parseTimestamp(data['completedAt']),
+    );
+  }
 
-          caregiverId: data['caregiverId'],
+  static DateTime? _parseTimestamp(dynamic value) {
+    if (value == null) return null;
+    if (value is Timestamp) return value.toDate();
+    if (value is String) return DateTime.tryParse(value);
+    if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
+    return null;
+  }
 
-          caregiverPatientId:
-          data['caregiverPatientId'],
-
-          hospitalId: data['hospitalId'] ?? '',
-
-          departmentId: data['departmentId'] ?? '',
-
-          slotId: data['slotId'] ?? '',
-
-          patientName: data['patientName'] ?? '',
-
-          appointmentDate:
-          data['appointmentDate'] ?? '',
-
-          startTime:
-          data['startTime'] ?? '',
-
-          endTime:
-          data['endTime'] ?? '',
-
-          status:
-          data['status'] ?? 'confirmed',
-
-          hospitalName: data['hospitalName'] ?? '',
-
-          departmentName: data['departmentName'] ?? '',
-
-          tokenCode: data['tokenCode'] ?? '',
-
-          timeSlot: data['timeSlot'] ?? '',
-
-          createdAt:
-          data['createdAt']?.toDate(),
-
-          updatedAt:
-          data['updatedAt']?.toDate(),
-
-          cancelledAt:
-          data['cancelledAt']?.toDate(),
-
-          completedAt:
-          data['completedAt']?.toDate(),
-        );
-      }
-
-      Map<String, dynamic> toFirestore(){
-        return {
-          'patientId': patientId,
-          'caregiverId': caregiverId,
-          'caregiverPatientId': caregiverPatientId,
-          'hospitalId': hospitalId,
-          'departmentId': departmentId,
-          'slotId': slotId,
-          'appointmentDate': appointmentDate,
-          'startTime': startTime,
-          'endTime': endTime,
-          'status': status,
-          'createdAt': createdAt,
-          'updatedAt': updatedAt,
-          'cancelledAt': cancelledAt,
-          'completedAt': completedAt,
-        };
-      }
+  Map<String, dynamic> toFirestore() {
+    return {
+      'patientId': patientId,
+      'caregiverId': caregiverId,
+      'caregiverPatientId': caregiverPatientId,
+      'hospitalId': hospitalId,
+      'departmentId': departmentId,
+      'slotId': slotId,
+      'appointmentDate': appointmentDate,
+      'startTime': startTime,
+      'endTime': endTime,
+      'status': status,
+      'tokenCode': tokenCode,
+      'tokenNumber': tokenCode,
+      'patientName': patientName,
+      'hospitalName': hospitalName,
+      'departmentName': departmentName,
+      'clinicName': departmentName,
+      'timeSlot': timeSlot,
+      'createdAt': createdAt,
+      'updatedAt': updatedAt,
+      'cancelledAt': cancelledAt,
+      'completedAt': completedAt,
+    };
+  }
 }

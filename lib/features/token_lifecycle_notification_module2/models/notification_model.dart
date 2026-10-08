@@ -90,5 +90,24 @@ class NotificationModel {
 
   }
 
+  factory NotificationModel.fromFirestore(String id, Map<String, dynamic> data) {
+    return NotificationModel(
+      id: id,
+      type: data['type'] ?? '',
+      title: data['title'] ?? '',
+      message: data['message'] ?? '',
+      status: data['status'] ?? (data['isRead'] == true ? 'READ' : 'NEW'),
+      isRead: data['isRead'] ?? false,
+      tokenNumber: data['tokenNumber'] ?? data['tokenCode'],
+      hospitalName: data['hospitalName'],
+      clinicName: data['clinicName'] ?? data['departmentName'],
+      dateTime: data['createdAt'] != null ? data['createdAt'].toString() : null,
+      nowServing: data['nowServing'],
+      peopleAhead: data['patientsAhead'] != null ? data['patientsAhead'].toString() : data['peopleAhead'],
+      estimatedWait: data['estimatedWait'],
+      affectedOPD: data['affectedOPD'],
+      delayTime: data['delayTime'],
+    );
+  }
 
 }

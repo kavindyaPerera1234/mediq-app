@@ -7,6 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../auth_live_queue_module3/services/auth_service.dart';
+import '../../auth_live_queue_module3/screens/queue/live_queue_main_screen.dart';
+import 'appointment_details_screen.dart';
 import 'my_appointments_screen.dart';
 
 class DigitalTokenDetailsScreen extends StatefulWidget {
@@ -26,12 +29,54 @@ class _DigitalTokenDetailsScreenState
     extends State<DigitalTokenDetailsScreen> {
   bool _isDownloading = false;
 
-  Future<DocumentSnapshot<Map<String, dynamic>>>
+  Future<DocumentSnapshot<Map<String, dynamic>>?>
       _getAppointment() async {
-    return FirebaseFirestore.instance
-        .collection('appointments')
-        .doc(widget.appointmentId)
-        .get();
+    if (widget.appointmentId.isNotEmpty) {
+      final doc = await FirebaseFirestore.instance
+          .collection('appointments')
+          .doc(widget.appointmentId)
+          .get();
+      if (doc.exists) return doc;
+
+      final byToken = await FirebaseFirestore.instance
+          .collection('appointments')
+          .where('tokenCode', isEqualTo: widget.appointmentId)
+          .limit(1)
+          .get();
+      if (byToken.docs.isNotEmpty) return byToken.docs.first;
+    }
+
+    final ids = <String>[];
+    final user = AuthService().currentUser;
+    if (user != null) {
+      if (user.nic != null && user.nic!.isNotEmpty) ids.add(user.nic!);
+      if (user.phoneNumber.isNotEmpty) ids.add(user.phoneNumber);
+      if (user.userId.isNotEmpty) ids.add(user.userId);
+    }
+    if (ids.isEmpty) ids.add('200164801234');
+
+    for (final id in ids) {
+      final q1 = await FirebaseFirestore.instance
+          .collection('appointments')
+          .where('patientId', isEqualTo: id)
+          .get();
+      if (q1.docs.isNotEmpty) {
+        final sorted = List<QueryDocumentSnapshot<Map<String, dynamic>>>.from(q1.docs)
+          ..sort((a, b) => (b.data()['appointmentDate'] ?? '').toString().compareTo((a.data()['appointmentDate'] ?? '').toString()));
+        return sorted.first;
+      }
+
+      final q2 = await FirebaseFirestore.instance
+          .collection('appointments')
+          .where('patientNic', isEqualTo: id)
+          .get();
+      if (q2.docs.isNotEmpty) {
+        final sorted = List<QueryDocumentSnapshot<Map<String, dynamic>>>.from(q2.docs)
+          ..sort((a, b) => (b.data()['appointmentDate'] ?? '').toString().compareTo((a.data()['appointmentDate'] ?? '').toString()));
+        return sorted.first;
+      }
+    }
+    return null;
   }
 
   String _createQrData({
@@ -204,7 +249,7 @@ Time: $timeSlot
       ),
 
       body: FutureBuilder<
-          DocumentSnapshot<Map<String, dynamic>>>(
+          DocumentSnapshot<Map<String, dynamic>>?>(
         future: _getAppointment(),
 
         builder: (context, snapshot) {
@@ -228,6 +273,7 @@ Time: $timeSlot
           }
 
           if (!snapshot.hasData ||
+              snapshot.data == null ||
               !snapshot.data!.exists) {
             return const Center(
               child: Text(
@@ -376,15 +422,50 @@ Time: $timeSlot
 
                     children: [
 
-                      const Text(
-                        'Appointment Details',
-                        style: TextStyle(
-                          color:
-                              AppColors.textPrimary,
-                          fontSize: 18,
-                          fontWeight:
-                              FontWeight.bold,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Appointment Details',
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          TextButton.icon(
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            icon: const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AppColors.primary),
+                            label: const Text(
+                              'Manage Visit',
+                              style: TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => AppointmentDetailsScreen(
+                                    appointmentId: snapshot.data!.id,
+                                    token: tokenCode,
+                                    patientName: patientName,
+                                    hospitalName: hospitalName,
+                                    clinic: clinicName,
+                                    date: appointmentDate,
+                                    time: timeSlot,
+                                    status: status,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
                       ),
 
                       const SizedBox(height: 18),
@@ -417,6 +498,47 @@ Time: $timeSlot
                         Icons.access_time,
                         'Time',
                         timeSlot,
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.edit_calendar_rounded, size: 18, color: AppColors.primary),
+                          label: const Text(
+                            'Manage Appointment (Reschedule / Cancel)',
+                            style: TextStyle(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            side: const BorderSide(color: AppColors.primary),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => AppointmentDetailsScreen(
+                                  appointmentId: snapshot.data!.id,
+                                  token: tokenCode,
+                                  patientName: patientName,
+                                  hospitalName: hospitalName,
+                                  clinic: clinicName,
+                                  date: appointmentDate,
+                                  time: timeSlot,
+                                  status: status,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ],
                   ),
@@ -503,6 +625,46 @@ Time: $timeSlot
                       ),
 
                       const SizedBox(height: 18),
+
+                      // ==========================
+                      // TRACK LIVE QUEUE CTA
+                      // ==========================
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 2,
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const LiveQueueMainScreen(),
+                              ),
+                            );
+                          },
+                          icon: const Icon(
+                            Icons.format_list_bulleted_rounded,
+                            color: Colors.white,
+                          ),
+                          label: const Text(
+                            'Track Live Queue',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
 
                       // ==========================
                       // DOWNLOAD BUTTON
