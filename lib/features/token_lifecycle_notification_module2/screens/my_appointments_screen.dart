@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../auth_live_queue_module3/services/auth_service.dart';
 import 'appointment_details_screen.dart';
 import '../../patient_appointment_scheduling_module1/screens/caregiver_setup_screen.dart';
 import '../services/appointment_service.dart';
 import '../models/appointment_model.dart';
 import 'digital_token_details_screen.dart';
+import 'qr_scanner_screen.dart';
 
 class MyAppointmentsScreen extends StatefulWidget {
     const MyAppointmentsScreen({
@@ -29,6 +31,16 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
     List<AppointmentModel> appointments = [];
     bool isLoading = true;
 
+    String get _currentPatientId {
+      final user = AuthService().currentUser;
+      if (user != null) {
+        if (user.nic != null && user.nic!.trim().isNotEmpty) return user.nic!.trim();
+        if (user.phoneNumber.trim().isNotEmpty) return user.phoneNumber.trim();
+        if (user.userId.isNotEmpty) return user.userId.trim();
+      }
+      return '200164801234';
+    }
+
     @override
     void initState() {
         super.initState();  
@@ -36,11 +48,12 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
         loadAppointments();
     }
     Future<void> loadAppointments() async {
-        final data =
-        await _appointmentService.getUpcomingAppointments(
-            "200164801234",
+        setState(() => isLoading = true);
+        final data = await _appointmentService.getUpcomingAppointments(
+            _currentPatientId,
         );
         print("UI received appointments: ${data.length}");
+        if (!mounted) return;
         setState(() {
             appointments = data;
             isLoading = false;
@@ -54,15 +67,15 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
             appBar: AppBar(
                 backgroundColor: Colors.white,
                 elevation: 0,
-                leading: IconButton(
-                    icon: Icon(
+                leading: Navigator.canPop(context) ? IconButton(
+                    icon: const Icon(
                         Icons.arrow_back_ios_new,
                         color: AppColors.textPrimary,
                     ),
                     onPressed: (){
                         Navigator.pop(context);
                     },
-                ),
+                ) : null,
 
                 title: Column(
                     crossAxisAlignment:
@@ -88,6 +101,20 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
 
                     ],
                 ),
+                actions: [
+                    IconButton(
+                        icon: const Icon(Icons.qr_code_scanner_rounded, color: AppColors.primary),
+                        tooltip: 'Scan Hospital Check-in QR Code',
+                        onPressed: () {
+                            Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => const QrScannerScreen(),
+                                ),
+                            );
+                        },
+                    ),
+                ],
             ),
 
             body: Column(
@@ -148,73 +175,78 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                             child: Column(
                                 children: [
                                     Expanded(
-                                        child: ListView(
-                                            children: [
-                                                if (isLoading)
-                                                const Center(
-                                                    child: CircularProgressIndicator(),
-                                                )
-                                                else if (appointments.isEmpty)
-                                                const Center(
-                                                    child: Text(
-                                                        "No appointments found",
-                                                    ),
-                                                )
-                                                else
-                                                ...appointments
-                                                .where((appointment) {
-                                                    if(selectedTab == 0){
+                                        child: Builder(
+                                            builder: (context) {
+                                                if (isLoading) {
+                                                    return const Center(child: CircularProgressIndicator());
+                                                }
+                                                final filtered = appointments.where((appointment) {
+                                                    if (selectedTab == 0) {
                                                         return appointment.status == "confirmed" ||
-                                                        appointment.status == "rescheduled";
+                                                            appointment.status == "rescheduled" ||
+                                                            appointment.status == "waiting";
                                                     }
-                                                    if(selectedTab == 1){
+                                                    if (selectedTab == 1) {
                                                         return appointment.status == "completed";
                                                     }
-                                                    if(selectedTab == 2){
+                                                    if (selectedTab == 2) {
                                                         return appointment.status == "cancelled";
                                                     }
-                                                   return false; 
-                                                })
+                                                    return false;
+                                                }).toList();
 
-                                                .map((appointment){
-                                                    return appointmentCard(
-                                                        hospital: appointment.hospitalName,
-
-                                                        clinic: appointment.departmentName,
-
-                                                        time: appointment.timeSlot,
-
-                                                        date: appointment.appointmentDate,
-
-                                                        token: appointment.tokenCode,
-
-                                                        status: appointment.status,
-
-                                                        patientName: appointment.patientName,
-
-                                                        appointmentId: appointment.id,
-
-                                                        color: appointment.status == "confirmed"
-                                                        ? Colors.green
-                                                        : Colors.orange,
-                                                    );
-                                                }).toList(),
-
-                                                if(selectedTab != 0)
-                                                Padding(
-                                                    padding:
-                                                    const EdgeInsets.only(top:100),
-                                                    child: Center(
-                                                        child: Text(
-                                                            "No appointments found",
-                                                            style: TextStyle(
-                                                                color:
-                                                                AppColors.textSecondary,
+                                                if (filtered.isEmpty) {
+                                                    final tabName = tabs[selectedTab].toLowerCase();
+                                                    return Center(
+                                                        child: Padding(
+                                                            padding: const EdgeInsets.all(32.0),
+                                                            child: Column(
+                                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                                children: [
+                                                                    Icon(Icons.event_note_outlined, size: 64, color: Colors.grey.shade400),
+                                                                    const SizedBox(height: 16),
+                                                                    Text(
+                                                                        "No $tabName appointments",
+                                                                        style: const TextStyle(
+                                                                            fontSize: 16,
+                                                                            fontWeight: FontWeight.bold,
+                                                                            color: AppColors.textPrimary,
+                                                                        ),
+                                                                    ),
+                                                                    const SizedBox(height: 8),
+                                                                    Text(
+                                                                        selectedTab == 0
+                                                                            ? "You do not have any upcoming visits booked."
+                                                                            : "No $tabName records found for your account.",
+                                                                        textAlign: TextAlign.center,
+                                                                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                                                                    ),
+                                                                ],
                                                             ),
                                                         ),
-                                                    ),
-                                                ),
-                                            ],
+                                                    );
+                                                }
+
+                                                return ListView.builder(
+                                                    itemCount: filtered.length,
+                                                    itemBuilder: (context, i) {
+                                                        final appointment = filtered[i];
+                                                        return appointmentCard(
+                                                            hospital: appointment.hospitalName,
+                                                            clinic: appointment.departmentName,
+                                                            time: appointment.timeSlot,
+                                                            date: appointment.appointmentDate,
+                                                            token: appointment.tokenCode,
+                                                            status: appointment.status,
+                                                            patientName: appointment.patientName,
+                                                            appointmentId: appointment.id,
+                                                            color: appointment.status == "confirmed"
+                                                                ? Colors.green
+                                                                : Colors.orange,
+                                                        );
+                                                    },
+                                                );
+                                            },
                                         ),
                                     ),
 
@@ -383,25 +415,37 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                                             ),
                                         ],
                                     ),
-                                    Text.rich(
-                                        TextSpan(
-                                            text:"Token: ",
-                                            children:[
-                                                TextSpan(
-                                                    text:
-                                                    token.isEmpty ? "N/A" : token,
-                                                    style: TextStyle(
-                                                        color: AppColors.primary,
-                                                        fontWeight: FontWeight.bold,
+                                    InkWell(
+                                        onTap: () {
+                                            Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                    builder: (context) => DigitalTokenDetailsScreen(
+                                                        appointmentId: appointmentId,
                                                     ),
-
-                                                )
-
-                                            ],
-
+                                                ),
+                                            );
+                                        },
+                                        borderRadius: BorderRadius.circular(6),
+                                        child: Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                            child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                    const Icon(Icons.qr_code_2_rounded, size: 16, color: AppColors.primary),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                        token.isEmpty ? "View Token" : "Token: $token",
+                                                        style: const TextStyle(
+                                                            color: AppColors.primary,
+                                                            fontWeight: FontWeight.bold,
+                                                            fontSize: 13,
+                                                        ),
+                                                    ),
+                                                ],
+                                            ),
                                         ),
-
-                                    )
+                                    ),
 
                                 ],
 

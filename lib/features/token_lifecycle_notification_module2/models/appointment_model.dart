@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class AppointmentModel {
   final String id;
 
@@ -90,18 +92,19 @@ class AppointmentModel {
 
           timeSlot: data['timeSlot'] ?? '',
 
-          createdAt:
-          data['createdAt']?.toDate(),
-
-          updatedAt:
-          data['updatedAt']?.toDate(),
-
-          cancelledAt:
-          data['cancelledAt']?.toDate(),
-
-          completedAt:
-          data['completedAt']?.toDate(),
+          createdAt: _parseTimestamp(data['createdAt']),
+          updatedAt: _parseTimestamp(data['updatedAt']),
+          cancelledAt: _parseTimestamp(data['cancelledAt']),
+          completedAt: _parseTimestamp(data['completedAt']),
         );
+      }
+
+      static DateTime? _parseTimestamp(dynamic value) {
+        if (value == null) return null;
+        if (value is Timestamp) return value.toDate();
+        if (value is String) return DateTime.tryParse(value);
+        if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
+        return null;
       }
 
       Map<String, dynamic> toFirestore(){

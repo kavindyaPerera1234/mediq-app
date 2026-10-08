@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import 'assisted_queue_setup_screen.dart';
 import 'cancel_appointment_screen.dart';
+import 'digital_token_details_screen.dart';
 import 'reschedule_appointment_screen.dart';
+import '../../auth_live_queue_module3/screens/queue/live_queue_main_screen.dart';
 
 class AppointmentDetailsScreen extends StatelessWidget {
   final String appointmentId;
@@ -207,7 +209,14 @@ class AppointmentDetailsScreen extends StatelessWidget {
                   ),
                 ),
 
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const LiveQueueMainScreen(),
+                    ),
+                  );
+                },
 
                 label: const Text(
                   "View Live Queue",
@@ -221,20 +230,49 @@ class AppointmentDetailsScreen extends StatelessWidget {
 
             const SizedBox(height: 10),
 
+            // Digital Token & QR Code Action
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.qr_code_2_rounded, color: Colors.white),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DigitalTokenDetailsScreen(
+                        appointmentId: appointmentId,
+                      ),
+                    ),
+                  );
+                },
+                label: const Text(
+                  "View Digital Token & QR Code",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // Assisted Queue & Caregiver Alert Setup
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
                 icon: const Icon(
-                  Icons.people_outline,
-                  color: AppColors.primary,
+                  Icons.accessibility_new_rounded,
+                  color: Color(0xFF0D9488),
                 ),
                 style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 14,
-                  ),
-                  side: const BorderSide(
-                    color: AppColors.primary,
-                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  side: const BorderSide(color: Color(0xFF0D9488)),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -246,14 +284,13 @@ class AppointmentDetailsScreen extends StatelessWidget {
                       builder: (context) => AssistedQueueSetupScreen(
                         appointmentId: appointmentId,
                       ),
-                    ),  
+                    ),
                   );
                 },
-                
                 label: const Text(
-                  "Assisted Queue",
+                  "Assisted Queue & Caregiver Alert",
                   style: TextStyle(
-                    color: AppColors.primary,
+                    color: Color(0xFF0D9488),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
