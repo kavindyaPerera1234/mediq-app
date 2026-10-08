@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_accessibility.dart';
 import '../../services/live_queue_service.dart';
 import '../../models/queue_entry_model.dart';
 
@@ -12,23 +13,26 @@ class QueueTimelineScreen extends StatelessWidget {
     final queueService = LiveQueueService();
 
     return AnimatedBuilder(
-      animation: queueService,
+      animation: Listenable.merge([
+        queueService,
+        AppAccessibility.isHighContrastMode,
+      ]),
       builder: (context, _) {
         final session = queueService.session;
         final myEntry = queueService.myEntry;
         final queue = queueService.queue;
 
         return Scaffold(
-          backgroundColor: AppColors.background,
+          backgroundColor: AppColors.pageBg,
           appBar: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
             title: Text(
               'Queue Timeline',
-              style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+              style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.headingText),
             ),
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textPrimary),
+              icon: Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.headingText),
               onPressed: () => Navigator.pop(context),
             ),
           ),
@@ -43,13 +47,13 @@ class QueueTimelineScreen extends StatelessWidget {
                     style: GoogleFonts.inter(
                       fontSize: 24,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary,
+                      color: AppColors.headingText,
                     ),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     'Real-time token calls and clinic progress for ${session.departmentName} (${session.roomNumber}).',
-                    style: GoogleFonts.inter(fontSize: 14, color: AppColors.textSecondary, height: 1.4),
+                    style: GoogleFonts.inter(fontSize: 14, color: AppColors.bodyText, height: 1.4),
                   ),
 
                   const SizedBox(height: 28),
@@ -157,15 +161,19 @@ class QueueTimelineScreen extends StatelessWidget {
     Color? customColor,
     Color? customLightColor,
   }) {
+    final isDark = AppAccessibility.isHighContrastMode.value;
+
     Color pointColor = customColor ??
         (isTarget
-            ? AppColors.primary
-            : (isCurrent ? AppColors.success : (isPast ? AppColors.textSecondary : AppColors.textMuted)));
+            ? AppColors.accentColor
+            : (isCurrent ? AppColors.success : (isPast ? AppColors.bodyText : AppColors.textMuted)));
 
     Color bgColor = customLightColor ??
         (isCurrent
-            ? AppColors.successLight
-            : (isTarget ? AppColors.primaryLight : AppColors.surface));
+            ? (isDark ? const Color(0xFF14532D) : AppColors.successLight)
+            : (isTarget
+                ? (isDark ? const Color(0xFF243356) : AppColors.primaryLight)
+                : AppColors.cardSurface));
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 20.0),
@@ -180,7 +188,7 @@ class QueueTimelineScreen extends StatelessWidget {
               style: GoogleFonts.inter(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
-                color: isTarget ? AppColors.primary : AppColors.textSecondary,
+                color: isTarget ? AppColors.accentColor : AppColors.bodyText,
               ),
             ),
           ),
@@ -204,11 +212,15 @@ class QueueTimelineScreen extends StatelessWidget {
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: isTarget
-                    ? AppColors.primaryLight.withValues(alpha: 0.5)
-                    : (isCurrent ? AppColors.successLight.withValues(alpha: 0.4) : AppColors.surface),
+                    ? (isDark ? const Color(0xFF243356) : AppColors.primaryLight.withValues(alpha: 0.5))
+                    : (isCurrent
+                        ? (isDark ? const Color(0xFF14532D) : AppColors.successLight.withValues(alpha: 0.4))
+                        : AppColors.cardSurface),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: isTarget ? AppColors.primary : (isCurrent ? AppColors.success : AppColors.border),
+                  color: isTarget
+                      ? (isDark ? const Color(0xFF38BDF8) : AppColors.primary)
+                      : (isCurrent ? AppColors.success : AppColors.cardBorder),
                   width: isTarget || isCurrent ? 1.5 : 1,
                 ),
               ),
@@ -220,13 +232,15 @@ class QueueTimelineScreen extends StatelessWidget {
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
-                      color: isTarget ? AppColors.primaryDark : AppColors.textPrimary,
+                      color: isTarget
+                          ? (isDark ? const Color(0xFF38BDF8) : AppColors.primaryDark)
+                          : AppColors.headingText,
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     detail,
-                    style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary, height: 1.3),
+                    style: GoogleFonts.inter(fontSize: 12, color: AppColors.bodyText, height: 1.3),
                   ),
                 ],
               ),

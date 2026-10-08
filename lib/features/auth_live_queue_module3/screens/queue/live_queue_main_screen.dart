@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_accessibility.dart';
 import '../../services/live_queue_service.dart';
 import '../../models/queue_entry_model.dart';
 import '../../../patient_appointment_scheduling_module1/screens/hospital_selection_screen.dart';
@@ -57,26 +58,31 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: _queueService,
+      animation: Listenable.merge([
+        _queueService,
+        AppAccessibility.isHighContrastMode,
+        AppAccessibility.currentLanguage,
+      ]),
       builder: (context, _) {
         final session = _queueService.session;
         final myEntry = _queueService.myEntry;
+        final isDark = AppAccessibility.isHighContrastMode.value;
 
         return Scaffold(
-          backgroundColor: AppColors.background,
+          backgroundColor: AppColors.pageBg,
           appBar: AppBar(
-            backgroundColor: AppColors.surface,
-            elevation: 0,
+            backgroundColor: AppColors.cardSurface,
+            elevation: isDark ? 1 : 0,
             automaticallyImplyLeading: false,
             title: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.primaryLight,
+                    color: isDark ? const Color(0xFF243356) : AppColors.primaryLight,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.emergency_outlined, color: AppColors.primary, size: 22),
+                  child: Icon(Icons.emergency_outlined, color: AppColors.accentColor, size: 22),
                 ),
                 const SizedBox(width: 12),
                 Column(
@@ -87,7 +93,7 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
                       style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
+                        color: AppColors.headingText,
                       ),
                     ),
                     Text(
@@ -95,7 +101,7 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: AppColors.textSecondary,
+                        color: AppColors.bodyText,
                       ),
                     ),
                   ],
@@ -105,7 +111,7 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
             actions: [
               IconButton(
                 tooltip: 'Refresh Queue Data',
-                icon: const Icon(Icons.refresh_rounded, color: AppColors.primary),
+                icon: Icon(Icons.refresh_rounded, color: AppColors.accentColor),
                 onPressed: () {
                   setState(() {});
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -118,7 +124,7 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
               ),
               PopupMenuButton<String>(
                 tooltip: 'Queue Screen Quick Switcher',
-                icon: const Icon(Icons.more_vert_rounded, color: AppColors.primary),
+                icon: Icon(Icons.more_vert_rounded, color: AppColors.accentColor),
                 onSelected: (value) {
                   if (value == 'rejoin') {
                     Navigator.push(
@@ -214,17 +220,19 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
                           return ChoiceChip(
                             label: Text('$token • $dept ($status)'),
                             selected: isSelected,
-                            selectedColor: AppColors.primary,
-                            backgroundColor: AppColors.surface,
+                            selectedColor: isDark ? const Color(0xFF38BDF8) : AppColors.primary,
+                            backgroundColor: AppColors.cardSurface,
                             labelStyle: GoogleFonts.inter(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color: isSelected ? Colors.white : AppColors.textPrimary,
+                              color: isSelected ? Colors.white : AppColors.headingText,
                             ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                               side: BorderSide(
-                                color: isSelected ? AppColors.primary : AppColors.border,
+                                color: isSelected
+                                    ? (isDark ? const Color(0xFF38BDF8) : AppColors.primary)
+                                    : AppColors.cardBorder,
                                 width: isSelected ? 1.5 : 1,
                               ),
                             ),
@@ -241,27 +249,27 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
                       padding: const EdgeInsets.all(20),
                       margin: const EdgeInsets.only(bottom: 20),
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
+                        color: AppColors.cardSurface,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.border),
+                        border: Border.all(color: AppColors.cardBorder),
                       ),
                       child: Column(
                         children: [
-                          const Icon(Icons.event_busy_rounded, size: 48, color: AppColors.primary),
+                          Icon(Icons.event_busy_rounded, size: 48, color: AppColors.accentColor),
                           const SizedBox(height: 12),
                           Text(
                             'No Active OPD Queue Today',
                             style: GoogleFonts.inter(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
-                              color: AppColors.textPrimary,
+                              color: AppColors.headingText,
                             ),
                           ),
                           const SizedBox(height: 8),
                           Text(
                             'You do not currently have a confirmed appointment for today\'s clinic sessions.',
                             textAlign: TextAlign.center,
-                            style: GoogleFonts.inter(fontSize: 14, color: AppColors.textSecondary),
+                            style: GoogleFonts.inter(fontSize: 14, color: AppColors.bodyText),
                           ),
                           const SizedBox(height: 16),
                           ElevatedButton.icon(
@@ -579,12 +587,12 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
+                      color: AppColors.cardSurface,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(color: AppColors.cardBorder),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
+                          color: isDark ? Colors.black38 : Colors.black.withValues(alpha: 0.04),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -612,7 +620,7 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
                                     fontSize: 13,
                                     fontWeight: FontWeight.w800,
                                     letterSpacing: 0.5,
-                                    color: AppColors.textSecondary,
+                                    color: AppColors.bodyText,
                                   ),
                                 ),
                               ],
@@ -620,7 +628,7 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: AppColors.successLight,
+                                color: isDark ? const Color(0xFF14532D) : AppColors.successLight,
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Text(
@@ -628,7 +636,7 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
                                 style: GoogleFonts.inter(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w800,
-                                  color: AppColors.success,
+                                  color: isDark ? const Color(0xFF4ADE80) : AppColors.success,
                                 ),
                               ),
                             ),
@@ -641,7 +649,9 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
                           style: GoogleFonts.inter(
                             fontSize: session.currentTokenServing == '—' ? 36 : 48,
                             fontWeight: FontWeight.w900,
-                            color: session.currentTokenServing == '—' ? AppColors.textSecondary : AppColors.primary,
+                            color: session.currentTokenServing == '—'
+                                ? AppColors.bodyText
+                                : (isDark ? const Color(0xFF38BDF8) : AppColors.primary),
                             letterSpacing: -1,
                           ),
                         ),
@@ -653,7 +663,7 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
                           style: GoogleFonts.inter(
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
-                            color: AppColors.textSecondary,
+                            color: AppColors.bodyText,
                           ),
                         ),
                       ],
@@ -666,15 +676,18 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
                   Container(
                     padding: const EdgeInsets.all(22),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF0056B3), Color(0xFF003E82)],
+                      gradient: LinearGradient(
+                        colors: isDark
+                            ? const [Color(0xFF14244B), Color(0xFF0D1B3E)]
+                            : const [Color(0xFF0056B3), Color(0xFF003E82)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       borderRadius: BorderRadius.circular(20),
+                      border: isDark ? Border.all(color: const Color(0xFF38BDF8), width: 1.5) : null,
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.28),
+                          color: (isDark ? const Color(0xFF38BDF8) : AppColors.primary).withValues(alpha: 0.28),
                           blurRadius: 16,
                           offset: const Offset(0, 6),
                         ),
@@ -809,7 +822,7 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
                     style: GoogleFonts.inter(
                       fontSize: 17,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary,
+                      color: AppColors.headingText,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -876,25 +889,26 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
     required String subtitle,
     required VoidCallback onTap,
   }) {
+    final isDark = AppAccessibility.isHighContrastMode.value;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: AppColors.cardSurface,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: AppColors.cardBorder),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: AppColors.primaryLight,
+                color: isDark ? const Color(0xFF243356) : AppColors.primaryLight,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: AppColors.primary, size: 24),
+              child: Icon(icon, color: AppColors.accentColor, size: 24),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -906,7 +920,7 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
                     style: GoogleFonts.inter(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
+                      color: AppColors.headingText,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -914,13 +928,13 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
                     subtitle,
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: AppColors.textSecondary,
+                      color: AppColors.bodyText,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppColors.textMuted),
+            Icon(Icons.arrow_forward_ios_rounded, size: 16, color: isDark ? const Color(0xFF94A3B8) : AppColors.textMuted),
           ],
         ),
       ),

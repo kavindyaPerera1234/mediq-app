@@ -814,7 +814,10 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: Listenable.merge([
+        AppAccessibility.isLargeTextMode,
         AppAccessibility.isHighContrastMode,
+        AppAccessibility.isSimplifiedNav,
+        AppAccessibility.isVoiceGuidance,
         AppAccessibility.currentLanguage,
         ProfileService.activeProfileNotifier,
       ]),
