@@ -73,6 +73,8 @@ class ProfileService {
               phone: phone,
               email: email,
               bloodGroup: (data['bloodGroup'] ?? 'O+').toString(),
+              gender: (data['gender'] ?? 'Not Specified').toString(),
+              dateOfBirth: (data['dateOfBirth'] ?? '1995-01-01').toString(),
               photoUrl: (data['photoUrl'] ?? user.photoURL ?? '').toString(),
             );
             activeProfileNotifier.value = newProfile;
@@ -156,6 +158,8 @@ class ProfileService {
           'phoneNumber': profile.phone,
           'email': profile.email,
           'bloodGroup': profile.bloodGroup,
+          'gender': profile.gender,
+          'dateOfBirth': profile.dateOfBirth,
           if (profile.photoUrl.isNotEmpty) 'photoUrl': profile.photoUrl,
         }, SetOptions(merge: true)).catchError((_) {});
       }

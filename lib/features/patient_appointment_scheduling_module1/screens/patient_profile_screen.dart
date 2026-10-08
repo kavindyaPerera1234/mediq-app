@@ -107,7 +107,13 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
     final emailController = TextEditingController(text: _profile.email);
     final emergencyNameController = TextEditingController(text: _profile.emergencyContactName);
     final emergencyPhoneController = TextEditingController(text: _profile.emergencyContactPhone);
-    String bloodGroup = _profile.bloodGroup;
+    String bloodGroup = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].contains(_profile.bloodGroup)
+        ? _profile.bloodGroup
+        : 'O+';
+    String gender = ['Male', 'Female', 'Other'].contains(_profile.gender)
+        ? _profile.gender
+        : 'Female';
+    String dob = _profile.dateOfBirth.isNotEmpty ? _profile.dateOfBirth : '1995-01-01';
 
     showModalBottomSheet(
       context: context,
@@ -177,6 +183,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     _buildFieldLabel('Full Name'),
                     TextField(
                       controller: nameController,
+                      style: TextStyle(color: AppColors.headingText),
                       decoration: _inputDecoration('Enter full name'),
                     ),
                     const SizedBox(height: 12),
@@ -185,6 +192,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     TextField(
                       controller: phoneController,
                       keyboardType: TextInputType.phone,
+                      style: TextStyle(color: AppColors.headingText),
                       decoration: _inputDecoration('+94 77 123 4567'),
                     ),
                     const SizedBox(height: 12),
@@ -193,32 +201,132 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     TextField(
                       controller: emailController,
                       keyboardType: TextInputType.emailAddress,
+                      style: TextStyle(color: AppColors.headingText),
                       decoration: _inputDecoration('example@gmail.com'),
                     ),
                     const SizedBox(height: 12),
 
-                    _buildFieldLabel('Blood Group'),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: AppColors.background,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: bloodGroup,
-                          isExpanded: true,
-                          items: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((bg) {
-                            return DropdownMenuItem(value: bg, child: Text(bg));
-                          }).toList(),
-                          onChanged: (val) {
-                            if (val != null) {
-                              setModalState(() {
-                                bloodGroup = val;
-                              });
-                            }
-                          },
+                    // Blood Group & Gender Row
+                    Row(
+                      children: [
+                        // Blood Group
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildFieldLabel('Blood Group'),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.innerCardBg,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: AppColors.cardBorder),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<String>(
+                                    value: bloodGroup,
+                                    dropdownColor: AppColors.cardSurface,
+                                    style: TextStyle(color: AppColors.headingText, fontSize: 13, fontWeight: FontWeight.w600),
+                                    icon: Icon(Icons.arrow_drop_down, color: AppColors.headingText),
+                                    isExpanded: true,
+                                    items: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((bg) {
+                                      return DropdownMenuItem(
+                                        value: bg,
+                                        child: Text(bg, style: TextStyle(color: AppColors.headingText)),
+                                      );
+                                    }).toList(),
+                                    onChanged: (val) {
+                                      if (val != null) {
+                                        setModalState(() {
+                                          bloodGroup = val;
+                                        });
+                                      }
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+
+                        // Gender Selection
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildFieldLabel('Gender'),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.innerCardBg,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: AppColors.cardBorder),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<String>(
+                                    value: gender,
+                                    dropdownColor: AppColors.cardSurface,
+                                    style: TextStyle(color: AppColors.headingText, fontSize: 13, fontWeight: FontWeight.w600),
+                                    icon: Icon(Icons.arrow_drop_down, color: AppColors.headingText),
+                                    isExpanded: true,
+                                    items: ['Male', 'Female', 'Other'].map((g) {
+                                      return DropdownMenuItem(
+                                        value: g,
+                                        child: Text(g, style: TextStyle(color: AppColors.headingText)),
+                                      );
+                                    }).toList(),
+                                    onChanged: (val) {
+                                      if (val != null) {
+                                        setModalState(() {
+                                          gender = val;
+                                        });
+                                      }
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Date of Birth Field
+                    _buildFieldLabel('Date of Birth'),
+                    InkWell(
+                      onTap: () async {
+                        final DateTime initialDate = DateTime.tryParse(dob) ?? DateTime(1995, 1, 1);
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: initialDate,
+                          firstDate: DateTime(1920),
+                          lastDate: DateTime.now(),
+                        );
+                        if (picked != null) {
+                          setModalState(() {
+                            dob = "${picked.year.toString().padLeft(4, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+                          });
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                        decoration: BoxDecoration(
+                          color: AppColors.innerCardBg,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.cardBorder),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              dob,
+                              style: TextStyle(color: AppColors.headingText, fontSize: 13, fontWeight: FontWeight.w500),
+                            ),
+                            Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.accentColor),
+                          ],
                         ),
                       ),
                     ),
@@ -230,6 +338,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                         Expanded(
                           child: TextField(
                             controller: emergencyNameController,
+                            style: TextStyle(color: AppColors.headingText),
                             decoration: _inputDecoration('Contact Name'),
                           ),
                         ),
@@ -238,6 +347,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                           child: TextField(
                             controller: emergencyPhoneController,
                             keyboardType: TextInputType.phone,
+                            style: TextStyle(color: AppColors.headingText),
                             decoration: _inputDecoration('Phone No'),
                           ),
                         ),
@@ -260,6 +370,8 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                             phone: phoneController.text.trim(),
                             email: emailController.text.trim(),
                             bloodGroup: bloodGroup,
+                            gender: gender,
+                            dateOfBirth: dob,
                             emergencyContactName: emergencyNameController.text.trim(),
                             emergencyContactPhone: emergencyPhoneController.text.trim(),
                           );
