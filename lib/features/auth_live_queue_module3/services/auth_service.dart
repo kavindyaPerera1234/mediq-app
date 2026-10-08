@@ -205,9 +205,28 @@ class AuthService extends ChangeNotifier {
 
   // ── Password Reset ────────────────────────────────────────────────────────
 
-  Future<void> sendPasswordReset(String email) async {
+  Future<void> sendPasswordReset(String emailOrPhone) async {
     try {
-      await _auth.sendPasswordResetEmail(email: email.trim());
+      String targetEmail = emailOrPhone.trim();
+      if (!targetEmail.contains('@')) {
+        final rawPhone = targetEmail;
+        final formattedPhone = formatToE164(rawPhone);
+        var q = await _firestore.collection(AppConstants.usersCollection).where('phoneNumber', isEqualTo: rawPhone).limit(1).get();
+        if (q.docs.isEmpty) {
+          q = await _firestore.collection(AppConstants.usersCollection).where('phoneNumber', isEqualTo: formattedPhone).limit(1).get();
+        }
+        if (q.docs.isEmpty) {
+          q = await _firestore.collection(AppConstants.usersCollection).where('phone', isEqualTo: rawPhone).limit(1).get();
+        }
+        if (q.docs.isNotEmpty) {
+          final data = q.docs.first.data();
+          final stored = (data['email'] ?? '').toString().trim();
+          if (stored.contains('@')) {
+            targetEmail = stored;
+          }
+        }
+      }
+      await _auth.sendPasswordResetEmail(email: targetEmail.trim());
     } on FirebaseAuthException catch (e) {
       debugPrint("Password reset error: ${e.code} - ${e.message}");
       rethrow;
