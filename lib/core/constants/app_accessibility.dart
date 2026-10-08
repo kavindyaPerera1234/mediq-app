@@ -17,10 +17,16 @@ class AppAccessibility {
   /// Controls active application language ('en' = English, 'si' = Sinhala, 'ta' = Tamil)
   static final ValueNotifier<String> currentLanguage = ValueNotifier<String>('en');
 
+  /// Global callback to notify listeners (e.g. AppLanguage) when language changes
+  static void Function(String lang)? onLanguageChanged;
+
   /// Updates active language globally across the entire app
   static void setLanguage(String lang) {
-    if (['en', 'si', 'ta'].contains(lang) && currentLanguage.value != lang) {
-      currentLanguage.value = lang;
+    if (['en', 'si', 'ta'].contains(lang)) {
+      if (currentLanguage.value != lang) {
+        currentLanguage.value = lang;
+      }
+      onLanguageChanged?.call(lang);
     }
   }
 

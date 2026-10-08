@@ -15,7 +15,7 @@ class SeniorModeSettingsScreen extends StatefulWidget {
 
 class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
   final ProfileService _profileService = ProfileService();
-  final String _patientNic = '200164801234';
+  String get _patientNic => ProfileService.activeProfileNotifier.value.nic;
 
   bool _largeTextMode = true;
   bool _highContrastMode = false;

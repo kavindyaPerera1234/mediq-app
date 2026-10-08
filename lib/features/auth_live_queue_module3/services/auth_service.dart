@@ -52,7 +52,11 @@ class AuthService extends ChangeNotifier {
 
       if (doc.exists) {
         _currentUser = UserModel.fromMap(doc.data()!, id: doc.id);
-        if (_currentUser!.preferredLanguage.isNotEmpty) {
+        final activeLang = core_lang.AppLanguage.code;
+        if (core_lang.AppLanguage.hasUserExplicitlySelected || activeLang != 'en') {
+          _currentUser = _currentUser!.copyWith(preferredLanguage: activeLang);
+          core_lang.AppLanguage.setLanguage(activeLang, isExplicit: true);
+        } else if (_currentUser!.preferredLanguage.isNotEmpty) {
           core_lang.AppLanguage.setLanguage(_currentUser!.preferredLanguage);
         }
         ProfileService().syncWithCurrentUser();
@@ -144,9 +148,20 @@ class AuthService extends ChangeNotifier {
 
       if (doc.exists) {
         _currentUser = UserModel.fromMap(doc.data()!, id: doc.id);
-        if (_currentUser!.preferredLanguage.isNotEmpty) {
+        
+        final activeLang = core_lang.AppLanguage.code;
+        if (core_lang.AppLanguage.hasUserExplicitlySelected || activeLang != 'en') {
+          _currentUser = _currentUser!.copyWith(preferredLanguage: activeLang);
+          try {
+            await _firestore.collection(AppConstants.usersCollection).doc(uid).update({
+              'preferredLanguage': activeLang,
+            });
+          } catch (_) {}
+          core_lang.AppLanguage.setLanguage(activeLang, isExplicit: true);
+        } else if (_currentUser!.preferredLanguage.isNotEmpty && _currentUser!.preferredLanguage != 'en') {
           core_lang.AppLanguage.setLanguage(_currentUser!.preferredLanguage);
         }
+        
         ProfileService().syncWithCurrentUser();
         if (!_currentUser!.isActive) {
           await _auth.signOut();
@@ -344,6 +359,18 @@ class AuthService extends ChangeNotifier {
       if (query.docs.isNotEmpty) {
         final doc = query.docs.first;
         _currentUser = UserModel.fromMap(doc.data(), id: doc.id);
+        final activeLang = core_lang.AppLanguage.code;
+        if (core_lang.AppLanguage.hasUserExplicitlySelected || activeLang != 'en') {
+          _currentUser = _currentUser!.copyWith(preferredLanguage: activeLang);
+          try {
+            await _firestore.collection(AppConstants.usersCollection).doc(doc.id).update({
+              'preferredLanguage': activeLang,
+            });
+          } catch (_) {}
+          core_lang.AppLanguage.setLanguage(activeLang, isExplicit: true);
+        } else if (_currentUser!.preferredLanguage.isNotEmpty && _currentUser!.preferredLanguage != 'en') {
+          core_lang.AppLanguage.setLanguage(_currentUser!.preferredLanguage);
+        }
         LiveQueueService().refresh();
         notifyListeners();
         return true;
@@ -420,7 +447,10 @@ class AuthService extends ChangeNotifier {
       );
     } else {
       // Patient or caregiver -> Module 1 Patient Dashboard
-      if (_currentUser != null && _currentUser!.preferredLanguage.isNotEmpty) {
+      final activeLang = core_lang.AppLanguage.code;
+      if (core_lang.AppLanguage.hasUserExplicitlySelected || activeLang != 'en') {
+        core_lang.AppLanguage.setLanguage(activeLang, isExplicit: true);
+      } else if (_currentUser != null && _currentUser!.preferredLanguage.isNotEmpty) {
         core_lang.AppLanguage.setLanguage(_currentUser!.preferredLanguage);
       }
       ProfileService().syncWithCurrentUser();

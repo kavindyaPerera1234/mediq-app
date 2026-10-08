@@ -5,6 +5,7 @@ import '../../../core/constants/app_accessibility.dart';
 import '../../../core/constants/app_translations.dart';
 import '../../../core/services/voice_guidance_service.dart';
 import '../backend/backend.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'senior_mode_settings_screen.dart';
 import '../../auth_live_queue_module3/screens/auth/welcome_entry_screen.dart';
 import '../../auth_live_queue_module3/services/auth_service.dart';
@@ -844,10 +845,17 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 4.0),
                   child: InkWell(
                     onTap: () {
-                      AppAccessibility.setLanguage(opt['code']!);
-                      if (opt['code'] == 'si') {
+                      final langCode = opt['code']!;
+                      AppAccessibility.setLanguage(langCode);
+                      final user = AuthService().currentUser;
+                      if (user != null) {
+                        FirebaseFirestore.instance.collection('users').doc(user.userId).update({
+                          'preferredLanguage': langCode,
+                        }).catchError((_) {});
+                      }
+                      if (langCode == 'si') {
                         VoiceGuidanceService.speak('භාෂාව සිංහල ලෙස වෙනස් කරන ලදී', context: context);
-                      } else if (opt['code'] == 'ta') {
+                      } else if (langCode == 'ta') {
                         VoiceGuidanceService.speak('மொழி தமிழில் மாற்றப்பட்டது', context: context);
                       } else {
                         VoiceGuidanceService.speak('Language switched to English', context: context);
