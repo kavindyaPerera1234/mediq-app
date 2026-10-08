@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_accessibility.dart';
 import '../../auth_live_queue_module3/services/auth_service.dart';
+import '../../patient_appointment_scheduling_module1/backend/services/profile_service.dart';
 import 'appointment_details_screen.dart';
 import '../../patient_appointment_scheduling_module1/screens/caregiver_setup_screen.dart';
 import '../services/appointment_service.dart';
@@ -32,6 +34,11 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
     bool isLoading = true;
 
     String get _currentPatientId {
+      try {
+        final profile = ProfileService.activeProfileNotifier.value;
+        if (profile.nic.isNotEmpty && profile.nic != 'N/A') return profile.nic.trim();
+        if (profile.patientId.isNotEmpty) return profile.patientId.trim();
+      } catch (_) {}
       final user = AuthService().currentUser;
       if (user != null) {
         if (user.nic != null && user.nic!.trim().isNotEmpty) return user.nic!.trim();
@@ -52,7 +59,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
         final data = await _appointmentService.getUpcomingAppointments(
             _currentPatientId,
         );
-        print("UI received appointments: ${data.length}");
+        debugPrint("UI received appointments: ${data.length}");
         if (!mounted) return;
         setState(() {
             appointments = data;
@@ -62,242 +69,285 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
 
     @override
     Widget build(BuildContext context) {
-        return Scaffold(
-            backgroundColor: AppColors.background,
-            appBar: AppBar(
-                backgroundColor: Colors.white,
-                elevation: 0,
-                leading: Navigator.canPop(context) ? IconButton(
-                    icon: const Icon(
-                        Icons.arrow_back_ios_new,
-                        color: AppColors.textPrimary,
+        return AnimatedBuilder(
+          animation: Listenable.merge([
+            AppAccessibility.isHighContrastMode,
+            AppAccessibility.currentLanguage,
+          ]),
+          builder: (context, _) {
+            final isDark = AppAccessibility.isHighContrastMode.value;
+            final lang = AppAccessibility.currentLanguage.value;
+
+            final String pageTitle = lang == 'si'
+                ? "මගේ සායන වෙන්කිරීම්"
+                : (lang == 'ta' ? "எனது சந்திப்புகள்" : "My Appointments");
+            final String pageSubtitle = lang == 'si'
+                ? "ඔබගේ OPD සායන කළමනාකරණය"
+                : (lang == 'ta' ? "உங்கள் OPD சந்திப்புகளை நிர்வகிக்கவும்" : "Manage your OPD visits");
+
+            final List<String> tabTitles = [
+              lang == 'si' ? "ඉදිරි සායන" : (lang == 'ta' ? "வரவிருக்கும்" : "Upcoming"),
+              lang == 'si' ? "අවසන් වූ" : (lang == 'ta' ? "முடிந்தவை" : "Completed"),
+              lang == 'si' ? "අවලංගු කළ" : (lang == 'ta' ? "ரத்துசெய்தவை" : "Cancelled"),
+            ];
+
+            final String bookBtnText = lang == 'si'
+                ? "නව සායනයක් වෙන්කරවා ගැනීම"
+                : (lang == 'ta' ? "புதிய சந்திப்பை பதிவு செய்யவும்" : "Book New Appointment");
+
+            return Scaffold(
+                backgroundColor: AppColors.pageBg,
+                appBar: AppBar(
+                    backgroundColor: AppColors.appBarBg,
+                    foregroundColor: Colors.white,
+                    elevation: isDark ? 1 : 0,
+                    leading: Navigator.canPop(context) ? IconButton(
+                        icon: const Icon(
+                            Icons.arrow_back_ios_new,
+                            color: Colors.white,
+                            size: 18,
+                        ),
+                        onPressed: (){
+                            Navigator.pop(context);
+                        },
+                    ) : null,
+
+                    title: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                            Text(
+                                pageTitle,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                ),
+                            ),
+                            Text(
+                                pageSubtitle,
+                                style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 12,
+                                ),
+                            ),
+                        ],
                     ),
-                    onPressed: (){
-                        Navigator.pop(context);
-                    },
-                ) : null,
-
-                title: Column(
-                    crossAxisAlignment:
-                    CrossAxisAlignment.start,
-
-                    children: [
-                        Text(
-                            "My Appointments",
-                            style: TextStyle(
-                                color: AppColors.textPrimary,
-                                fontWeight: FontWeight.bold,
-                                fontSize:18,
-                            ),
+                    actions: [
+                        IconButton(
+                            icon: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white),
+                            tooltip: 'Scan Hospital Check-in QR Code',
+                            onPressed: () {
+                                Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) => const QrScannerScreen(),
+                                    ),
+                                );
+                            },
                         ),
-
-                        Text(
-                            "Manage your OPD visits",
-                            style: TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize:12,
-                            ),
-                        ),
-
                     ],
                 ),
-                actions: [
-                    IconButton(
-                        icon: const Icon(Icons.qr_code_scanner_rounded, color: AppColors.primary),
-                        tooltip: 'Scan Hospital Check-in QR Code',
-                        onPressed: () {
-                            Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) => const QrScannerScreen(),
-                                ),
-                            );
-                        },
-                    ),
-                ],
-            ),
 
-            body: Column(
-                children: [
-                    // Tabs
-                    Container(
-                        color: Colors.white,
-                        child: Row(
-                            mainAxisAlignment:
-                            MainAxisAlignment.spaceAround,
-                            children: List.generate(
-                                tabs.length,
-                                (index){
-                                    bool active =
-                                    selectedTab == index;
-                                    return GestureDetector(
-                                        onTap: (){
-                                            setState((){
-                                                selectedTab = index;
-                                            });
-                                        },
-                                        child: Container(
-                                            padding:
-                                            const EdgeInsets.symmetric(
-                                                vertical:14,
-                                            ),
-                                            decoration: BoxDecoration(
-                                                border: Border(
-                                                    bottom: BorderSide(
+                body: Column(
+                    children: [
+                        // Tabs
+                        Container(
+                            color: AppColors.cardSurface,
+                            child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                children: List.generate(
+                                    tabTitles.length,
+                                    (index){
+                                        bool active = selectedTab == index;
+                                        return GestureDetector(
+                                            onTap: (){
+                                                setState((){
+                                                    selectedTab = index;
+                                                });
+                                            },
+                                            child: Container(
+                                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                                decoration: BoxDecoration(
+                                                    border: Border(
+                                                        bottom: BorderSide(
+                                                            color: active
+                                                            ? AppColors.accentColor
+                                                            : Colors.transparent,
+                                                            width: 2.5,
+                                                        ),
+                                                    ),
+                                                ),
+                                                child: Text(
+                                                    tabTitles[index],
+                                                    style: TextStyle(
                                                         color: active
-                                                        ? AppColors.primary
-                                                        : Colors.transparent,
-                                                        width:2,
+                                                        ? AppColors.accentColor
+                                                        : AppColors.bodyText,
+                                                        fontWeight: active
+                                                        ? FontWeight.bold
+                                                        : FontWeight.normal,
                                                     ),
                                                 ),
                                             ),
-                                            child: Text(
-                                                tabs[index],
-                                                style: TextStyle(
-                                                    color: active
-                                                    ? AppColors.primary
-                                                    : Colors.grey,
-                                                    fontWeight: active
-                                                    ? FontWeight.bold
-                                                    : FontWeight.normal,
-                                                ),
-                                            ),
-                                        ),
-                                    );
-                                },
+                                        );
+                                    },
+                                ),
                             ),
                         ),
-                    ),
-                    Expanded(
-                        child: Padding(
-                            padding:
-                            const EdgeInsets.all(16),
-                            child: Column(
-                                children: [
-                                    Expanded(
-                                        child: StreamBuilder<List<AppointmentModel>>(
-                                            stream: _appointmentService.streamUpcomingAppointments(_currentPatientId),
-                                            builder: (context, snapshot) {
-                                                if (snapshot.connectionState == ConnectionState.waiting && appointments.isEmpty) {
-                                                    return const Center(child: CircularProgressIndicator());
-                                                }
-                                                final list = snapshot.data ?? appointments;
-                                                final filtered = list.where((appointment) {
-                                                    if (selectedTab == 0) {
-                                                        return appointment.status == "confirmed" ||
-                                                            appointment.status == "rescheduled" ||
-                                                            appointment.status == "waiting" ||
-                                                            appointment.status == "scheduled";
+                        Expanded(
+                            child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                    children: [
+                                        Expanded(
+                                            child: StreamBuilder<List<AppointmentModel>>(
+                                                stream: _appointmentService.streamUpcomingAppointments(_currentPatientId),
+                                                builder: (context, snapshot) {
+                                                    if (snapshot.connectionState == ConnectionState.waiting && appointments.isEmpty) {
+                                                        return const Center(child: CircularProgressIndicator());
                                                     }
-                                                    if (selectedTab == 1) {
-                                                        return appointment.status == "completed";
-                                                    }
-                                                    if (selectedTab == 2) {
-                                                        return appointment.status == "cancelled";
-                                                    }
-                                                    return false;
-                                                }).toList();
+                                                    final list = snapshot.data ?? appointments;
+                                                    final filtered = list.where((appointment) {
+                                                        if (selectedTab == 0) {
+                                                            return appointment.status == "confirmed" ||
+                                                                appointment.status == "rescheduled" ||
+                                                                appointment.status == "waiting" ||
+                                                                appointment.status == "scheduled";
+                                                        }
+                                                        if (selectedTab == 1) {
+                                                            return appointment.status == "completed";
+                                                        }
+                                                        if (selectedTab == 2) {
+                                                            return appointment.status == "cancelled";
+                                                        }
+                                                        return false;
+                                                    }).toList();
 
-                                                if (filtered.isEmpty) {
-                                                    final tabName = tabs[selectedTab].toLowerCase();
-                                                    return Center(
-                                                        child: Padding(
-                                                            padding: const EdgeInsets.all(32.0),
-                                                            child: Column(
-                                                                mainAxisAlignment: MainAxisAlignment.center,
-                                                                children: [
-                                                                    Icon(Icons.event_note_outlined, size: 64, color: Colors.grey.shade400),
-                                                                    const SizedBox(height: 16),
-                                                                    Text(
-                                                                        "No $tabName appointments",
-                                                                        style: const TextStyle(
-                                                                            fontSize: 16,
-                                                                            fontWeight: FontWeight.bold,
-                                                                            color: AppColors.textPrimary,
+                                                    if (filtered.isEmpty) {
+                                                        final currentTabTitle = tabTitles[selectedTab];
+                                                        return Center(
+                                                            child: Padding(
+                                                                padding: const EdgeInsets.all(32.0),
+                                                                child: Column(
+                                                                    mainAxisAlignment: MainAxisAlignment.center,
+                                                                    children: [
+                                                                        Icon(Icons.event_note_outlined, size: 64, color: isDark ? AppColors.accentColor : Colors.grey.shade400),
+                                                                        const SizedBox(height: 16),
+                                                                        Text(
+                                                                            lang == 'si'
+                                                                                ? "$currentTabTitle කිසිවක් නොමැත"
+                                                                                : (lang == 'ta' ? "$currentTabTitle எதுவும் இல்லை" : "No $currentTabTitle appointments"),
+                                                                            style: TextStyle(
+                                                                                fontSize: 16,
+                                                                                fontWeight: FontWeight.bold,
+                                                                                color: AppColors.headingText,
+                                                                            ),
                                                                         ),
-                                                                    ),
-                                                                    const SizedBox(height: 8),
-                                                                    Text(
-                                                                        selectedTab == 0
-                                                                            ? "You do not have any upcoming visits booked."
-                                                                            : "No $tabName records found for your account.",
-                                                                        textAlign: TextAlign.center,
-                                                                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
-                                                                    ),
-                                                                ],
+                                                                        const SizedBox(height: 8),
+                                                                        Text(
+                                                                            selectedTab == 0
+                                                                                ? (lang == 'si'
+                                                                                    ? "ඔබ මෙතෙක් කිසිදු ඉදිරි සායන වාරයක් වෙන්කර නොමැත."
+                                                                                    : (lang == 'ta'
+                                                                                        ? "நீங்கள் எந்த வரவிருக்கும் சந்திப்பையும் பதிவு செய்யவில்லை."
+                                                                                        : "You do not have any upcoming visits booked."))
+                                                                                : (lang == 'si'
+                                                                                    ? "මෙම කාණ්ඩය සඳහා දත්ත හමු නොවීය."
+                                                                                    : (lang == 'ta'
+                                                                                        ? "பதிவுகள் எதுவும் கிடைக்கவில்லை."
+                                                                                        : "No records found for your account.")),
+                                                                            textAlign: TextAlign.center,
+                                                                            style: TextStyle(color: AppColors.bodyText, fontSize: 13),
+                                                                        ),
+                                                                        if (selectedTab == 0) ...[
+                                                                            const SizedBox(height: 18),
+                                                                            ElevatedButton.icon(
+                                                                                icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
+                                                                                label: Text(bookBtnText, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                                                                style: ElevatedButton.styleFrom(
+                                                                                    backgroundColor: AppColors.primary,
+                                                                                    foregroundColor: Colors.white,
+                                                                                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                                                                ),
+                                                                                onPressed: () {
+                                                                                    Navigator.push(
+                                                                                        context,
+                                                                                        MaterialPageRoute(
+                                                                                            builder: (context) => const CaregiverSetupScreen(),
+                                                                                        ),
+                                                                                    );
+                                                                                },
+                                                                            ),
+                                                                        ],
+                                                                    ],
+                                                                ),
                                                             ),
+                                                        );
+                                                    }
+
+                                                    return ListView.builder(
+                                                        itemCount: filtered.length,
+                                                        itemBuilder: (context, i) {
+                                                            final appointment = filtered[i];
+                                                            return appointmentCard(
+                                                                hospital: appointment.hospitalName,
+                                                                clinic: appointment.departmentName,
+                                                                time: appointment.timeSlot,
+                                                                date: appointment.appointmentDate,
+                                                                token: appointment.tokenCode,
+                                                                status: appointment.status,
+                                                                patientName: appointment.patientName,
+                                                                appointmentId: appointment.id,
+                                                                color: appointment.status == "confirmed"
+                                                                    ? AppColors.statusGreen
+                                                                    : AppColors.statusOrange,
+                                                            );
+                                                        },
+                                                    );
+                                                },
+                                            ),
+                                        ),
+
+                                        const SizedBox(height: 15),
+                                        SizedBox(
+                                            width: double.infinity,
+                                            height: 52,
+                                            child: ElevatedButton.icon(
+                                                icon: const Icon(Icons.add_circle_outline_rounded, size: 20),
+                                                style: ElevatedButton.styleFrom(
+                                                    backgroundColor: AppColors.primary,
+                                                    foregroundColor: Colors.white,
+                                                    shape: RoundedRectangleBorder(
+                                                        borderRadius: BorderRadius.circular(12),
+                                                    ),
+                                                ),
+                                                onPressed: (){
+                                                    Navigator.push(
+                                                        context,
+                                                        MaterialPageRoute(
+                                                            builder:(context)=> const CaregiverSetupScreen(),
                                                         ),
                                                     );
-                                                }
-
-                                                return ListView.builder(
-                                                    itemCount: filtered.length,
-                                                    itemBuilder: (context, i) {
-                                                        final appointment = filtered[i];
-                                                        return appointmentCard(
-                                                            hospital: appointment.hospitalName,
-                                                            clinic: appointment.departmentName,
-                                                            time: appointment.timeSlot,
-                                                            date: appointment.appointmentDate,
-                                                            token: appointment.tokenCode,
-                                                            status: appointment.status,
-                                                            patientName: appointment.patientName,
-                                                            appointmentId: appointment.id,
-                                                            color: appointment.status == "confirmed"
-                                                                ? Colors.green
-                                                                : Colors.orange,
-                                                        );
-                                                    },
-                                                );
-                                            },
-                                        ),
-                                    ),
-
-                                    const SizedBox(height:15),
-                                    SizedBox(
-                                        width: double.infinity,
-                                        height:52,
-                                        child: ElevatedButton(
-                                            style:
-                                            ElevatedButton.styleFrom(
-                                                backgroundColor:
-                                                AppColors.primary,
-                                                shape:
-                                                RoundedRectangleBorder(
-                                                    borderRadius:
-                                                    BorderRadius.circular(12),
-                                                ),
-                                            ),
-
-                                            onPressed: (){
-                                                Navigator.push(
-                                                    context,
-                                                    MaterialPageRoute(
-                                                        builder:(context)=> const CaregiverSetupScreen(),
+                                                },
+                                                label: Text(
+                                                    bookBtnText,
+                                                    style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontWeight: FontWeight.bold,
+                                                        fontSize: 15,
                                                     ),
-                                                );
-                                            },
-
-                                            child: const Text(
-                                                "Book New Appointment",
-                                                style: TextStyle(
-                                                    color: Colors.white,
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize:15,
                                                 ),
                                             ),
                                         ),
-                                    ),
-                                ],
-
-
+                                    ],
+                                ),
                             ),
-
                         ),
-
-                    ),
-                ],
-            ),
+                    ],
+                ),
+            );
+          },
         );
     }
 
@@ -340,10 +390,10 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                     margin: const EdgeInsets.only(bottom:12),
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppColors.cardSurface,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                            color: Colors.grey.shade200,
+                            color: AppColors.cardBorder,
                         ),
                     ),
 
@@ -357,9 +407,10 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                                         child: Text(
                                             hospital,
                                             overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                                 fontWeight: FontWeight.bold,
                                                 fontSize:13,
+                                                color: AppColors.headingText,
                                             ),
                                         ),
                                     ),
@@ -370,7 +421,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                                             vertical:4,
                                         ),
                                         decoration: BoxDecoration(
-                                            color: color.withOpacity(0.15),
+                                            color: color.withValues(alpha: 0.15),
                                             borderRadius:
                                             BorderRadius.circular(6),
                                         ),
@@ -390,11 +441,11 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                             Text(
                                 clinic,
                                 style: TextStyle(
-                                    color: AppColors.textSecondary,
+                                    color: AppColors.bodyText,
                                     fontSize:12,
                                 ),
                             ),
-                            const Divider(),
+                            Divider(color: AppColors.cardBorder),
                             Row(
                                 mainAxisAlignment:
                                 MainAxisAlignment.spaceBetween,
@@ -405,15 +456,17 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                                         children:[
                                             Text(
                                                 date,
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                     fontWeight: FontWeight.w600,
                                                     fontSize:13,
+                                                    color: AppColors.headingText,
                                                 ),
                                             ),
                                             Text(
                                                 time,
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                     fontSize:12,
+                                                    color: AppColors.bodyText,
                                                 ),
                                             ),
                                         ],
@@ -435,12 +488,12 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                                             child: Row(
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
-                                                    const Icon(Icons.qr_code_2_rounded, size: 16, color: AppColors.primary),
+                                                    Icon(Icons.qr_code_2_rounded, size: 16, color: AppColors.accentColor),
                                                     const SizedBox(width: 4),
                                                     Text(
                                                         token.isEmpty ? "View Token" : "Token: $token",
-                                                        style: const TextStyle(
-                                                            color: AppColors.primary,
+                                                        style: TextStyle(
+                                                            color: AppColors.accentColor,
                                                             fontWeight: FontWeight.bold,
                                                             fontSize: 13,
                                                         ),
