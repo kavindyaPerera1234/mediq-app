@@ -3,6 +3,7 @@ import '../../../../core/constants/app_colors.dart';
 import 'manage_hospitals_screen.dart';
 import 'manage_departments_screen.dart';
 import 'manage_appointment_slots_screen.dart';
+import '../../../../features/auth_live_queue_module3/screens/auth/welcome_entry_screen.dart';
 
 class HospitalAdminDashboard extends StatelessWidget {
   const HospitalAdminDashboard({super.key});
@@ -24,7 +25,16 @@ class HospitalAdminDashboard extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.logout_rounded),
             tooltip: 'Exit to Patient App',
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              } else {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const WelcomeEntryScreen()),
+                );
+              }
+            },
           ),
         ],
       ),

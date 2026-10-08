@@ -25,6 +25,8 @@ import 'consultation_complete_screen.dart';
 import 'skip_patient_confirmation_screen.dart';
 import '../features/admin_dashboard/screens/admin_dashboard_screen.dart';
 import '../features/patient_appointment_scheduling_module1/admin/screens/hospital_admin_dashboard.dart';
+import '../features/auth_live_queue_module3/screens/auth/welcome_entry_screen.dart';
+import '../features/auth_live_queue_module3/services/auth_service.dart' as mod3_auth;
 
 class StaffDashboardScreen extends StatefulWidget {
   final AuthService authService;
@@ -62,20 +64,26 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
   void _handleLogout() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         title: const Text('Staff Logout'),
         content: const Text('Are you sure you want to log out of MediQ OPD Portal?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogCtx),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
             onPressed: () async {
+              Navigator.pop(dialogCtx);
               await widget.authService.signOut();
+              await mod3_auth.AuthService().logout();
               if (mounted) {
-                Navigator.of(context).popUntil((route) => route.isFirst);
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const WelcomeEntryScreen()),
+                  (route) => false,
+                );
               }
             },
             child: const Text('Logout', style: TextStyle(color: Colors.white)),

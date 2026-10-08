@@ -7,6 +7,8 @@ import 'admin_user_management_screen.dart';
 import '../../patient_appointment_scheduling_module1/admin/screens/hospital_admin_dashboard.dart';
 import '../../patient_appointment_scheduling_module1/admin/screens/manage_hospitals_screen.dart';
 import '../../patient_appointment_scheduling_module1/admin/screens/manage_appointment_slots_screen.dart';
+import '../../auth_live_queue_module3/screens/auth/welcome_entry_screen.dart';
+import '../../auth_live_queue_module3/services/auth_service.dart' as mod3_auth;
 
 class AdminDashboardScreen extends StatefulWidget {
   final AuthService authService;
@@ -25,20 +27,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   void _handleLogout() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Staff Logout'),
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Admin Logout'),
         content: const Text('Are you sure you want to log out of MediQ Portal?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogCtx),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
             onPressed: () async {
+              Navigator.pop(dialogCtx);
               await widget.authService.signOut();
+              await mod3_auth.AuthService().logout();
               if (mounted) {
-                Navigator.of(context).popUntil((route) => route.isFirst);
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const WelcomeEntryScreen()),
+                  (route) => false,
+                );
               }
             },
             child: const Text('Logout', style: TextStyle(color: Colors.white)),
