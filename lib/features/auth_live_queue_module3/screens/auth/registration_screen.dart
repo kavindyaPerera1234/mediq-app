@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../services/auth_service.dart';
-import 'verification_code_screen.dart';
 import '../../../../core/localization/app_strings.dart';
 import '../../../../core/localization/app_language.dart' as core_lang;
 
@@ -69,15 +68,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       setState(() => _isLoading = false);
 
       if (mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => VerificationCodeScreen(
-              phoneNumber: rawPhone,
-              isRegistration: true,
-            ),
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Registration successful! Welcome to MediQ.'),
+            backgroundColor: AppColors.statusGreen,
           ),
         );
+        AuthService().routeUserByRole(context);
       }
     } on FirebaseAuthException catch (e) {
       setState(() => _isLoading = false);
