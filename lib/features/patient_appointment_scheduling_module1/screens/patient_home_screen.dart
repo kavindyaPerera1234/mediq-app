@@ -8,6 +8,7 @@ import '../backend/backend.dart';
 import 'senior_mode_settings_screen.dart';
 import '../../auth_live_queue_module3/screens/auth/welcome_entry_screen.dart';
 import '../../auth_live_queue_module3/services/auth_service.dart';
+import '../../token_lifecycle_notification_module2/screens/digital_token_details_screen.dart';
 
 class PatientHomeScreen extends StatelessWidget {
   final ValueChanged<int> onNavigateTab;
@@ -374,7 +375,18 @@ class PatientHomeScreen extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               ElevatedButton(
-                onPressed: () => onNavigateTab(4), // Go to Profile
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DigitalTokenDetailsScreen(
+                        appointmentId: appointment.id.isNotEmpty
+                            ? appointment.id
+                            : appointment.tokenCode,
+                      ),
+                    ),
+                  );
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: AppColors.primaryDark,
