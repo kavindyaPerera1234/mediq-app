@@ -6,6 +6,7 @@ import '../../../patient_appointment_scheduling_module1/screens/patient_main_scr
 import 'welcome_entry_screen.dart';
 import '../../../../screens/staff_dashboard_screen.dart';
 import '../../../../features/admin_dashboard/screens/admin_dashboard_screen.dart';
+import '../../../../services/auth_service.dart' as root_auth;
 
 /// Splash screen that checks Firebase Auth session on launch.
 ///
@@ -70,13 +71,13 @@ class _SplashScreenState extends State<SplashScreen>
         _navigateTo(const WelcomeEntryScreen());
       } else if (role == 'admin') {
         // Admin session → Admin Dashboard Screen
-        _navigateTo(AdminDashboardScreen(authService: authService));
+        _navigateTo(AdminDashboardScreen(authService: root_auth.AuthService()));
       } else if (role == 'patient' || role == 'caregiver') {
         // Patient session → Patient main (booking tab)
         _navigateTo(const PatientMainScreen());
       } else {
         // Staff session (doctor, nurse, receptionist, staff)
-        _navigateTo(StaffDashboardScreen(authService: authService));
+        _navigateTo(StaffDashboardScreen(authService: root_auth.AuthService()));
       }
     } catch (e) {
       debugPrint("Splash session check error: $e");
@@ -182,169 +183,4 @@ class _SplashScreenState extends State<SplashScreen>
   }
 }
 
-// ── Placeholder screens (for standalone Module 3 execution) ─────────────────
 
-/// Temporary admin dashboard placeholder.
-class _AdminDashboardPlaceholder extends StatelessWidget {
-  const _AdminDashboardPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        title: Text(
-          'Admin Dashboard',
-          style: GoogleFonts.inter(fontWeight: FontWeight.w700),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout_rounded),
-            onPressed: () async {
-              await AuthService().logout();
-              if (context.mounted) {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const WelcomeEntryScreen(),
-                  ),
-                );
-              }
-            },
-          ),
-        ],
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: const BoxDecoration(
-                  color: AppColors.primaryLight,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.admin_panel_settings_rounded,
-                  size: 64,
-                  color: AppColors.primary,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Welcome, Admin!',
-                style: GoogleFonts.inter(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'The full admin dashboard will be integrated here by the dashboard team member.',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
-                  height: 1.5,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Temporary staff dashboard placeholder.
-class _StaffDashboardPlaceholder extends StatelessWidget {
-  const _StaffDashboardPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    final authService = AuthService();
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        title: Text(
-          'Staff Portal',
-          style: GoogleFonts.inter(fontWeight: FontWeight.w700),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout_rounded),
-            onPressed: () async {
-              await authService.logout();
-              if (context.mounted) {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const WelcomeEntryScreen(),
-                  ),
-                );
-              }
-            },
-          ),
-        ],
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: const BoxDecoration(
-                  color: AppColors.primaryLight,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.medical_services_rounded,
-                  size: 64,
-                  color: AppColors.primary,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Welcome, ${authService.currentUser?.fullName ?? "Staff"}!',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Role: ${authService.role.name.toUpperCase()}',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primary,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'The staff OPD workflow module will be integrated here by Module 4 team member.',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
-                  height: 1.5,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
