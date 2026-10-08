@@ -75,13 +75,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('MediQ Admin Console'),
+        titleSpacing: 16,
+        title: const Text(
+          'MediQ Admin Console',
+          overflow: TextOverflow.ellipsis,
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout_rounded, color: AppColors.error),
             tooltip: 'Logout',
             onPressed: _handleLogout,
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: SafeArea(
