@@ -9,13 +9,41 @@ class AppointmentService {
   Set<String> _buildUserLookupIds(String patientId) {
     final ids = <String>{};
     if (patientId.trim().isNotEmpty) ids.add(patientId.trim());
-    final user = AuthService().currentUser;
-    if (user != null) {
-      if (user.nic != null && user.nic!.trim().isNotEmpty) ids.add(user.nic!.trim());
-      if (user.phoneNumber.trim().isNotEmpty) ids.add(user.phoneNumber.trim());
-      if (user.userId.trim().isNotEmpty) ids.add(user.userId.trim());
-    }
+    try {
+      final user = AuthService().currentUser;
+      if (user != null) {
+        if (user.nic != null && user.nic!.trim().isNotEmpty) ids.add(user.nic!.trim());
+        if (user.phoneNumber.trim().isNotEmpty) ids.add(user.phoneNumber.trim());
+        if (user.userId.trim().isNotEmpty) ids.add(user.userId.trim());
+      }
+    } catch (_) {}
     return ids;
+  }
+
+  /// Real-time stream of upcoming appointments so newly booked slots appear instantly
+  Stream<List<AppointmentModel>> streamUpcomingAppointments(String patientId) {
+    final ids = _buildUserLookupIds(patientId);
+    return _firestore.collection('appointments').snapshots().map((snapshot) {
+      final docs = <String, DocumentSnapshot<Map<String, dynamic>>>{};
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final pId = data['patientId']?.toString().trim();
+        final pNic = data['patientNic']?.toString().trim();
+        final uId = data['userId']?.toString().trim();
+        final cId = data['caregiverId']?.toString().trim();
+        if ((pId != null && ids.contains(pId)) ||
+            (pNic != null && ids.contains(pNic)) ||
+            (uId != null && ids.contains(uId)) ||
+            (cId != null && ids.contains(cId))) {
+          docs[doc.id] = doc;
+        }
+      }
+      final list = docs.values
+          .map((doc) => AppointmentModel.fromFirestore(doc.id, doc.data()!))
+          .toList();
+      list.sort((a, b) => b.appointmentDate.compareTo(a.appointmentDate));
+      return list;
+    });
   }
 
   // Get upcoming appointments
@@ -88,36 +116,22 @@ class AppointmentService {
 
   // Reschedule appointment
   Future<void> rescheduleAppointment({
-
     required String appointmentId,
-
     required String newDate,
-
     required String newStartTime,
-
     required String newEndTime,
-
     required String newSlotId,
-
   }) async {
-
     await _firestore
         .collection('appointments')
         .doc(appointmentId)
         .update({
-
       'slotId': newSlotId,
-
       'appointmentDate': newDate,
-
       'startTime': newStartTime,
-
       'endTime': newEndTime,
-
       'status': 'rescheduled',
-
       'updatedAt': Timestamp.now(),
-
     });
   }
 

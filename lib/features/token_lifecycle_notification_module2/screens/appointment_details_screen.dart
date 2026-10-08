@@ -219,7 +219,7 @@ class AppointmentDetailsScreen extends StatelessWidget {
                 },
 
                 label: const Text(
-                  "View Live Queue",
+                  "Track Live Queue",
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,

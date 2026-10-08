@@ -8,6 +8,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../auth_live_queue_module3/services/auth_service.dart';
+import '../../auth_live_queue_module3/screens/queue/live_queue_main_screen.dart';
 import 'appointment_details_screen.dart';
 import 'my_appointments_screen.dart';
 
@@ -624,6 +625,46 @@ Time: $timeSlot
                       ),
 
                       const SizedBox(height: 18),
+
+                      // ==========================
+                      // TRACK LIVE QUEUE CTA
+                      // ==========================
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 2,
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const LiveQueueMainScreen(),
+                              ),
+                            );
+                          },
+                          icon: const Icon(
+                            Icons.format_list_bulleted_rounded,
+                            color: Colors.white,
+                          ),
+                          label: const Text(
+                            'Track Live Queue',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
 
                       // ==========================
                       // DOWNLOAD BUTTON

@@ -175,16 +175,19 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                             child: Column(
                                 children: [
                                     Expanded(
-                                        child: Builder(
-                                            builder: (context) {
-                                                if (isLoading) {
+                                        child: StreamBuilder<List<AppointmentModel>>(
+                                            stream: _appointmentService.streamUpcomingAppointments(_currentPatientId),
+                                            builder: (context, snapshot) {
+                                                if (snapshot.connectionState == ConnectionState.waiting && appointments.isEmpty) {
                                                     return const Center(child: CircularProgressIndicator());
                                                 }
-                                                final filtered = appointments.where((appointment) {
+                                                final list = snapshot.data ?? appointments;
+                                                final filtered = list.where((appointment) {
                                                     if (selectedTab == 0) {
                                                         return appointment.status == "confirmed" ||
                                                             appointment.status == "rescheduled" ||
-                                                            appointment.status == "waiting";
+                                                            appointment.status == "waiting" ||
+                                                            appointment.status == "scheduled";
                                                     }
                                                     if (selectedTab == 1) {
                                                         return appointment.status == "completed";
