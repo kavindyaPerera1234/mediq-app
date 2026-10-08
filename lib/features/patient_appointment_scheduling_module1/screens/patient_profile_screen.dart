@@ -11,6 +11,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'senior_mode_settings_screen.dart';
 import '../../auth_live_queue_module3/screens/auth/welcome_entry_screen.dart';
 import '../../auth_live_queue_module3/services/auth_service.dart';
+import '../../../core/utils/nic_helper.dart';
 
 class PatientProfileScreen extends StatefulWidget {
   final int initialProfileTab;
@@ -137,13 +138,24 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
     final emailController = TextEditingController(text: _profile.email);
     final emergencyNameController = TextEditingController(text: _profile.emergencyContactName);
     final emergencyPhoneController = TextEditingController(text: _profile.emergencyContactPhone);
-    String bloodGroup = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].contains(_profile.bloodGroup)
+    final availableBloodGroups = ['Not Set', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+    String bloodGroup = availableBloodGroups.contains(_profile.bloodGroup)
         ? _profile.bloodGroup
-        : 'O+';
-    String gender = ['Male', 'Female', 'Other'].contains(_profile.gender)
+        : 'Not Set';
+    String gender = ['Male', 'Female', 'Other', 'Not Specified'].contains(_profile.gender)
         ? _profile.gender
-        : 'Female';
-    String dob = _profile.dateOfBirth.isNotEmpty ? _profile.dateOfBirth : '1995-01-01';
+        : 'Not Specified';
+
+    final nicInfo = SriLankanNicHelper.decode(_profile.nic);
+    String dob = (_profile.dateOfBirth.isNotEmpty && _profile.dateOfBirth != '1995-01-01')
+        ? _profile.dateOfBirth
+        : '';
+    if (dob.isEmpty && nicInfo.isValid) {
+      dob = nicInfo.dateOfBirth;
+    }
+    if ((gender.isEmpty || gender == 'Not Specified') && nicInfo.isValid) {
+      gender = nicInfo.gender;
+    }
 
     showModalBottomSheet(
       context: context,
@@ -259,10 +271,15 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                                     style: TextStyle(color: AppColors.headingText, fontSize: 13, fontWeight: FontWeight.w600),
                                     icon: Icon(Icons.arrow_drop_down, color: AppColors.headingText),
                                     isExpanded: true,
-                                    items: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((bg) {
+                                    items: ['Not Set', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((bg) {
                                       return DropdownMenuItem(
                                         value: bg,
-                                        child: Text(bg, style: TextStyle(color: AppColors.headingText)),
+                                        child: Text(
+                                          bg == 'Not Set' ? 'Not Set (—)' : bg,
+                                          style: TextStyle(
+                                            color: bg == 'Not Set' ? AppColors.bodyText : AppColors.headingText,
+                                          ),
+                                        ),
                                       );
                                     }).toList(),
                                     onChanged: (val) {
@@ -295,15 +312,20 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                                 ),
                                 child: DropdownButtonHideUnderline(
                                   child: DropdownButton<String>(
-                                    value: gender,
+                                    value: ['Not Specified', 'Male', 'Female', 'Other'].contains(gender) ? gender : 'Not Specified',
                                     dropdownColor: AppColors.cardSurface,
                                     style: TextStyle(color: AppColors.headingText, fontSize: 13, fontWeight: FontWeight.w600),
                                     icon: Icon(Icons.arrow_drop_down, color: AppColors.headingText),
                                     isExpanded: true,
-                                    items: ['Male', 'Female', 'Other'].map((g) {
+                                    items: ['Not Specified', 'Male', 'Female', 'Other'].map((g) {
                                       return DropdownMenuItem(
                                         value: g,
-                                        child: Text(g, style: TextStyle(color: AppColors.headingText)),
+                                        child: Text(
+                                          g == 'Not Specified' ? 'Not Specified (—)' : g,
+                                          style: TextStyle(
+                                            color: g == 'Not Specified' ? AppColors.bodyText : AppColors.headingText,
+                                          ),
+                                        ),
                                       );
                                     }).toList(),
                                     onChanged: (val) {
@@ -327,7 +349,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     _buildFieldLabel('Date of Birth'),
                     InkWell(
                       onTap: () async {
-                        final DateTime initialDate = DateTime.tryParse(dob) ?? DateTime(1995, 1, 1);
+                        final DateTime initialDate = (dob.isNotEmpty ? DateTime.tryParse(dob) : null) ?? DateTime(2000, 1, 1);
                         final picked = await showDatePicker(
                           context: context,
                           initialDate: initialDate,
@@ -352,14 +374,51 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              dob,
-                              style: TextStyle(color: AppColors.headingText, fontSize: 13, fontWeight: FontWeight.w500),
+                              dob.isNotEmpty ? dob : 'Select Date of Birth (YYYY-MM-DD)',
+                              style: TextStyle(
+                                color: dob.isNotEmpty ? AppColors.headingText : AppColors.bodyText,
+                                fontSize: 13,
+                                fontWeight: dob.isNotEmpty ? FontWeight.w600 : FontWeight.w400,
+                              ),
                             ),
                             Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.accentColor),
                           ],
                         ),
                       ),
                     ),
+                    if (nicInfo.isValid && nicInfo.dateOfBirth.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: InkWell(
+                          onTap: () {
+                            setModalState(() {
+                              dob = nicInfo.dateOfBirth;
+                              gender = nicInfo.gender;
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(6),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.auto_awesome, size: 13, color: AppColors.primary),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Auto-fill from NIC (${nicInfo.dateOfBirth})',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 12),
 
                     _buildFieldLabel('Emergency Contact (Name & Phone)'),
@@ -1664,6 +1723,14 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
   }
 
   Widget _buildProfileHeaderCard() {
+    final nicInfo = SriLankanNicHelper.decode(_profile.nic);
+    final effectiveGender = (_profile.gender.isNotEmpty && _profile.gender != 'Not Specified')
+        ? _profile.gender
+        : (nicInfo.isValid ? nicInfo.gender : 'Not Specified');
+    final effectiveDob = (_profile.dateOfBirth.isNotEmpty && _profile.dateOfBirth != '1995-01-01')
+        ? _profile.dateOfBirth
+        : (nicInfo.isValid ? nicInfo.dateOfBirth : 'Not Set');
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1778,18 +1845,51 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: AppColors.errorLight.withValues(alpha: AppColors.isDark ? 0.2 : 1.0),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            _profile.bloodGroup,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.isDark ? const Color(0xFFFCA5A5) : AppColors.error,
+                        InkWell(
+                          onTap: _showEditProfileDialog,
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: (_profile.bloodGroup.isNotEmpty && _profile.bloodGroup != 'Not Set')
+                                  ? AppColors.errorLight.withValues(alpha: AppColors.isDark ? 0.2 : 1.0)
+                                  : (AppColors.isDark ? Colors.white10 : Colors.grey.shade100),
+                              borderRadius: BorderRadius.circular(6),
+                              border: (_profile.bloodGroup.isEmpty || _profile.bloodGroup == 'Not Set')
+                                  ? Border.all(color: AppColors.cardBorder)
+                                  : null,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (_profile.bloodGroup.isNotEmpty && _profile.bloodGroup != 'Not Set') ...[
+                                  Icon(
+                                    Icons.water_drop_rounded,
+                                    size: 11,
+                                    color: AppColors.isDark ? const Color(0xFFFCA5A5) : AppColors.error,
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    _profile.bloodGroup,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.isDark ? const Color(0xFFFCA5A5) : AppColors.error,
+                                    ),
+                                  ),
+                                ] else ...[
+                                  Icon(Icons.add_circle_outline_rounded, size: 11, color: AppColors.bodyText),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    'Blood: Not Set',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.bodyText,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
                         ),
@@ -1814,19 +1914,35 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              Expanded(child: _buildInfoColumn(AppTranslations.tr('genderLabel'), _profile.gender, icon: Icons.person_outline_rounded)),
+              Expanded(
+                child: InkWell(
+                  onTap: _showEditProfileDialog,
+                  borderRadius: BorderRadius.circular(8),
+                  child: _buildInfoColumn(AppTranslations.tr('genderLabel'), effectiveGender, icon: Icons.person_outline_rounded),
+                ),
+              ),
               Container(width: 1, height: 24, color: AppColors.cardBorder),
-              Expanded(child: _buildInfoColumn(AppTranslations.tr('dobLabel'), _profile.dateOfBirth, icon: Icons.cake_outlined)),
+              Expanded(
+                child: InkWell(
+                  onTap: _showEditProfileDialog,
+                  borderRadius: BorderRadius.circular(8),
+                  child: _buildInfoColumn(AppTranslations.tr('dobLabel'), effectiveDob, icon: Icons.cake_outlined),
+                ),
+              ),
               Container(width: 1, height: 24, color: AppColors.cardBorder),
               Expanded(
                 child: Tooltip(
                   message: 'Emergency: ${_profile.emergencyContactName} (${_profile.emergencyContactPhone})',
-                  child: _buildInfoColumn(
-                    AppTranslations.tr('emgContactLabel'),
-                    _profile.emergencyContactName.isNotEmpty
-                        ? _profile.emergencyContactName
-                        : (_profile.emergencyContactPhone.isNotEmpty ? _profile.emergencyContactPhone : '—'),
-                    icon: Icons.phone_in_talk_rounded,
+                  child: InkWell(
+                    onTap: _showEditProfileDialog,
+                    borderRadius: BorderRadius.circular(8),
+                    child: _buildInfoColumn(
+                      AppTranslations.tr('emgContactLabel'),
+                      _profile.emergencyContactName.isNotEmpty
+                          ? _profile.emergencyContactName
+                          : (_profile.emergencyContactPhone.isNotEmpty ? _profile.emergencyContactPhone : '—'),
+                      icon: Icons.phone_in_talk_rounded,
+                    ),
                   ),
                 ),
               ),

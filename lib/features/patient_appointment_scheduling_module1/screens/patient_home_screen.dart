@@ -224,9 +224,13 @@ class PatientHomeScreen extends StatelessWidget {
       greeting = 'Welcome, $firstName';
     }
 
+    final hasBloodGroup = profile.bloodGroup.isNotEmpty && profile.bloodGroup != 'Not Set';
+    final bloodStr = hasBloodGroup ? 'Blood: ${profile.bloodGroup}' : null;
     final idSubtitle = (patientNic.isNotEmpty && patientNic != 'N/A')
-        ? 'NIC: $patientNic • Blood: ${profile.bloodGroup}'
-        : (profile.phone.isNotEmpty ? 'Phone: ${profile.phone}' : 'Blood: ${profile.bloodGroup}');
+        ? (bloodStr != null ? 'NIC: $patientNic • $bloodStr' : 'NIC: $patientNic')
+        : (profile.phone.isNotEmpty
+            ? (bloodStr != null ? 'Phone: ${profile.phone} • $bloodStr' : 'Phone: ${profile.phone}')
+            : (bloodStr ?? 'NIC: N/A'));
 
     return Container(
       padding: const EdgeInsets.all(18),

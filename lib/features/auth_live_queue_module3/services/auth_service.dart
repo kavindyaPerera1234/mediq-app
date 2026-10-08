@@ -8,6 +8,7 @@ import '../../patient_appointment_scheduling_module1/backend/services/profile_se
 import '../../patient_appointment_scheduling_module1/screens/patient_main_screen.dart';
 import '../screens/auth/splash_screen.dart';
 import 'live_queue_service.dart';
+import '../../../core/utils/nic_helper.dart';
 
 class AuthService extends ChangeNotifier {
   static final AuthService _instance = AuthService._internal();
@@ -288,13 +289,16 @@ class AuthService extends ChangeNotifier {
 
       final uid = credential.user!.uid;
 
+      final nicInfo = SriLankanNicHelper.decode(nic);
+      final effectiveAge = age ?? nicInfo.age;
+
       final newUser = UserModel(
         userId: uid,
         fullName: fullName.trim(),
         phoneNumber: phoneNumber.trim(),
         email: email.trim(),
         nic: nic?.trim(),
-        age: age,
+        age: effectiveAge,
         role: isCaregiver ? UserRole.caregiver : UserRole.patient,
         isCaregiver: isCaregiver,
         preferredLanguage: preferredLanguage,
@@ -311,15 +315,18 @@ class AuthService extends ChangeNotifier {
       // Dual write to patient_profiles for Module 1 ProfileService
       try {
         final profileDocId = (nic != null && nic.trim().isNotEmpty) ? nic.trim() : uid;
+        final derivedDob = nicInfo.isValid ? nicInfo.dateOfBirth : '';
+        final derivedGender = nicInfo.isValid ? nicInfo.gender : 'Not Specified';
+
         await _firestore.collection('patient_profiles').doc(profileDocId).set({
           'patientId': profileDocId,
           'fullName': fullName.trim(),
           'nic': (nic != null && nic.trim().isNotEmpty) ? nic.trim() : profileDocId,
           'phone': phoneNumber.trim(),
           'email': email.trim(),
-          'bloodGroup': 'O+',
-          'dateOfBirth': '1995-01-01',
-          'gender': 'Not Specified',
+          'bloodGroup': 'Not Set',
+          'dateOfBirth': derivedDob,
+          'gender': derivedGender,
           'emergencyContactName': '',
           'emergencyContactPhone': '',
           'isSeniorModeEnabled': false,
