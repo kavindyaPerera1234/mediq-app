@@ -5,8 +5,6 @@ import '../../../widgets/statistic_card.dart';
 import 'admin_live_queue_console_screen.dart';
 import 'admin_user_management_screen.dart';
 import '../../patient_appointment_scheduling_module1/admin/screens/hospital_admin_dashboard.dart';
-import '../../patient_appointment_scheduling_module1/admin/screens/manage_hospitals_screen.dart';
-import '../../patient_appointment_scheduling_module1/admin/screens/manage_appointment_slots_screen.dart';
 import '../../auth_live_queue_module3/screens/auth/welcome_entry_screen.dart';
 import '../../auth_live_queue_module3/services/auth_service.dart' as mod3_auth;
 
@@ -212,10 +210,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       ListTile(
                         leading: Container(
                           padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(color: AppColors.successLight, shape: BoxShape.circle),
-                          child: const Icon(Icons.local_hospital_rounded, color: AppColors.success),
+                          decoration: BoxDecoration(color: AppColors.primaryLight, shape: BoxShape.circle),
+                          child: const Icon(Icons.local_hospital_rounded, color: AppColors.primary),
                         ),
-                        title: const Text('Hospital & OPD Slot Console (Module 1)', style: TextStyle(fontWeight: FontWeight.bold)),
+                        title: const Text('Hospital & OPD Clinic Console (Module 1)', style: TextStyle(fontWeight: FontWeight.bold)),
                         subtitle: const Text('Configure hospitals, clinic rooms & daily 25-patient appointment slot caps'),
                         trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
                         onTap: () {
@@ -223,44 +221,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             context,
                             MaterialPageRoute(
                               builder: (context) => const HospitalAdminDashboard(),
-                            ),
-                          );
-                        },
-                      ),
-                      const Divider(),
-                      ListTile(
-                        leading: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(color: Colors.purple.withValues(alpha: 0.15), shape: BoxShape.circle),
-                          child: const Icon(Icons.tune_rounded, color: Colors.purple),
-                        ),
-                        title: const Text('Appointment Slot Capping & Timings', style: TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: const Text('Set 25-patient slot caps, morning & afternoon clinic session hours'),
-                        trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const ManageAppointmentSlotsScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                      const Divider(),
-                      ListTile(
-                        leading: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(color: AppColors.statusOrange.withValues(alpha: 0.15), shape: BoxShape.circle),
-                          child: const Icon(Icons.domain_add_rounded, color: AppColors.statusOrange),
-                        ),
-                        title: const Text('National & Teaching Hospitals Registry', style: TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: const Text('Register new OPD hospitals, province/district data & emergency hotlines'),
-                        trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const ManageHospitalsScreen(),
                             ),
                           );
                         },
