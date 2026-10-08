@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_accessibility.dart';
@@ -45,6 +47,58 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  ImageProvider? _getProfileImage(String url) {
+    final clean = url.trim();
+    if (clean.isEmpty) return null;
+    if (clean.startsWith('data:image') || clean.startsWith('data:;base64,')) {
+      try {
+        final commaIdx = clean.indexOf(',');
+        final base64Str = commaIdx != -1 ? clean.substring(commaIdx + 1) : clean;
+        return MemoryImage(base64Decode(base64Str));
+      } catch (e) {
+        return null;
+      }
+    } else if (clean.startsWith('http://') || clean.startsWith('https://')) {
+      return NetworkImage(clean);
+    } else {
+      try {
+        return MemoryImage(base64Decode(clean));
+      } catch (_) {
+        return null;
+      }
+    }
+  }
+
+  Widget _buildAvatarWidget({required double radius, VoidCallback? onTap}) {
+    final imageProvider = _getProfileImage(_profile.photoUrl);
+    final avatar = CircleAvatar(
+      radius: radius,
+      backgroundColor: AppColors.chipBg,
+      backgroundImage: imageProvider,
+      onBackgroundImageError: imageProvider != null
+          ? (exception, stackTrace) {
+              debugPrint('Avatar load error: $exception');
+            }
+          : null,
+      child: imageProvider == null
+          ? Text(
+              _profile.fullName.trim().isNotEmpty ? _profile.fullName.trim()[0].toUpperCase() : 'P',
+              style: TextStyle(
+                fontSize: radius * 0.72,
+                fontWeight: FontWeight.bold,
+                color: AppColors.accentColor,
+              ),
+            )
+          : null,
+    );
+
+    if (onTap == null) return avatar;
+    return GestureDetector(
+      onTap: onTap,
+      child: avatar,
+    );
   }
 
   void _showEditProfileDialog() {
@@ -97,20 +151,19 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     Center(
                       child: Column(
                         children: [
-                          CircleAvatar(
+                          _buildAvatarWidget(
                             radius: 36,
-                            backgroundColor: AppColors.chipBg,
-                            backgroundImage: _profile.photoUrl.isNotEmpty ? NetworkImage(_profile.photoUrl) : null,
-                            child: _profile.photoUrl.isEmpty
-                                ? Text(
-                                    _profile.fullName.isNotEmpty ? _profile.fullName[0] : 'P',
-                                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.accentColor),
-                                  )
-                                : null,
+                            onTap: () {
+                              Navigator.pop(context);
+                              _showProfilePhotoModal();
+                            },
                           ),
                           TextButton.icon(
                             icon: const Icon(Icons.camera_alt_rounded, size: 16),
-                            label: const Text('Change Profile Photo', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                            label: Text(
+                              AppTranslations.tr('changePhoto'),
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                            ),
                             onPressed: () {
                               Navigator.pop(context);
                               _showProfilePhotoModal();
@@ -240,31 +293,29 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
   }
 
   void _showProfilePhotoModal() {
-    final urlController = TextEditingController(text: _profile.photoUrl);
-
     final List<Map<String, String>> presetAvatars = [
       {
-        'label': 'Female (Default)',
+        'label': 'Female',
         'url': 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&fit=crop&crop=faces',
       },
       {
-        'label': 'Nurse / Doctor',
+        'label': 'Doctor',
         'url': 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=200&fit=crop&crop=faces',
       },
       {
-        'label': 'Elderly Mother',
+        'label': 'Mother',
         'url': 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=200&fit=crop&crop=faces',
       },
       {
-        'label': 'Elderly Father',
+        'label': 'Father',
         'url': 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&fit=crop&crop=faces',
       },
       {
-        'label': 'Male Patient',
+        'label': 'Male',
         'url': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&fit=crop&crop=faces',
       },
       {
-        'label': 'Young Adult',
+        'label': 'Young',
         'url': 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&fit=crop&crop=faces',
       },
     ];
@@ -278,24 +329,56 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
           padding: EdgeInsets.only(
             left: 20,
             right: 20,
-            top: 20,
+            top: 14,
             bottom: MediaQuery.of(modalCtx).viewInsets.bottom + 24,
           ),
           decoration: BoxDecoration(
             color: AppColors.cardSurface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.15),
+                blurRadius: 12,
+                offset: const Offset(0, -2),
+              ),
+            ],
           ),
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Pull handle
+                Center(
+                  child: Container(
+                    width: 44,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.cardBorder,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Choose Profile Photo',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.headingText),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(7),
+                          decoration: BoxDecoration(
+                            color: AppColors.chipBg,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.account_circle_rounded, color: AppColors.accentColor, size: 22),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          AppTranslations.tr('changePhoto'),
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.headingText),
+                        ),
+                      ],
                     ),
                     IconButton(
                       icon: Icon(Icons.close_rounded, color: AppColors.headingText),
@@ -304,20 +387,146 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                   ],
                 ),
                 Divider(color: AppColors.cardBorder),
-                const SizedBox(height: 12),
-                Text(
-                  'Select a Profile Avatar:',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.headingText),
-                ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
 
-                // Avatar Horizontal Selector
+                // Option 1: Choose from Gallery / Files
+                InkWell(
+                  onTap: () async {
+                    try {
+                      final picker = ImagePicker();
+                      final XFile? image = await picker.pickImage(
+                        source: ImageSource.gallery,
+                        maxWidth: 512,
+                        maxHeight: 512,
+                        imageQuality: 75,
+                      );
+                      if (image != null) {
+                        final bytes = await image.readAsBytes();
+                        final base64Image = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+                        if (modalCtx.mounted) Navigator.pop(modalCtx);
+                        await _saveProfilePhoto(base64Image);
+                      }
+                    } catch (e) {
+                      debugPrint('Error picking from gallery: $e');
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: AppColors.accentColor.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.accentColor.withValues(alpha: 0.35)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppColors.accentColor,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.photo_library_rounded, color: Colors.white, size: 22),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                AppTranslations.tr('uploadFromGallery'),
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.headingText),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'JPG, PNG from device folder or gallery',
+                                style: TextStyle(fontSize: 11, color: AppColors.bodyText),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.accentColor),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                // Option 2: Take Photo with Camera
+                InkWell(
+                  onTap: () async {
+                    try {
+                      final picker = ImagePicker();
+                      final XFile? image = await picker.pickImage(
+                        source: ImageSource.camera,
+                        maxWidth: 512,
+                        maxHeight: 512,
+                        imageQuality: 75,
+                      );
+                      if (image != null) {
+                        final bytes = await image.readAsBytes();
+                        final base64Image = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+                        if (modalCtx.mounted) Navigator.pop(modalCtx);
+                        await _saveProfilePhoto(base64Image);
+                      }
+                    } catch (e) {
+                      debugPrint('Error taking photo: $e');
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: AppColors.innerCardBg,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.cardBorder),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppColors.chipBg,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(Icons.camera_alt_rounded, color: AppColors.accentColor, size: 22),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                AppTranslations.tr('takePhoto'),
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.headingText),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Capture a new profile photo with camera',
+                                style: TextStyle(fontSize: 11, color: AppColors.bodyText),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.bodyText),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+
+                // Preset Avatars Section
+                Text(
+                  AppTranslations.tr('chooseAvatar'),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.headingText),
+                ),
+                const SizedBox(height: 10),
                 SizedBox(
-                  height: 96,
+                  height: 84,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: presetAvatars.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 14),
+                    separatorBuilder: (_, __) => const SizedBox(width: 12),
                     itemBuilder: (context, idx) {
                       final item = presetAvatars[idx];
                       final isSelected = _profile.photoUrl == item['url'];
@@ -333,22 +542,22 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: isSelected ? AppColors.primary : Colors.transparent,
+                                  color: isSelected ? AppColors.accentColor : Colors.transparent,
                                   width: 2.5,
                                 ),
                               ),
                               child: CircleAvatar(
-                                radius: 28,
+                                radius: 26,
                                 backgroundImage: NetworkImage(item['url']!),
                               ),
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              item['label']!.split(' ')[0],
+                              item['label']!,
                               style: TextStyle(
                                 fontSize: 10,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                color: isSelected ? AppColors.accentColor : AppColors.bodyText,
                               ),
                             ),
                           ],
@@ -357,56 +566,22 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     },
                   ),
                 ),
-                const SizedBox(height: 16),
-                const Divider(color: AppColors.border),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
 
-                // Option 2: Enter Custom Photo URL
-                const Text(
-                  'Or Paste Image Web URL:',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: urlController,
-                        decoration: _inputDecoration('https://... image.jpg'),
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      onPressed: () async {
-                        final url = urlController.text.trim();
-                        if (url.isNotEmpty) {
-                          Navigator.pop(modalCtx);
-                          await _saveProfilePhoto(url);
-                        }
-                      },
-                      child: const Text('Apply', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Option 3: Remove Profile Photo
+                // Remove Photo Button
                 if (_profile.photoUrl.isNotEmpty) ...[
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error, size: 18),
-                      label: const Text('Remove Profile Photo', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
+                      icon: const Icon(Icons.delete_outline_rounded, color: AppColors.statusRed, size: 18),
+                      label: Text(
+                        AppTranslations.tr('removePhoto'),
+                        style: const TextStyle(color: AppColors.statusRed, fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: AppColors.error),
+                        side: BorderSide(color: AppColors.statusRed.withValues(alpha: 0.5)),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                       onPressed: () async {
                         Navigator.pop(modalCtx);
@@ -427,12 +602,20 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
     setState(() {
       _profile = _profile.copyWith(photoUrl: newUrl);
     });
+    ProfileService.activeProfileNotifier.value = _profile;
+
     final success = await _profileService.updateProfilePhoto(_currentPatientNic, newUrl);
     if (!mounted) return;
+    final isSi = AppAccessibility.currentLanguage.value == 'si';
+    final isTa = AppAccessibility.currentLanguage.value == 'ta';
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(success ? 'Profile photo updated successfully!' : 'Failed to update photo online.'),
-        backgroundColor: success ? AppColors.statusGreen : AppColors.error,
+        content: Text(
+          success
+              ? (isSi ? 'පැතිකඩ ඡායාරූපය සාර්ථකව යාවත්කාලීන විය!' : isTa ? 'சுயவிவரப் படம் வெற்றிகரமாக புதுப்பிக்கப்பட்டது!' : 'Profile photo updated successfully!')
+              : (isSi ? 'ඡායාරූපය යාවත්කාලීන කිරීම අසාර්ථක විය.' : isTa ? 'புகைப்படத்தை புதுப்பிக்க முடியவில்லை.' : 'Failed to update photo online.'),
+        ),
+        backgroundColor: success ? AppColors.statusGreen : AppColors.statusRed,
         duration: const Duration(seconds: 2),
       ),
     );
@@ -806,13 +989,13 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
   Widget _buildLanguageSelectorCard(bool isDark) {
     final currentLang = AppAccessibility.currentLanguage.value;
     final options = [
-      {'code': 'en', 'label': 'English', 'flag': '🇬🇧'},
-      {'code': 'si', 'label': 'සිංහල', 'flag': '🇱🇰'},
-      {'code': 'ta', 'label': 'தமிழ்', 'flag': '🇱🇰'},
+      {'code': 'en', 'badge': 'EN', 'label': 'English'},
+      {'code': 'si', 'badge': 'සිං', 'label': 'සිංහල'},
+      {'code': 'ta', 'badge': 'தம', 'label': 'தமிழ்'},
     ];
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: AppColors.cardSurface,
         borderRadius: BorderRadius.circular(16),
@@ -823,7 +1006,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.language_rounded, color: AppColors.accentColor, size: 20),
+              Icon(Icons.translate_rounded, color: AppColors.accentColor, size: 20),
               const SizedBox(width: 8),
               Text(
                 AppTranslations.tr('language'),
@@ -836,7 +1019,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Row(
             children: options.map((opt) {
               final isSelected = currentLang == opt['code'];
@@ -863,7 +1046,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     },
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
                       decoration: BoxDecoration(
                         color: isSelected ? AppColors.accentColor : AppColors.innerCardBg,
                         borderRadius: BorderRadius.circular(10),
@@ -875,8 +1058,24 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(opt['flag']!, style: const TextStyle(fontSize: 14)),
-                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? Colors.white.withValues(alpha: 0.25)
+                                  : AppColors.chipBg,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              opt['badge']!,
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.bold,
+                                color: isSelected ? Colors.white : AppColors.accentColor,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 5),
                           Text(
                             opt['label']!,
                             style: TextStyle(
@@ -908,9 +1107,9 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
       ),
       child: Row(
         children: [
-          _buildTabItem(0, AppTranslations.tr('navAppointments'), Icons.confirmation_number_outlined),
-          _buildTabItem(1, AppTranslations.tr('patientDependents'), Icons.family_restroom_rounded),
-          _buildTabItem(2, AppTranslations.tr('settings'), Icons.tune_rounded),
+          _buildTabItem(0, AppTranslations.tr('tabAppointments'), Icons.confirmation_number_outlined),
+          _buildTabItem(1, AppTranslations.tr('tabDependents'), Icons.family_restroom_rounded),
+          _buildTabItem(2, AppTranslations.tr('tabSettings'), Icons.tune_rounded),
         ],
       ),
     );
@@ -924,7 +1123,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
         borderRadius: BorderRadius.circular(10),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(vertical: 9),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 9),
           decoration: BoxDecoration(
             color: isSelected ? AppColors.accentColor : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
@@ -944,7 +1143,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
             children: [
               Icon(
                 icon,
-                size: 14,
+                size: 13,
                 color: isSelected ? Colors.white : AppColors.bodyText,
               ),
               const SizedBox(width: 4),
@@ -952,7 +1151,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                 child: Text(
                   title,
                   style: TextStyle(
-                    fontSize: 11.5,
+                    fontSize: 11,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
                     color: isSelected ? Colors.white : AppColors.bodyText,
                   ),
@@ -966,7 +1165,6 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
       ),
     );
   }
-
 
   Widget _buildProfileHeaderCard() {
     return Container(
@@ -1001,7 +1199,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     Icon(Icons.verified_user_rounded, size: 14, color: AppColors.accentColor),
                     const SizedBox(width: 4),
                     Text(
-                      'Verified Patient',
+                      AppTranslations.tr('verifiedPatient'),
                       style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.accentColor),
                     ),
                   ],
@@ -1040,21 +1238,9 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
               // Interactive Avatar with Camera Badge
               Stack(
                 children: [
-                  GestureDetector(
+                  _buildAvatarWidget(
+                    radius: 34,
                     onTap: _showProfilePhotoModal,
-                    child: CircleAvatar(
-                      radius: 34,
-                      backgroundColor: AppColors.chipBg,
-                      backgroundImage: _profile.photoUrl.isNotEmpty
-                          ? NetworkImage(_profile.photoUrl)
-                          : null,
-                      child: _profile.photoUrl.isEmpty
-                          ? Text(
-                              _profile.fullName.isNotEmpty ? _profile.fullName[0] : 'P',
-                              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.accentColor),
-                            )
-                          : null,
-                    ),
                   ),
                   Positioned(
                     bottom: 0,
@@ -1062,13 +1248,20 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     child: GestureDetector(
                       onTap: _showProfilePhotoModal,
                       child: Container(
-                        padding: const EdgeInsets.all(4),
+                        padding: const EdgeInsets.all(5),
                         decoration: BoxDecoration(
                           color: AppColors.accentColor,
                           shape: BoxShape.circle,
                           border: Border.all(color: AppColors.cardSurface, width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.15),
+                              blurRadius: 3,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
                         ),
-                        child: const Icon(Icons.camera_alt_rounded, size: 13, color: Colors.white),
+                        child: const Icon(Icons.camera_alt_rounded, size: 12, color: Colors.white),
                       ),
                     ),
                   ),
@@ -1096,7 +1289,11 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                           ),
                           child: Text(
                             _profile.bloodGroup,
-                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.isDark ? const Color(0xFFFCA5A5) : AppColors.error),
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.isDark ? const Color(0xFFFCA5A5) : AppColors.error,
+                            ),
                           ),
                         ),
                       ],
@@ -1120,16 +1317,18 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              Expanded(child: _buildInfoColumn('GENDER', _profile.gender)),
+              Expanded(child: _buildInfoColumn(AppTranslations.tr('genderLabel'), _profile.gender, icon: Icons.person_outline_rounded)),
               Container(width: 1, height: 24, color: AppColors.cardBorder),
-              Expanded(child: _buildInfoColumn('DOB', _profile.dateOfBirth)),
+              Expanded(child: _buildInfoColumn(AppTranslations.tr('dobLabel'), _profile.dateOfBirth, icon: Icons.cake_outlined)),
               Container(width: 1, height: 24, color: AppColors.cardBorder),
               Expanded(
                 child: Tooltip(
-                  message: 'Emergency Contact: ${_profile.emergencyContactName} (${_profile.emergencyContactPhone})',
+                  message: 'Emergency: ${_profile.emergencyContactName} (${_profile.emergencyContactPhone})',
                   child: _buildInfoColumn(
-                    'EMG. CONTACT',
-                    _profile.emergencyContactName,
+                    AppTranslations.tr('emgContactLabel'),
+                    _profile.emergencyContactName.isNotEmpty
+                        ? _profile.emergencyContactName
+                        : (_profile.emergencyContactPhone.isNotEmpty ? _profile.emergencyContactPhone : '—'),
                     icon: Icons.phone_in_talk_rounded,
                   ),
                 ),
@@ -1142,6 +1341,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
   }
 
   Widget _buildInfoColumn(String label, String value, {IconData? icon}) {
+    final displayVal = value.trim().isNotEmpty ? value : '—';
     return Column(
       children: [
         Row(
@@ -1149,22 +1349,22 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 10, color: AppColors.bodyText),
+              Icon(icon, size: 11, color: AppColors.bodyText),
               const SizedBox(width: 3),
             ],
             Flexible(
               child: Text(
                 label,
-                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.bodyText),
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.bodyText),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 3),
         Text(
-          value,
+          displayVal,
           style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.headingText),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,

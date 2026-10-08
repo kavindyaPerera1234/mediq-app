@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
@@ -181,6 +182,28 @@ class PatientHomeScreen extends StatelessWidget {
     }
   }
 
+  ImageProvider? _getProfileImage(String url) {
+    final clean = url.trim();
+    if (clean.isEmpty) return null;
+    if (clean.startsWith('data:image') || clean.startsWith('data:;base64,')) {
+      try {
+        final commaIdx = clean.indexOf(',');
+        final base64Str = commaIdx != -1 ? clean.substring(commaIdx + 1) : clean;
+        return MemoryImage(base64Decode(base64Str));
+      } catch (_) {
+        return null;
+      }
+    } else if (clean.startsWith('http://') || clean.startsWith('https://')) {
+      return NetworkImage(clean);
+    } else {
+      try {
+        return MemoryImage(base64Decode(clean));
+      } catch (_) {
+        return null;
+      }
+    }
+  }
+
   Widget _buildWelcomeHeader() {
     final profile = ProfileService.activeProfileNotifier.value;
     final fullName = profile.fullName;
@@ -221,7 +244,11 @@ class PatientHomeScreen extends StatelessWidget {
           CircleAvatar(
             radius: 26,
             backgroundColor: AppColors.chipBg,
-            child: Text(initial, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.accentColor)),
+            backgroundImage: _getProfileImage(profile.photoUrl),
+            onBackgroundImageError: profile.photoUrl.isNotEmpty ? (_, __) {} : null,
+            child: (profile.photoUrl.isNotEmpty && _getProfileImage(profile.photoUrl) != null)
+                ? null
+                : Text(initial, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.accentColor)),
           ),
           const SizedBox(width: 14),
           Expanded(

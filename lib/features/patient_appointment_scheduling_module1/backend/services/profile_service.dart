@@ -72,6 +72,7 @@ class ProfileService {
               phone: phone,
               email: email,
               bloodGroup: (data['bloodGroup'] ?? 'O+').toString(),
+              photoUrl: (data['photoUrl'] ?? user.photoURL ?? '').toString(),
             );
             activeProfileNotifier.value = newProfile;
             return newProfile;
@@ -84,6 +85,7 @@ class ProfileService {
             phone: user.phoneNumber ?? '',
             email: user.email ?? '',
             bloodGroup: 'O+',
+            photoUrl: user.photoURL ?? '',
           );
           activeProfileNotifier.value = newProfile;
           return newProfile;
@@ -119,10 +121,26 @@ class ProfileService {
   Future<bool> savePatientProfile(PatientProfileModel profile) async {
     activeProfileNotifier.value = profile;
     try {
+      final currentUid = FirebaseAuth.instance.currentUser?.uid;
+      final docId = (profile.nic.isNotEmpty && profile.nic != 'N/A')
+          ? profile.nic
+          : (currentUid ?? profile.patientId);
+
       await _profilesRef
-          .doc(profile.nic)
+          .doc(docId)
           .set(profile.toMap(), SetOptions(merge: true))
           .timeout(const Duration(seconds: 4));
+
+      if (currentUid != null) {
+        await _firestore.collection('users').doc(currentUid).set({
+          'fullName': profile.fullName,
+          'phone': profile.phone,
+          'phoneNumber': profile.phone,
+          'email': profile.email,
+          'bloodGroup': profile.bloodGroup,
+          if (profile.photoUrl.isNotEmpty) 'photoUrl': profile.photoUrl,
+        }, SetOptions(merge: true)).catchError((_) {});
+      }
       return true;
     } catch (e) {
       debugPrint('ProfileService: savePatientProfile error: $e');
@@ -133,10 +151,22 @@ class ProfileService {
   /// Update profile photo URL directly
   Future<bool> updateProfilePhoto(String patientNic, String photoUrl) async {
     try {
+      activeProfileNotifier.value = activeProfileNotifier.value.copyWith(photoUrl: photoUrl);
+      final currentUid = FirebaseAuth.instance.currentUser?.uid;
+      final docId = (patientNic.isNotEmpty && patientNic != 'N/A')
+          ? patientNic
+          : (currentUid ?? 'default');
+
       await _profilesRef
-          .doc(patientNic)
+          .doc(docId)
           .set({'photoUrl': photoUrl, 'updatedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true))
           .timeout(const Duration(seconds: 4));
+
+      if (currentUid != null) {
+        await _firestore.collection('users').doc(currentUid).set({
+          'photoUrl': photoUrl,
+        }, SetOptions(merge: true)).catchError((_) {});
+      }
       return true;
     } catch (e) {
       debugPrint('ProfileService: updateProfilePhoto error: $e');
