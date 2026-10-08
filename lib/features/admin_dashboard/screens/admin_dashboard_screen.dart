@@ -1,370 +1,209 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../services/auth_service.dart';
+import '../../../widgets/statistic_card.dart';
+import 'admin_live_queue_console_screen.dart';
+import 'admin_user_management_screen.dart';
 
-import '../../../../core/constants/app_colors.dart';
+class AdminDashboardScreen extends StatefulWidget {
+  final AuthService authService;
 
-class AdminDashboardScreen extends StatelessWidget {
-  const AdminDashboardScreen({super.key});
+  const AdminDashboardScreen({
+    super.key,
+    required this.authService,
+  });
+
+  @override
+  State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+}
+
+class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+
+  void _handleLogout() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Staff Logout'),
+        content: const Text('Are you sure you want to log out of MediQ Portal?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () async {
+              await widget.authService.signOut();
+              if (mounted) {
+                Navigator.of(context).popUntil((route) => route.isFirst);
+              }
+            },
+            child: const Text('Logout', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final currentUser = widget.authService.currentUserModel;
+
     return Scaffold(
       backgroundColor: AppColors.background,
-
       appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        title: Text(
-          'Admin Dashboard',
-          style: GoogleFonts.inter(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
+        title: const Text('MediQ Admin Console'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_none_rounded),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.person_outline_rounded),
-            onPressed: () {},
+            icon: const Icon(Icons.logout_rounded, color: AppColors.error),
+            tooltip: 'Logout',
+            onPressed: _handleLogout,
           ),
         ],
       ),
-
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-
-            Text(
-              'Welcome, Admin',
-              style: GoogleFonts.inter(
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
-              ),
-            ),
-
-            const SizedBox(height: 6),
-
-            Text(
-              'Hospital OPD Management System',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: AppColors.textSecondary,
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 14,
-              mainAxisSpacing: 14,
-              childAspectRatio: 1.35,
-              children: [
-                _dashboardCard(
-                  icon: Icons.people_outline_rounded,
-                  title: 'Registered Users',
-                  value: '120',
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Admin Profile Banner
+              Card(
+                elevation: 1,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: const BorderSide(color: AppColors.border),
                 ),
-                _dashboardCard(
-                  icon: Icons.calendar_today_outlined,
-                  title: "Today's Appointments",
-                  value: '24',
-                ),
-                _dashboardCard(
-                  icon: Icons.queue_outlined,
-                  title: 'Active OPD Queues',
-                  value: '6',
-                ),
-                _dashboardCard(
-                  icon: Icons.check_circle_outline_rounded,
-                  title: 'Completed Today',
-                  value: '18',
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 28),
-
-            Text(
-              'Management',
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
-              ),
-            ),
-
-            const SizedBox(height: 14),
-
-            _managementCard(
-              icon: Icons.calendar_month_outlined,
-              title: 'Appointment & Scheduling',
-              subtitle: 'Manage appointments and schedules',
-            ),
-
-            _managementCard(
-              icon: Icons.notifications_none_rounded,
-              title: 'Token & Notifications',
-              subtitle: 'Manage tokens and patient notifications',
-            ),
-
-            _managementCard(
-              icon: Icons.manage_accounts_outlined,
-              title: 'Users & Access',
-              subtitle: 'Manage users and access permissions',
-            ),
-
-            _managementCard(
-              icon: Icons.groups_outlined,
-              title: 'Queue & Staff Operations',
-              subtitle: 'Monitor queues and staff operations',
-            ),
-
-            const SizedBox(height: 28),
-
-            Text(
-              'Recent Activity',
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
-              ),
-            ),
-
-            const SizedBox(height: 14),
-
-            _activityItem(
-              'New appointment booked',
-              'Patient appointment was created',
-            ),
-
-            _activityItem(
-              'Queue updated',
-              'OPD queue information was updated',
-            ),
-
-            _activityItem(
-              'Staff account updated',
-              'Staff information was modified',
-            ),
-
-            const SizedBox(height: 20),
-
-            Text(
-              'Needs Attention',
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
-              ),
-            ),
-
-            const SizedBox(height: 14),
-
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.10),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: Colors.orange.withOpacity(0.30),
-                ),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.warning_amber_rounded,
-                    color: Colors.orange,
-                    size: 28,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Some appointments and queue activities need attention.',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
+                child: Padding(
+                  padding: const EdgeInsets.all(18.0),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 28,
+                        backgroundColor: AppColors.primaryLight,
+                        child: const Icon(Icons.admin_panel_settings_rounded, size: 32, color: AppColors.primary),
                       ),
-                    ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'HOSPITAL SYSTEM ADMIN',
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
+                            ),
+                            Text(
+                              currentUser?.fullName ?? 'Administrator',
+                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                            ),
+                            Text(
+                              currentUser?.email ?? 'admin@mediq.lk',
+                              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              const Text(
+                'SYSTEM ANALYTICS & OVERVIEW',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 0.8),
+              ),
+              const SizedBox(height: 12),
+
+              Row(
+                children: [
+                  StatisticCard(
+                    label: 'Clinics',
+                    value: '12',
+                    icon: Icons.local_hospital_rounded,
+                    color: AppColors.primary,
+                    backgroundColor: AppColors.primaryLight,
+                  ),
+                  const SizedBox(width: 10),
+                  StatisticCard(
+                    label: 'Staff Users',
+                    value: '48',
+                    icon: Icons.people_alt_rounded,
+                    color: AppColors.info,
+                    backgroundColor: AppColors.infoLight,
+                  ),
+                  const SizedBox(width: 10),
+                  StatisticCard(
+                    label: 'Active Queues',
+                    value: '8',
+                    icon: Icons.playlist_add_check_circle_rounded,
+                    color: AppColors.success,
+                    backgroundColor: AppColors.successLight,
                   ),
                 ],
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+              const SizedBox(height: 24),
 
-  Widget _dashboardCard({
-    required IconData icon,
-    required String title,
-    required String value,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.border,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            icon,
-            color: AppColors.primary,
-            size: 28,
-          ),
-          const Spacer(),
-          Text(
-            value,
-            style: GoogleFonts.inter(
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            title,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+              const Text(
+                'ADMINISTRATION CONTROL PANELS',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 0.8),
+              ),
+              const SizedBox(height: 12),
 
-  Widget _managementCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: AppColors.border,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(11),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.10),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              icon,
-              color: AppColors.primary,
-              size: 25,
-            ),
-          ),
-
-          const SizedBox(width: 14),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: GoogleFonts.inter(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+              Card(
+                elevation: 1,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: const BorderSide(color: AppColors.border),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(color: AppColors.primaryLight, shape: BoxShape.circle),
+                          child: const Icon(Icons.monitor_heart_rounded, color: AppColors.primary),
+                        ),
+                        title: const Text('Master Live Queue Console', style: TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: const Text('Real-time token control, queue pause/resume & triage overrides'),
+                        trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AdminLiveQueueConsoleScreen(authService: widget.authService),
+                            ),
+                          );
+                        },
+                      ),
+                      const Divider(),
+                      ListTile(
+                        leading: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(color: AppColors.infoLight, shape: BoxShape.circle),
+                          child: const Icon(Icons.manage_accounts_rounded, color: AppColors.info),
+                        ),
+                        title: const Text('User Registry & Role Management', style: TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: const Text('Manage doctors, nurses, receptionists and patient accounts'),
+                        trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AdminUserManagementScreen(authService: widget.authService),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-
-          const Icon(
-            Icons.arrow_forward_ios_rounded,
-            size: 16,
-            color: AppColors.textSecondary,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _activityItem(
-    String title,
-    String subtitle,
-  ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.border,
         ),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.circle,
-            size: 9,
-            color: AppColors.primary,
-          ),
-
-          const SizedBox(width: 12),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
