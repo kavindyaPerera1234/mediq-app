@@ -6,11 +6,8 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../services/auth_service.dart';
 import '../../patient_appointment_scheduling_module1/admin/screens/hospital_admin_dashboard.dart';
-import '../../token_lifecycle_notification_module2/screens/notification_settings_screen.dart';
 import 'admin_user_management_screen.dart';
 import 'admin_live_queue_console_screen.dart';
-import '../../../screens/staff_dashboard_screen.dart';
-import '../../../screens/receptionist_queue_monitor_screen.dart';
 import '../../auth_live_queue_module3/screens/auth/welcome_entry_screen.dart';
 import '../../auth_live_queue_module3/services/auth_service.dart' as mod3_auth;
 
@@ -243,21 +240,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 },
               ),
 
-              // Card 2: Module 2 — Token Lifecycle & Delay Alerts
-              _managementCard(
-                icon: Icons.notifications_active_rounded,
-                title: 'Token Lifecycle & Delay Alerts (Module 2)',
-                subtitle: 'Configure clinic delay notifications, SMS gateways, and reminder rules',
-                color: Colors.amber.shade800,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const NotificationSettingsScreen()),
-                  );
-                },
-              ),
-
-              // Card 3: Module 3 — User Registry & Role Management
+              // Card 2: Module 3 — User Registry & Role Management
               _managementCard(
                 icon: Icons.manage_accounts_rounded,
                 title: 'User Registry & Role Management (Module 3)',
@@ -273,7 +256,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 },
               ),
 
-              // Card 4: Module 3 — Master Live Queue Console
+              // Card 3: Module 3 — Master Live Queue Console
               _managementCard(
                 icon: Icons.monitor_heart_rounded,
                 title: 'Master Live Queue Console (Module 3)',
@@ -284,38 +267,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     context,
                     MaterialPageRoute(
                       builder: (_) => AdminLiveQueueConsoleScreen(authService: _authService),
-                    ),
-                  );
-                },
-              ),
-
-              // Card 5: Module 4 (Member 4) — Doctor Consultation & Clinical Operations
-              _managementCard(
-                icon: Icons.medical_services_rounded,
-                title: 'Doctor Consultation & Clinical Operations (Module 4)',
-                subtitle: 'Doctor clinical console, consultation notes, examination rooms & patient call queue',
-                color: Colors.teal,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => StaffDashboardScreen(authService: _authService),
-                    ),
-                  );
-                },
-              ),
-
-              // Card 6: Module 4 (Member 4) — Receptionist Live Queue Monitor
-              _managementCard(
-                icon: Icons.desktop_windows_rounded,
-                title: 'Receptionist Queue Monitor (Module 4)',
-                subtitle: 'Live OPD desk queue monitor, check-in verification & emergency prioritization',
-                color: Colors.indigo,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ReceptionistQueueMonitorScreen(authService: _authService),
                     ),
                   );
                 },
