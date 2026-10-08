@@ -205,7 +205,7 @@ class AuthService extends ChangeNotifier {
 
   // ── Password Reset ────────────────────────────────────────────────────────
 
-  Future<void> sendPasswordReset(String emailOrPhone) async {
+  Future<String> sendPasswordReset(String emailOrPhone) async {
     try {
       String targetEmail = emailOrPhone.trim();
       if (!targetEmail.contains('@')) {
@@ -218,6 +218,9 @@ class AuthService extends ChangeNotifier {
         if (q.docs.isEmpty) {
           q = await _firestore.collection(AppConstants.usersCollection).where('phone', isEqualTo: rawPhone).limit(1).get();
         }
+        if (q.docs.isEmpty) {
+          q = await _firestore.collection(AppConstants.usersCollection).where('phone', isEqualTo: formattedPhone).limit(1).get();
+        }
         if (q.docs.isNotEmpty) {
           final data = q.docs.first.data();
           final stored = (data['email'] ?? '').toString().trim();
@@ -226,11 +229,42 @@ class AuthService extends ChangeNotifier {
           }
         }
       }
+      if (!targetEmail.contains('@')) {
+        throw FirebaseAuthException(
+          code: 'user-not-found',
+          message: 'No registered email was found linked to this phone number. Please sign in via SMS OTP.',
+        );
+      }
       await _auth.sendPasswordResetEmail(email: targetEmail.trim());
+      return targetEmail;
     } on FirebaseAuthException catch (e) {
       debugPrint("Password reset error: ${e.code} - ${e.message}");
       rethrow;
     }
+  }
+
+  /// Updates or sets password for current authenticated user
+  Future<void> updateUserPassword(String newPassword) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'no-current-user',
+        message: 'No active session found. Please sign in first.',
+      );
+    }
+
+    final targetEmail = _currentUser?.email ?? user.email ?? '';
+    if (targetEmail.isNotEmpty && targetEmail.contains('@')) {
+      try {
+        final cred = EmailAuthProvider.credential(email: targetEmail, password: newPassword.trim());
+        await user.linkWithCredential(cred);
+        return;
+      } catch (linkErr) {
+        debugPrint('Link credential notice (may already be linked): $linkErr');
+      }
+    }
+
+    await user.updatePassword(newPassword.trim());
   }
 
   // ── Registration: Patient or Caregiver ───────────────────────────────────

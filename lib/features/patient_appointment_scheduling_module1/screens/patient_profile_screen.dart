@@ -989,6 +989,8 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                       const SizedBox(height: 16),
                       _buildLanguageSelectorCard(isDark),
                       const SizedBox(height: 16),
+                      _buildSecurityCard(context),
+                      const SizedBox(height: 16),
                       _buildLogoutCard(context),
                     ],
                     const SizedBox(height: 30),
@@ -1049,6 +1051,160 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
         (route) => false,
       );
     }
+  }
+
+  Widget _buildSecurityCard(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cardSurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.security_rounded, color: AppColors.accentColor, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Security & Login Password',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.headingText),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Keep your password updated so you can log in easily with your phone number (${_profile.phone}) or email.',
+            style: TextStyle(fontSize: 12, color: AppColors.bodyText),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.accentColor,
+                side: BorderSide(color: AppColors.accentColor.withValues(alpha: 0.6)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              icon: const Icon(Icons.lock_reset_rounded, size: 18),
+              label: const Text(
+                'Set / Change Password',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              ),
+              onPressed: () => _showChangePasswordDialog(context),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showChangePasswordDialog(BuildContext context) {
+    final passwordController = TextEditingController();
+    final confirmController = TextEditingController();
+    bool isSaving = false;
+    String? dialogError;
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Text('Set New Password', style: TextStyle(fontWeight: FontWeight.bold)),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (dialogError != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.statusRed.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(dialogError!, style: const TextStyle(color: AppColors.statusRed, fontSize: 12)),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                    TextField(
+                      controller: passwordController,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'New Password',
+                        hintText: 'Enter new password',
+                        prefixIcon: Icon(Icons.lock_outline),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: confirmController,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Confirm Password',
+                        hintText: 'Repeat new password',
+                        prefixIcon: Icon(Icons.lock_reset_outlined),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSaving ? null : () => Navigator.pop(dialogCtx),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accentColor,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: isSaving ? null : () async {
+                    final p1 = passwordController.text.trim();
+                    final p2 = confirmController.text.trim();
+                    if (p1.length < 6) {
+                      setDialogState(() => dialogError = 'Password must be at least 6 characters.');
+                      return;
+                    }
+                    if (p1 != p2) {
+                      setDialogState(() => dialogError = 'Passwords do not match.');
+                      return;
+                    }
+                    setDialogState(() {
+                      isSaving = true;
+                      dialogError = null;
+                    });
+                    try {
+                      await AuthService().updateUserPassword(p1);
+                      if (!dialogCtx.mounted) return;
+                      Navigator.pop(dialogCtx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Password updated successfully! You can now log in using this password.'),
+                          backgroundColor: AppColors.statusGreen,
+                        ),
+                      );
+                    } catch (e) {
+                      setDialogState(() {
+                        isSaving = false;
+                        dialogError = 'Failed to update: $e';
+                      });
+                    }
+                  },
+                  child: isSaving
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Text('Save Password'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   Widget _buildLogoutCard(BuildContext context) {

@@ -16,6 +16,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   bool _submitted = false;
   bool _isLoading = false;
   String? _errorMessage;
+  String? _sentToEmail;
 
   @override
   void dispose() {
@@ -33,11 +34,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     });
 
     try {
-      final email = input.contains('@') ? input : '$input@mediq.lk';
-      await AuthService().sendPasswordReset(email);
+      final targetEmail = await AuthService().sendPasswordReset(input);
 
       if (mounted) {
         setState(() {
+          _sentToEmail = targetEmail;
           _submitted = true;
           _isLoading = false;
         });
@@ -50,11 +51,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         });
       }
     } catch (e) {
-      // In case of unexpected issue or demo, show friendly message
       if (mounted) {
         setState(() {
-          _submitted = true;
           _isLoading = false;
+          _errorMessage = 'Failed to locate user account: $e';
         });
       }
     }
@@ -175,21 +175,40 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   ),
                   child: Column(
                     children: [
-                      const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 48),
+                      const Icon(Icons.mark_email_read_rounded, color: AppColors.success, size: 48),
                       const SizedBox(height: 12),
                       Text(
-                        'Recovery Link Sent!',
+                        'Password Reset Email Sent!',
                         style: GoogleFonts.inter(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
                           color: AppColors.textPrimary,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 8),
                       Text(
-                        'A verification code and instructions were dispatched to ${_inputController.text.trim()}. Please check your SMS inbox.',
+                        'A secure password reset link has been dispatched to:',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(fontSize: 14, color: AppColors.textSecondary),
+                        style: GoogleFonts.inter(fontSize: 13, color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _sentToEmail ?? _inputController.text.trim(),
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.primary),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          'Please open your email inbox (and Spam/Junk folder) and tap the link to choose your new password. You can also sign in instantly using Phone SMS OTP!',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary, height: 1.4),
+                        ),
                       ),
                     ],
                   ),
