@@ -136,6 +136,34 @@ class AppointmentService {
         }, SetOptions(merge: true));
       } catch (_) {}
 
+      // Dual-sync: create corresponding queue_entries document for Module 3 & Module 4 Live Queue
+      try {
+        final sessId = 'sess_${appointment.hospitalId}_${appointment.departmentId}_${appointment.appointmentDate}';
+        await _firestore.collection('queue_entries').doc(docRef.id).set({
+          'queueEntryId': docRef.id,
+          'appointmentId': docRef.id,
+          'patientId': appointment.patientId,
+          'userId': appointment.userId ?? appointment.patientId,
+          'patientNic': appointment.patientNic,
+          'patientName': appointment.patientName,
+          'hospitalId': appointment.hospitalId,
+          'hospitalName': appointment.hospitalName,
+          'departmentId': appointment.departmentId,
+          'departmentName': appointment.departmentName,
+          'roomNumber': appointment.roomNumber,
+          'tokenCode': token,
+          'tokenNumber': token,
+          'queueSessionId': sessId,
+          'status': 'waiting',
+          'priority': appointment.priority,
+          'appointmentDate': appointment.appointmentDate,
+          'timeSlot': appointment.timeSlot,
+          'queueOrder': tokenNum,
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      } catch (_) {}
+
       return toSave.tokenCode;
     } catch (e) {
       debugPrint('AppointmentService: bookAppointment offline/fallback: $e');
