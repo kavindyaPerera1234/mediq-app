@@ -42,10 +42,17 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
   @override
   void initState() {
     super.initState();
-    // Default to today or tomorrow
     final now = DateTime.now();
-    _focusedDay = now;
-    _selectedDay = now;
+    // If today is past 2:00 PM (14:00) or Sunday, default to next available clinic date
+    DateTime initialDate = now;
+    if (now.hour >= 14 || now.weekday == DateTime.sunday) {
+      initialDate = now.add(const Duration(days: 1));
+      if (initialDate.weekday == DateTime.sunday) {
+        initialDate = initialDate.add(const Duration(days: 1));
+      }
+    }
+    _focusedDay = initialDate;
+    _selectedDay = initialDate;
     _listenForDateBookings();
   }
 
@@ -220,10 +227,18 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
                                   focusedDay: _focusedDay,
                                   currentDay: DateTime.now(),
                                   selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-                                  // Prevent selecting Sundays or past days
+                                  // Prevent selecting Sundays, past days, or today after 2:00 PM (14:00)
                                   enabledDayPredicate: (day) {
-                                    return day.weekday != DateTime.sunday &&
-                                        day.isAfter(DateTime.now().subtract(const Duration(days: 1)));
+                                    final now = DateTime.now();
+                                    final isToday = day.year == now.year && day.month == now.month && day.day == now.day;
+                                    if (isToday && now.hour >= 14) {
+                                      return false;
+                                    }
+                                    final startOfToday = DateTime(now.year, now.month, now.day);
+                                    if (day.isBefore(startOfToday)) {
+                                      return false;
+                                    }
+                                    return day.weekday != DateTime.sunday;
                                   },
                                   onDaySelected: (selectedDay, focusedDay) {
                                     setState(() {
@@ -326,7 +341,13 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
                                 const SizedBox(height: 6),
                                 Builder(
                                   builder: (_) {
+                                    final now = DateTime.now();
                                     final isSunday = _selectedDay.weekday == DateTime.sunday;
+                                    final isToday = _selectedDay.year == now.year &&
+                                        _selectedDay.month == now.month &&
+                                        _selectedDay.day == now.day;
+                                    final isTodayClosed = isToday && now.hour >= 14;
+
                                     if (isSunday) {
                                       return Row(
                                         mainAxisAlignment: MainAxisAlignment.center,
@@ -340,6 +361,27 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
                                                 fontSize: 12,
                                                 fontWeight: FontWeight.w600,
                                                 color: AppColors.statusRed,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    }
+
+                                    if (isTodayClosed) {
+                                      return Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: const [
+                                          Icon(Icons.schedule_rounded, size: 14, color: AppColors.statusOrange),
+                                          SizedBox(width: 4),
+                                          Flexible(
+                                            child: Text(
+                                              "Today's OPD Sessions Ended (Closed at 2 PM) • Select Tomorrow",
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                                color: AppColors.statusOrange,
                                               ),
                                               overflow: TextOverflow.ellipsis,
                                             ),
@@ -618,9 +660,13 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
 
   // Bottom Action Bar with Continue Button
   Widget _buildBottomActionBar() {
+    final now = DateTime.now();
+    final isToday = isSameDay(_selectedDay, now);
+    final isTodayClosed = isToday && now.hour >= 14;
     final isSunday = _selectedDay.weekday == DateTime.sunday;
     final available = (150 - _bookedCount).clamp(0, 150);
     final isFull = available == 0;
+    final isDisabled = isSunday || isFull || isTodayClosed;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -640,30 +686,40 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
           width: double.infinity,
           height: 50,
           child: ElevatedButton(
-            onPressed: isSunday
+            onPressed: isTodayClosed
                 ? () {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('OPD Clinic is closed on Sundays. Please select a weekday (Monday - Saturday).'),
-                        backgroundColor: AppColors.statusRed,
+                        content: Text("Today's OPD sessions ended at 2:00 PM. Please select tomorrow or an upcoming date."),
+                        backgroundColor: AppColors.statusOrange,
                         duration: Duration(seconds: 3),
                       ),
                     );
                   }
-                : (isFull
+                : (isSunday
                     ? () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('All slots are fully booked for this date. Please select another date.'),
-                            backgroundColor: AppColors.statusOrange,
+                            content: Text('OPD Clinic is closed on Sundays. Please select a weekday (Monday - Saturday).'),
+                            backgroundColor: AppColors.statusRed,
                             duration: Duration(seconds: 3),
                           ),
                         );
                       }
-                    : _proceedToTimeSlots),
+                    : (isFull
+                        ? () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('All slots are fully booked for this date. Please select another date.'),
+                                backgroundColor: AppColors.statusOrange,
+                                duration: Duration(seconds: 3),
+                              ),
+                            );
+                          }
+                        : _proceedToTimeSlots)),
             style: ElevatedButton.styleFrom(
-              backgroundColor: isSunday || isFull ? AppColors.cardBorder : AppColors.accentColor,
-              foregroundColor: isSunday || isFull ? AppColors.bodyText : (AppColors.isDark ? Colors.black : Colors.white),
+              backgroundColor: isDisabled ? AppColors.cardBorder : AppColors.accentColor,
+              foregroundColor: isDisabled ? AppColors.bodyText : (AppColors.isDark ? Colors.black : Colors.white),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -673,19 +729,29 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  AppTranslations.tr('continueToSlots'),
+                  isTodayClosed
+                      ? "Today's OPD Closed"
+                      : (isSunday
+                          ? 'Closed on Sundays'
+                          : (isFull
+                              ? 'Fully Booked'
+                              : AppTranslations.tr('continueToSlots'))),
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.isDark ? Colors.black : Colors.white,
+                    color: isDisabled
+                        ? AppColors.bodyText
+                        : (AppColors.isDark ? Colors.black : Colors.white),
                   ),
                 ),
-                const SizedBox(width: 8),
-                Icon(
-                  Icons.arrow_forward_rounded,
-                  size: 18,
-                  color: AppColors.isDark ? Colors.black : Colors.white,
-                ),
+                if (!isDisabled) ...[
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.arrow_forward_rounded,
+                    size: 18,
+                    color: AppColors.isDark ? Colors.black : Colors.white,
+                  ),
+                ],
               ],
             ),
           ),

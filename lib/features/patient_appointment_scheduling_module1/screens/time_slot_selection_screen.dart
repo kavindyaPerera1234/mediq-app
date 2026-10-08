@@ -15,6 +15,7 @@ class OpdTimeSlot {
   final int bookedCount;
   final int maxCapacity;
   final bool isClosed;
+  final bool isPast;
 
   const OpdTimeSlot({
     required this.id,
@@ -23,10 +24,11 @@ class OpdTimeSlot {
     required this.bookedCount,
     this.maxCapacity = 25,
     this.isClosed = false,
+    this.isPast = false,
   });
 
   bool get isFull => bookedCount >= maxCapacity;
-  bool get isSelectable => !isFull && !isClosed;
+  bool get isSelectable => !isFull && !isClosed && !isPast;
   int get remainingSlots => (maxCapacity - bookedCount).clamp(0, maxCapacity);
 }
 
@@ -150,10 +152,38 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
   }
 
   List<OpdTimeSlot> get _slots {
+    final now = DateTime.now();
+    final isToday = widget.selectedDate.year == now.year &&
+        widget.selectedDate.month == now.month &&
+        widget.selectedDate.day == now.day;
+
     return _baseSlots.map((base) {
       final count = _realBookedCounts[base.id] ?? 0;
       final capacity = _slotCapacities[base.id] ?? _slotCapacities[base.displayTime] ?? base.maxCapacity;
       final isClosed = _closedSlots[base.id] == true || _closedSlots[base.displayTime] == true || base.isClosed;
+
+      // Check if this time slot has already passed for today
+      bool isPast = false;
+      if (isToday) {
+        int slotStartHour = 8;
+        if (base.id == 'slot_1') {
+          slotStartHour = 8;
+        } else if (base.id == 'slot_2') {
+          slotStartHour = 9;
+        } else if (base.id == 'slot_3') {
+          slotStartHour = 10;
+        } else if (base.id == 'slot_4') {
+          slotStartHour = 11;
+        } else if (base.id == 'slot_5') {
+          slotStartHour = 12;
+        } else if (base.id == 'slot_6') {
+          slotStartHour = 13;
+        }
+
+        if (now.hour >= slotStartHour) {
+          isPast = true;
+        }
+      }
 
       return OpdTimeSlot(
         id: base.id,
@@ -162,6 +192,7 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
         bookedCount: count,
         maxCapacity: capacity,
         isClosed: isClosed,
+        isPast: isPast,
       );
     }).toList();
   }
@@ -169,6 +200,7 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
   @override
   void initState() {
     super.initState();
+    _recomputeSelection();
     _startRealtimeListeners();
   }
 
@@ -531,9 +563,10 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
   Widget _buildModernSlotCard(OpdTimeSlot slot) {
     final isSelected = _selectedSlotId == slot.id && slot.isSelectable;
     final isClosed = slot.isClosed;
+    final isPast = slot.isPast;
     final isFull = slot.isFull;
-    final isAlmostFull = !isFull && !isClosed && slot.remainingSlots <= 5;
-    final isDisabled = isClosed || isFull;
+    final isAlmostFull = !isFull && !isClosed && !isPast && slot.remainingSlots <= 5;
+    final isDisabled = isClosed || isFull || isPast;
 
     return InkWell(
       onTap: slot.isSelectable
@@ -603,7 +636,7 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
                             style: TextStyle(
                               fontSize: 12.5,
                               fontWeight: FontWeight.bold,
-                              decoration: isClosed ? TextDecoration.lineThrough : null,
+                              decoration: (isClosed || isPast) ? TextDecoration.lineThrough : null,
                               color: isDisabled
                                   ? AppColors.bodyText
                                   : isSelected
@@ -618,6 +651,8 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
                 ),
                 if (isSelected)
                   Icon(Icons.check_circle_rounded, size: 16, color: AppColors.accentColor)
+                else if (isPast)
+                  Icon(Icons.history_toggle_off_rounded, size: 14, color: AppColors.bodyText)
                 else if (isClosed)
                   const Icon(Icons.block_rounded, size: 14, color: AppColors.error)
                 else if (isFull)
@@ -627,7 +662,23 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
             const SizedBox(height: 6),
 
             // Availability Badge
-            if (isClosed)
+            if (isPast)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.cardBorder.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  'ENDED (Passed)',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.bodyText,
+                  ),
+                ),
+              )
+            else if (isClosed)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
@@ -921,6 +972,8 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
   // Bottom Action Button with Arrow Icon
   Widget _buildBottomActionBar() {
     final canProceed = _currentSelectedSlot.isSelectable;
+    final allSlotsEndedOrFull = _slots.every((s) => !s.isSelectable);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -954,9 +1007,11 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
                 Text(
                   canProceed
                       ? AppTranslations.tr('reviewAppointment')
-                      : (_currentSelectedSlot.isClosed
-                          ? 'Selected Slot Closed'
-                          : 'Selected Slot Full'),
+                      : (_currentSelectedSlot.isPast
+                          ? (allSlotsEndedOrFull ? "OPD Sessions Ended • Change Date" : 'Selected Slot Ended')
+                          : (_currentSelectedSlot.isClosed
+                              ? 'Selected Slot Closed'
+                              : 'Selected Slot Full')),
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
