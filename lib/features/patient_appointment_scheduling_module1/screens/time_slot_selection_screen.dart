@@ -58,33 +58,35 @@ class TimeSlotSelectionScreen extends StatefulWidget {
 class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
   String _selectedSlotId = 'slot_1';
   Map<String, int> _realBookedCounts = {};
+  Map<String, int> _slotCapacities = {};
+  Map<String, bool> _closedSlots = {};
 
   final List<OpdTimeSlot> _baseSlots = const [
     // Morning Slots
     OpdTimeSlot(
       id: 'slot_1',
-      displayTime: '08:00 - 09:00 AM',
+      displayTime: '08:00 AM - 09:00 AM',
       session: 'morning',
       bookedCount: 0,
       maxCapacity: 25,
     ),
     OpdTimeSlot(
       id: 'slot_2',
-      displayTime: '09:00 - 10:00 AM',
+      displayTime: '09:00 AM - 10:00 AM',
       session: 'morning',
       bookedCount: 0,
       maxCapacity: 25,
     ),
     OpdTimeSlot(
       id: 'slot_3',
-      displayTime: '10:00 - 11:00 AM',
+      displayTime: '10:00 AM - 11:00 AM',
       session: 'morning',
       bookedCount: 0,
       maxCapacity: 25,
     ),
     OpdTimeSlot(
       id: 'slot_4',
-      displayTime: '11:00 - 12:00 PM',
+      displayTime: '11:00 AM - 12:00 PM',
       session: 'morning',
       bookedCount: 0,
       maxCapacity: 25,
@@ -93,30 +95,46 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
     // Afternoon Slots
     OpdTimeSlot(
       id: 'slot_5',
-      displayTime: '12:00 - 01:00 PM',
+      displayTime: '12:00 PM - 01:00 PM',
       session: 'afternoon',
       bookedCount: 0,
       maxCapacity: 25,
     ),
     OpdTimeSlot(
       id: 'slot_6',
-      displayTime: '01:00 - 02:00 PM',
+      displayTime: '01:00 PM - 02:00 PM',
       session: 'afternoon',
       bookedCount: 0,
       maxCapacity: 25,
     ),
   ];
 
+  bool _timesMatch(String a, String b) {
+    String clean(String s) => s.replaceAll(' ', '').toUpperCase();
+    return clean(a) == clean(b);
+  }
+
   List<OpdTimeSlot> get _slots {
     return _baseSlots.map((base) {
-      final count = _realBookedCounts[base.displayTime] ?? 0;
+      int count = _realBookedCounts[base.displayTime] ?? 0;
+      if (count == 0) {
+        for (final entry in _realBookedCounts.entries) {
+          if (_timesMatch(entry.key, base.displayTime)) {
+            count += entry.value;
+          }
+        }
+      }
+
+      final capacity = _slotCapacities[base.id] ?? _slotCapacities[base.displayTime] ?? base.maxCapacity;
+      final isClosed = _closedSlots[base.id] == true || _closedSlots[base.displayTime] == true || base.isClosed;
+
       return OpdTimeSlot(
         id: base.id,
         displayTime: base.displayTime,
         session: base.session,
         bookedCount: count,
-        maxCapacity: base.maxCapacity,
-        isClosed: base.isClosed,
+        maxCapacity: capacity,
+        isClosed: isClosed,
       );
     }).toList();
   }
@@ -130,6 +148,8 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
   Future<void> _fetchRealSlotBookings() async {
     try {
       final formattedDate = DateFormat('yyyy-MM-dd').format(widget.selectedDate);
+
+      // 1. Fetch confirmed appointments for this clinic & date
       final querySnapshot = await FirebaseFirestore.instance
           .collection('appointments')
           .where('departmentId', isEqualTo: widget.clinic.id)
@@ -141,15 +161,63 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
       for (final doc in querySnapshot.docs) {
         final data = doc.data();
         if (data['status'] == 'cancelled') continue;
-        final slotTime = data['timeSlot'] as String? ?? '';
+        final slotTime = (data['timeSlot'] as String? ?? '').trim();
         if (slotTime.isNotEmpty) {
           counts[slotTime] = (counts[slotTime] ?? 0) + 1;
+        }
+      }
+
+      // 2. Fetch admin slot capping and closures
+      final slotSnap = await FirebaseFirestore.instance
+          .collection('appointment_slots')
+          .where('date', isEqualTo: formattedDate)
+          .get()
+          .timeout(const Duration(seconds: 4));
+
+      final Map<String, int> customCapacities = {};
+      final Map<String, bool> closedStatuses = {};
+
+      for (final doc in slotSnap.docs) {
+        final data = doc.data();
+        final slotId = data['slotId'] as String? ?? '';
+        final slotRange = data['slotRange'] as String? ?? '';
+        final clinic = (data['clinic'] as String? ?? '').toLowerCase();
+
+        final clinicNameLower = widget.clinic.name.toLowerCase();
+        final clinicIdLower = widget.clinic.id.toLowerCase();
+        final isMatching = clinic.isEmpty ||
+            clinic.contains(clinicIdLower) ||
+            clinicIdLower.contains(clinic) ||
+            clinic.contains(clinicNameLower) ||
+            clinicNameLower.contains(clinic) ||
+            (clinicNameLower.contains('general') && clinic.contains('general'));
+
+        if (isMatching) {
+          if (data['capacity'] is num) {
+            final cap = (data['capacity'] as num).toInt();
+            if (slotId.isNotEmpty) customCapacities[slotId] = cap;
+            if (slotRange.isNotEmpty) customCapacities[slotRange] = cap;
+          }
+          if (data['isClosed'] == true) {
+            if (slotId.isNotEmpty) closedStatuses[slotId] = true;
+            if (slotRange.isNotEmpty) closedStatuses[slotRange] = true;
+          }
         }
       }
 
       if (mounted) {
         setState(() {
           _realBookedCounts = counts;
+          _slotCapacities = customCapacities;
+          _closedSlots = closedStatuses;
+
+          if (!_currentSelectedSlot.isSelectable) {
+            final firstAvailable = _slots.firstWhere(
+              (s) => s.isSelectable,
+              orElse: () => _slots.first,
+            );
+            _selectedSlotId = firstAvailable.id;
+          }
         });
       }
     } catch (e) {
@@ -165,6 +233,8 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
   }
 
   void _proceedToReview() {
+    if (!_currentSelectedSlot.isSelectable) return;
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -358,8 +428,10 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
 
   Widget _buildModernSlotCard(OpdTimeSlot slot) {
     final isSelected = _selectedSlotId == slot.id && slot.isSelectable;
+    final isClosed = slot.isClosed;
     final isFull = slot.isFull;
-    final isAlmostFull = !isFull && slot.remainingSlots <= 5;
+    final isAlmostFull = !isFull && !isClosed && slot.remainingSlots <= 5;
+    final isDisabled = isClosed || isFull;
 
     return InkWell(
       onTap: slot.isSelectable
@@ -374,18 +446,20 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: isFull
+          color: isDisabled
               ? (AppColors.isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9))
               : isSelected
                   ? AppColors.chipBg
                   : AppColors.cardSurface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isFull
-                ? AppColors.cardBorder
-                : isSelected
-                    ? AppColors.accentColor
-                    : AppColors.cardBorder,
+            color: isClosed
+                ? AppColors.error.withValues(alpha: 0.35)
+                : isFull
+                    ? AppColors.cardBorder
+                    : isSelected
+                        ? AppColors.accentColor
+                        : AppColors.cardBorder,
             width: isSelected ? 2 : 1,
           ),
           boxShadow: [
@@ -411,7 +485,7 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
                       Icon(
                         Icons.access_time_rounded,
                         size: 14,
-                        color: isFull
+                        color: isDisabled
                             ? AppColors.bodyText
                             : isSelected
                                 ? AppColors.accentColor
@@ -424,7 +498,8 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
-                            color: isFull
+                            decoration: isClosed ? TextDecoration.lineThrough : null,
+                            color: isDisabled
                                 ? AppColors.bodyText
                                 : isSelected
                                     ? AppColors.accentColor
@@ -439,6 +514,8 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
                 ),
                 if (isSelected)
                   Icon(Icons.check_circle_rounded, size: 16, color: AppColors.accentColor)
+                else if (isClosed)
+                  const Icon(Icons.block_rounded, size: 14, color: AppColors.error)
                 else if (isFull)
                   Icon(Icons.lock_outline_rounded, size: 14, color: AppColors.bodyText),
               ],
@@ -446,16 +523,32 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
             const SizedBox(height: 6),
 
             // Availability Badge
-            if (isFull)
+            if (isClosed)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'CLOSED (Doctor Leave)',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.error,
+                  ),
+                ),
+              )
+            else if (isFull)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: AppColors.errorLight,
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: const Text(
-                  'Full (25/25)',
-                  style: TextStyle(
+                child: Text(
+                  'Full (${slot.maxCapacity}/${slot.maxCapacity})',
+                  style: const TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
                     color: AppColors.error,
@@ -646,6 +739,7 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
 
   // Bottom Action Button with Arrow Icon
   Widget _buildBottomActionBar() {
+    final canProceed = _currentSelectedSlot.isSelectable;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -664,9 +758,9 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
           width: double.infinity,
           height: 50,
           child: ElevatedButton(
-            onPressed: _proceedToReview,
+            onPressed: canProceed ? _proceedToReview : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accentColor,
+              backgroundColor: canProceed ? AppColors.accentColor : AppColors.cardBorder,
               foregroundColor: AppColors.isDark ? Colors.black : Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -677,19 +771,27 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  AppTranslations.tr('reviewAppointment'),
+                  canProceed
+                      ? AppTranslations.tr('reviewAppointment')
+                      : (_currentSelectedSlot.isClosed
+                          ? 'Selected Slot Closed'
+                          : 'Selected Slot Full'),
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.isDark ? Colors.black : Colors.white,
+                    color: canProceed
+                        ? (AppColors.isDark ? Colors.black : Colors.white)
+                        : AppColors.bodyText,
                   ),
                 ),
-                const SizedBox(width: 8),
-                Icon(
-                  Icons.arrow_forward_rounded,
-                  size: 18,
-                  color: AppColors.isDark ? Colors.black : Colors.white,
-                ),
+                if (canProceed) ...[
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.arrow_forward_rounded,
+                    size: 18,
+                    color: AppColors.isDark ? Colors.black : Colors.white,
+                  ),
+                ],
               ],
             ),
           ),

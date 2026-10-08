@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../backend/backend.dart';
 
@@ -86,6 +87,110 @@ class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScr
       isClosed: false,
     ),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSlotData();
+  }
+
+  bool _timesMatch(String a, String b) {
+    String clean(String s) => s.replaceAll(' ', '').toUpperCase();
+    return clean(a) == clean(b);
+  }
+
+  bool _clinicMatches(String a, String b) {
+    final cleanA = a.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    final cleanB = b.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    if (cleanA.isEmpty || cleanB.isEmpty) return true;
+    return (cleanA.contains('general') && cleanB.contains('general')) ||
+           (cleanA.contains('ent') && cleanB.contains('ent')) ||
+           (cleanA.contains('ortho') && cleanB.contains('ortho')) ||
+           (cleanA.contains('pedia') && cleanB.contains('pedia')) ||
+           (cleanA.contains('cardio') && cleanB.contains('cardio')) ||
+           cleanA == cleanB;
+  }
+
+  Future<void> _loadSlotData() async {
+    try {
+      final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+
+      // 1. Fetch appointments for this date to calculate actual bookings
+      final appSnap = await FirebaseFirestore.instance
+          .collection('appointments')
+          .where('appointmentDate', isEqualTo: dateStr)
+          .get()
+          .timeout(const Duration(seconds: 4));
+
+      final Map<String, int> counts = {};
+      for (final doc in appSnap.docs) {
+        final data = doc.data();
+        if (data['status'] == 'cancelled') continue;
+        final slotTime = (data['timeSlot'] as String? ?? '').trim();
+        final clinic = (data['departmentName'] ?? data['clinicName'] ?? data['departmentId'] ?? '').toString();
+
+        if (clinic.isNotEmpty && !_clinicMatches(clinic, _selectedClinic)) continue;
+
+        if (slotTime.isNotEmpty) {
+          counts[slotTime] = (counts[slotTime] ?? 0) + 1;
+        }
+      }
+
+      // 2. Fetch slot configs from appointment_slots
+      final slotSnap = await FirebaseFirestore.instance
+          .collection('appointment_slots')
+          .where('date', isEqualTo: dateStr)
+          .get()
+          .timeout(const Duration(seconds: 4));
+
+      final Map<String, Map<String, dynamic>> configs = {};
+      for (final doc in slotSnap.docs) {
+        final data = doc.data();
+        final slotId = data['slotId'] as String? ?? '';
+        final clinic = (data['clinic'] as String? ?? '').toLowerCase();
+        if (_clinicMatches(clinic, _selectedClinic)) {
+          if (slotId.isNotEmpty) {
+            configs[slotId] = data;
+          }
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          for (final slot in _slots) {
+            int count = counts[slot.slotRange] ?? 0;
+            if (count == 0) {
+              for (final entry in counts.entries) {
+                if (_timesMatch(entry.key, slot.slotRange)) {
+                  count += entry.value;
+                }
+              }
+            }
+            slot.bookedCount = count;
+
+            if (configs.containsKey(slot.id)) {
+              final cfg = configs[slot.id]!;
+              if (cfg['capacity'] is num) {
+                slot.capacity = (cfg['capacity'] as num).toInt();
+              }
+              if (cfg['isClosed'] is bool) {
+                slot.isClosed = cfg['isClosed'] as bool;
+              }
+              if (cfg['closureReason'] is String) {
+                slot.reason = cfg['closureReason'] as String;
+              }
+            } else {
+              slot.capacity = 25;
+              slot.isClosed = false;
+              slot.reason = '';
+            }
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('ManageAppointmentSlotsScreen: _loadSlotData notice: $e');
+    }
+  }
 
   void _editSlotCapacity(AdminTimeSlotConfig slot) {
     int tempCapacity = slot.capacity;
@@ -246,6 +351,9 @@ class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScr
                     slot.reason = 'Doctor Unavailable';
                   }
                 });
+                for (var slot in _slots) {
+                  _syncSlotToFirestore(slot);
+                }
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -332,6 +440,7 @@ class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScr
                               setState(() {
                                 _selectedDate = picked;
                               });
+                              _loadSlotData();
                             }
                           },
                         ),
@@ -359,6 +468,7 @@ class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScr
                               setState(() {
                                 _selectedClinic = val;
                               });
+                              _loadSlotData();
                             }
                           },
                         ),
@@ -431,7 +541,7 @@ class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScr
                                   slot.isClosed
                                       ? 'CLOSED'
                                       : slot.isFull
-                                          ? 'FULL (25/25)'
+                                          ? 'FULL (${slot.capacity}/${slot.capacity})'
                                           : 'ACTIVE',
                                   style: TextStyle(
                                     fontSize: 10,

@@ -54,12 +54,17 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
     );
 
     final currentUserId = AuthService().currentUser?.userId ?? 'user_patient';
+    final userNic = AuthService().currentUser?.nic ?? '';
+    final patientNic = widget.patientNic.isNotEmpty && widget.patientNic != 'N/A'
+        ? widget.patientNic
+        : (userNic.isNotEmpty ? userNic : 'N/A');
 
     final appointment = AppointmentModel(
       id: '',
-      patientId: widget.patientNic,
+      patientId: currentUserId,
+      userId: currentUserId,
       patientName: widget.patientName,
-      patientNic: widget.patientNic,
+      patientNic: patientNic,
       isCaregiverBooking: widget.isCaregiverBooking,
       relationship: widget.relationship,
       priority: widget.priority,
