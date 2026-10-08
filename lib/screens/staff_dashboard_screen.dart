@@ -24,6 +24,7 @@ import 'queue_pause_resume_screen.dart';
 import 'consultation_complete_screen.dart';
 import 'skip_patient_confirmation_screen.dart';
 import '../features/admin_dashboard/screens/admin_dashboard_screen.dart';
+import '../features/patient_appointment_scheduling_module1/admin/screens/hospital_admin_dashboard.dart';
 
 class StaffDashboardScreen extends StatefulWidget {
   final AuthService authService;
@@ -158,6 +159,7 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
                 child: ListView(
                   children: [
                     _buildScreenTile('0. Admin Dashboard Console', Icons.admin_panel_settings_rounded, () => _openScreen(AdminDashboardScreen(authService: widget.authService))),
+                    _buildScreenTile('Hospital & Slot Admin Console (Module 1)', Icons.domain_rounded, () => _openScreen(const HospitalAdminDashboard())),
                     _buildScreenTile('1. Staff Dashboard', Icons.dashboard_rounded, () => Navigator.pop(context)),
                     _buildScreenTile('2. Patient Queue List', Icons.format_list_bulleted_rounded, () => _openScreen(PatientQueueListScreen(authService: widget.authService, queueSessionId: dynamicSessionId))),
                     _buildScreenTile('4. Patient Queue Detail', Icons.person_search_rounded, () => _openScreen(PatientQueueDetailScreen(authService: widget.authService, queueEntryId: 'QE-pat-019'))),
