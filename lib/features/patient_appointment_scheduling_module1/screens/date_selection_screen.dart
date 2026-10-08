@@ -173,27 +173,36 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
 
                   Expanded(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Context Summary Card (Hospital & Clinic)
                           _buildBookingContextCard(),
 
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 16),
 
                           Text(
-                            AppTranslations.tr('chooseDateSubtitle'),
-                            style: TextStyle(fontSize: 12.5, color: AppColors.bodyText),
+                            AppTranslations.tr('chooseDate'),
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.headingText,
+                            ),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 4),
+                          Text(
+                            AppTranslations.tr('chooseDateSubtitle'),
+                            style: TextStyle(fontSize: 13, color: AppColors.bodyText, height: 1.3),
+                          ),
+                          const SizedBox(height: 16),
 
                           // Interactive Calendar Card
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
                               color: AppColors.cardSurface,
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(16),
                               border: Border.all(color: AppColors.cardBorder),
                               boxShadow: [
                                 BoxShadow(
@@ -210,8 +219,6 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
                                   lastDay: DateTime.now().add(const Duration(days: 90)),
                                   focusedDay: _focusedDay,
                                   currentDay: DateTime.now(),
-                                  rowHeight: 40,
-                                  daysOfWeekHeight: 22,
                                   selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
                                   // Prevent selecting Sundays or past days
                                   enabledDayPredicate: (day) {
@@ -228,18 +235,16 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
                                   headerStyle: HeaderStyle(
                                     formatButtonVisible: false,
                                     titleCentered: true,
-                                    headerPadding: const EdgeInsets.symmetric(vertical: 4),
                                     titleTextStyle: TextStyle(
-                                      fontSize: 15,
+                                      fontSize: 16,
                                       fontWeight: FontWeight.bold,
                                       color: AppColors.headingText,
                                     ),
-                                    leftChevronIcon: Icon(Icons.chevron_left, color: AppColors.accentColor, size: 22),
-                                    rightChevronIcon: Icon(Icons.chevron_right, color: AppColors.accentColor, size: 22),
+                                    leftChevronIcon: Icon(Icons.chevron_left, color: AppColors.accentColor),
+                                    rightChevronIcon: Icon(Icons.chevron_right, color: AppColors.accentColor),
                                   ),
                                   calendarStyle: CalendarStyle(
                                     outsideDaysVisible: false,
-                                    cellMargin: const EdgeInsets.all(4),
                                     selectedDecoration: BoxDecoration(
                                       color: AppColors.accentColor,
                                       shape: BoxShape.circle,
@@ -247,19 +252,18 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
                                     selectedTextStyle: TextStyle(
                                       color: isDark ? Colors.black : Colors.white,
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 13,
                                     ),
                                     defaultTextStyle: TextStyle(
                                       color: AppColors.headingText,
-                                      fontSize: 13,
+                                      fontSize: 14,
                                     ),
                                     weekendTextStyle: const TextStyle(
                                       color: AppColors.statusOrange,
-                                      fontSize: 13,
+                                      fontSize: 14,
                                     ),
                                     disabledTextStyle: TextStyle(
-                                      color: AppColors.bodyText.withValues(alpha: 0.45),
-                                      fontSize: 13,
+                                      color: AppColors.bodyText.withValues(alpha: 0.5),
+                                      fontSize: 14,
                                     ),
                                     todayDecoration: BoxDecoration(
                                       color: AppColors.chipBg,
@@ -269,11 +273,10 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
                                     todayTextStyle: TextStyle(
                                       color: AppColors.accentColor,
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 13,
                                     ),
                                   ),
                                 ),
-                                Divider(height: 16, color: AppColors.cardBorder),
+                                Divider(height: 24, color: AppColors.cardBorder),
 
                                 // Calendar Legend
                                 Row(
@@ -289,13 +292,101 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 16),
+
+                          // Selected Date Confirmation Card
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: AppColors.chipBg,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: AppColors.accentColor.withValues(alpha: 0.3)),
+                            ),
+                            child: Column(
+                              children: [
+                                Text(
+                                  AppTranslations.tr('selectedDateHeader'),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.accentColor,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  DateFormat('EEEE, d MMMM yyyy').format(_selectedDay),
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.headingText,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Builder(
+                                  builder: (_) {
+                                    final isSunday = _selectedDay.weekday == DateTime.sunday;
+                                    if (isSunday) {
+                                      return Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: const [
+                                          Icon(Icons.cancel_outlined, size: 14, color: AppColors.statusRed),
+                                          SizedBox(width: 4),
+                                          Flexible(
+                                            child: Text(
+                                              'Clinic Closed on Sundays • Select a Weekday',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                                color: AppColors.statusRed,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    }
+
+                                    final available = (150 - _bookedCount).clamp(0, 150);
+                                    final isFull = available == 0;
+
+                                    return Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          isFull ? Icons.warning_amber_rounded : Icons.check_circle_rounded,
+                                          size: 14,
+                                          color: isFull ? AppColors.statusOrange : AppColors.statusGreen,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Flexible(
+                                          child: Text(
+                                            isFull
+                                                ? 'All 150 OPD Slots Fully Booked for this date'
+                                                : 'Sessions Open (8 AM - 2 PM) • $available/150 spots available',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: isFull ? AppColors.statusOrange : AppColors.statusGreen,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 24),
                         ],
                       ),
                     ),
                   ),
 
-                  // Pinned Bottom Continue Button with Live Date Summary
+                  // Pinned Bottom Continue Button
                   _buildBottomActionBar(),
                 ],
               ),
@@ -525,139 +616,79 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
     );
   }
 
-  // Bottom Action Bar with Live Selected Date Indicator & Continue Button
+  // Bottom Action Bar with Continue Button
   Widget _buildBottomActionBar() {
     final isSunday = _selectedDay.weekday == DateTime.sunday;
     final available = (150 - _bookedCount).clamp(0, 150);
     final isFull = available == 0;
-    final formattedDate = DateFormat('EEE, d MMM yyyy').format(_selectedDay);
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.cardSurface,
         border: Border(top: BorderSide(color: AppColors.cardBorder, width: 1)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.isDark ? Colors.black26 : AppColors.textDark.withValues(alpha: 0.05),
-            blurRadius: 10,
+            color: AppColors.isDark ? Colors.black26 : AppColors.textDark.withValues(alpha: 0.04),
+            blurRadius: 8,
             offset: const Offset(0, -3),
           ),
         ],
       ),
       child: SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Selected Date Live Summary Bar
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      isSunday ? Icons.event_busy_rounded : Icons.event_available_rounded,
-                      size: 16,
-                      color: isSunday ? AppColors.statusRed : AppColors.accentColor,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      formattedDate,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.headingText,
+        child: SizedBox(
+          width: double.infinity,
+          height: 50,
+          child: ElevatedButton(
+            onPressed: isSunday
+                ? () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('OPD Clinic is closed on Sundays. Please select a weekday (Monday - Saturday).'),
+                        backgroundColor: AppColors.statusRed,
+                        duration: Duration(seconds: 3),
                       ),
-                    ),
-                  ],
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: isSunday
-                        ? AppColors.statusRed.withValues(alpha: 0.12)
-                        : isFull
-                            ? AppColors.errorLight
-                            : AppColors.statusGreen.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    isSunday
-                        ? 'Clinic Closed'
-                        : isFull
-                            ? 'Full (0/150)'
-                            : '$available/150 spots left',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: isSunday
-                          ? AppColors.statusRed
-                          : isFull
-                              ? AppColors.statusRed
-                              : AppColors.statusGreen,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-
-            // Main Action Button
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
-                onPressed: isSunday
+                    );
+                  }
+                : (isFull
                     ? () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('OPD Clinic is closed on Sundays. Please select a weekday (Monday - Saturday).'),
-                            backgroundColor: AppColors.statusRed,
+                            content: Text('All slots are fully booked for this date. Please select another date.'),
+                            backgroundColor: AppColors.statusOrange,
                             duration: Duration(seconds: 3),
                           ),
                         );
                       }
-                    : (isFull
-                        ? () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('All slots are fully booked for this date. Please select another date.'),
-                                backgroundColor: AppColors.statusOrange,
-                                duration: Duration(seconds: 3),
-                              ),
-                            );
-                          }
-                        : _proceedToTimeSlots),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isSunday || isFull ? AppColors.cardBorder : AppColors.accentColor,
-                  foregroundColor: isSunday || isFull ? AppColors.bodyText : (AppColors.isDark ? Colors.black : Colors.white),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      AppTranslations.tr('continueToSlots'),
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.isDark ? Colors.black : Colors.white,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Icon(
-                      Icons.arrow_forward_rounded,
-                      size: 18,
-                      color: AppColors.isDark ? Colors.black : Colors.white,
-                    ),
-                  ],
-                ),
+                    : _proceedToTimeSlots),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isSunday || isFull ? AppColors.cardBorder : AppColors.accentColor,
+              foregroundColor: isSunday || isFull ? AppColors.bodyText : (AppColors.isDark ? Colors.black : Colors.white),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
+              elevation: 0,
             ),
-          ],
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  AppTranslations.tr('continueToSlots'),
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.isDark ? Colors.black : Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  Icons.arrow_forward_rounded,
+                  size: 18,
+                  color: AppColors.isDark ? Colors.black : Colors.white,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

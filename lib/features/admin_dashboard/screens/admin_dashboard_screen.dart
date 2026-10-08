@@ -6,11 +6,8 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../services/auth_service.dart';
 import '../../patient_appointment_scheduling_module1/admin/screens/hospital_admin_dashboard.dart';
-import '../../token_lifecycle_notification_module2/screens/notification_settings_screen.dart';
 import 'admin_user_management_screen.dart';
 import 'admin_live_queue_console_screen.dart';
-import '../../../screens/staff_dashboard_screen.dart';
-import '../../../screens/receptionist_queue_monitor_screen.dart';
 import '../../auth_live_queue_module3/screens/auth/welcome_entry_screen.dart';
 import '../../auth_live_queue_module3/services/auth_service.dart' as mod3_auth;
 
@@ -75,10 +72,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        titleSpacing: 16,
+        automaticallyImplyLeading: false,
         title: const Text(
           'MediQ Admin Console',
-          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         actions: [
           IconButton(
@@ -86,7 +83,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             tooltip: 'Logout',
             onPressed: _handleLogout,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
         ],
       ),
       body: SafeArea(
@@ -119,14 +116,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             const Text(
                               'HOSPITAL SYSTEM ADMIN',
                               style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             Text(
                               currentUser?.fullName ?? 'Administrator',
                               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             Text(
                               currentUser?.email ?? 'admin@mediq.lk',
                               style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
@@ -150,7 +153,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
-                childAspectRatio: 1.4,
+                childAspectRatio: 1.3,
                 children: [
                   // 1. Registered Users Count
                   StreamBuilder<QuerySnapshot>(
@@ -243,21 +246,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 },
               ),
 
-              // Card 2: Module 2 — Token Lifecycle & Delay Alerts
-              _managementCard(
-                icon: Icons.notifications_active_rounded,
-                title: 'Token Lifecycle & Delay Alerts (Module 2)',
-                subtitle: 'Configure clinic delay notifications, SMS gateways, and reminder rules',
-                color: Colors.amber.shade800,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const NotificationSettingsScreen()),
-                  );
-                },
-              ),
-
-              // Card 3: Module 3 — User Registry & Role Management
+              // Card 2: Module 3 — User Registry & Role Management
               _managementCard(
                 icon: Icons.manage_accounts_rounded,
                 title: 'User Registry & Role Management (Module 3)',
@@ -273,7 +262,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 },
               ),
 
-              // Card 4: Module 3 — Master Live Queue Console
+              // Card 3: Module 3 — Master Live Queue Console
               _managementCard(
                 icon: Icons.monitor_heart_rounded,
                 title: 'Master Live Queue Console (Module 3)',
@@ -284,38 +273,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     context,
                     MaterialPageRoute(
                       builder: (_) => AdminLiveQueueConsoleScreen(authService: _authService),
-                    ),
-                  );
-                },
-              ),
-
-              // Card 5: Module 4 (Member 4) — Doctor Consultation & Clinical Operations
-              _managementCard(
-                icon: Icons.medical_services_rounded,
-                title: 'Doctor Consultation & Clinical Operations (Module 4)',
-                subtitle: 'Doctor clinical console, consultation notes, examination rooms & patient call queue',
-                color: Colors.teal,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => StaffDashboardScreen(authService: _authService),
-                    ),
-                  );
-                },
-              ),
-
-              // Card 6: Module 4 (Member 4) — Receptionist Live Queue Monitor
-              _managementCard(
-                icon: Icons.desktop_windows_rounded,
-                title: 'Receptionist Queue Monitor (Module 4)',
-                subtitle: 'Live OPD desk queue monitor, check-in verification & emergency prioritization',
-                color: Colors.indigo,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ReceptionistQueueMonitorScreen(authService: _authService),
                     ),
                   );
                 },
@@ -336,7 +293,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
@@ -344,27 +301,37 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Icon(icon, color: color, size: 24),
-          const Spacer(),
-          Text(
-            value,
-            style: GoogleFonts.inter(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            title,
-            style: GoogleFonts.inter(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  value,
+                  style: GoogleFonts.inter(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                title,
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
         ],
       ),
