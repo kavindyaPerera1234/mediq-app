@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -61,6 +62,9 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
   Map<String, int> _slotCapacities = {};
   Map<String, bool> _closedSlots = {};
 
+  StreamSubscription<QuerySnapshot>? _appointmentsSub;
+  StreamSubscription<QuerySnapshot>? _slotsSub;
+
   final List<OpdTimeSlot> _baseSlots = const [
     // Morning Slots
     OpdTimeSlot(
@@ -110,18 +114,26 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
   ];
 
   bool _timesMatch(String a, String b) {
-    String clean(String s) => s.replaceAll(' ', '').toUpperCase();
-    return clean(a) == clean(b);
+    if (a.trim() == b.trim()) return true;
+
+    String simplify(String s) {
+      String clean = s.replaceAll(' ', '').toUpperCase();
+      // Remove AM/PM before the dash (e.g. '12:00PM-01:00PM' -> '12:00-01:00PM')
+      clean = clean.replaceAll(RegExp(r'(AM|PM)-'), '-');
+      // Normalize single vs double digit hours (e.g. '-01:00' -> '-1:00', '08:00' -> '8:00')
+      clean = clean.replaceAll(RegExp(r'(^|-)0'), r'$1');
+      return clean;
+    }
+
+    return simplify(a) == simplify(b);
   }
 
   List<OpdTimeSlot> get _slots {
     return _baseSlots.map((base) {
-      int count = _realBookedCounts[base.displayTime] ?? 0;
-      if (count == 0) {
-        for (final entry in _realBookedCounts.entries) {
-          if (_timesMatch(entry.key, base.displayTime)) {
-            count += entry.value;
-          }
+      int count = 0;
+      for (final entry in _realBookedCounts.entries) {
+        if (_timesMatch(entry.key, base.displayTime)) {
+          count += entry.value;
         }
       }
 
@@ -142,38 +154,84 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchRealSlotBookings();
+    _startRealtimeListeners();
   }
 
-  Future<void> _fetchRealSlotBookings() async {
-    try {
-      final formattedDate = DateFormat('yyyy-MM-dd').format(widget.selectedDate);
+  @override
+  void dispose() {
+    _appointmentsSub?.cancel();
+    _slotsSub?.cancel();
+    super.dispose();
+  }
 
-      // 1. Fetch confirmed appointments for this clinic & date
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('appointments')
-          .where('departmentId', isEqualTo: widget.clinic.id)
-          .where('appointmentDate', isEqualTo: formattedDate)
-          .get()
-          .timeout(const Duration(seconds: 4));
+  void _startRealtimeListeners() {
+    final formattedDate = DateFormat('yyyy-MM-dd').format(widget.selectedDate);
 
+    _appointmentsSub?.cancel();
+    _slotsSub?.cancel();
+
+    // 1. Live stream of appointments for this date
+    _appointmentsSub = FirebaseFirestore.instance
+        .collection('appointments')
+        .where('appointmentDate', isEqualTo: formattedDate)
+        .snapshots()
+        .listen((querySnapshot) {
       final Map<String, int> counts = {};
+
+      final currentHospId = widget.hospital.id.toLowerCase();
+      final currentDeptId = widget.clinic.id.toLowerCase();
+      final currentDeptName = widget.clinic.name.toLowerCase();
+
       for (final doc in querySnapshot.docs) {
         final data = doc.data();
         if (data['status'] == 'cancelled') continue;
+
+        final appHospitalId = (data['hospitalId'] ?? '').toString().toLowerCase();
+        final appHospitalName = (data['hospitalName'] ?? '').toString().toLowerCase();
+        final appDeptId = (data['departmentId'] ?? data['clinicId'] ?? '').toString().toLowerCase();
+        final appDeptName = (data['departmentName'] ?? data['clinicName'] ?? '').toString().toLowerCase();
+
+        // Check hospital match
+        final bool isHospitalMatch = appHospitalId.isEmpty ||
+            appHospitalId == currentHospId ||
+            currentHospId.contains(appHospitalId) ||
+            appHospitalId.contains(currentHospId) ||
+            (appHospitalName.isNotEmpty && (appHospitalName.contains('colombo south') || appHospitalName.contains('teaching hospital')));
+
+        // Check clinic match
+        final bool isClinicMatch = appDeptId == currentDeptId ||
+            appDeptId.contains(currentDeptId) ||
+            currentDeptId.contains(appDeptId) ||
+            (currentDeptName.contains('general') && (appDeptName.contains('general') || appDeptId.contains('gen_med'))) ||
+            (currentDeptName.contains('ortho') && (appDeptName.contains('ortho') || appDeptId.contains('ortho'))) ||
+            (currentDeptName.contains('ent') && (appDeptName.contains('ent') || appDeptId.contains('ent'))) ||
+            (currentDeptName.contains('pedia') && (appDeptName.contains('pedia') || appDeptId.contains('pedia'))) ||
+            (currentDeptName.contains('derma') && (appDeptName.contains('derma') || appDeptId.contains('derma')));
+
+        if (!isHospitalMatch || !isClinicMatch) continue;
+
         final slotTime = (data['timeSlot'] as String? ?? '').trim();
         if (slotTime.isNotEmpty) {
           counts[slotTime] = (counts[slotTime] ?? 0) + 1;
         }
       }
 
-      // 2. Fetch admin slot capping and closures
-      final slotSnap = await FirebaseFirestore.instance
-          .collection('appointment_slots')
-          .where('date', isEqualTo: formattedDate)
-          .get()
-          .timeout(const Duration(seconds: 4));
+      if (mounted) {
+        setState(() {
+          _realBookedCounts = counts;
+          _recomputeSelection();
+        });
+      }
+    }, onError: (e) {
+      debugPrint('TimeSlotSelectionScreen: appointments stream notice: $e');
+    });
 
+    // 2. Live stream of admin slot capping and closures
+    _slotsSub = FirebaseFirestore.instance
+        .collection('appointment_slots')
+        .where('date', isEqualTo: formattedDate)
+        .snapshots()
+        .listen((slotSnap) {
       final Map<String, int> customCapacities = {};
       final Map<String, bool> closedStatuses = {};
 
@@ -207,21 +265,23 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
 
       if (mounted) {
         setState(() {
-          _realBookedCounts = counts;
           _slotCapacities = customCapacities;
           _closedSlots = closedStatuses;
-
-          if (!_currentSelectedSlot.isSelectable) {
-            final firstAvailable = _slots.firstWhere(
-              (s) => s.isSelectable,
-              orElse: () => _slots.first,
-            );
-            _selectedSlotId = firstAvailable.id;
-          }
+          _recomputeSelection();
         });
       }
-    } catch (e) {
-      debugPrint('TimeSlotSelectionScreen: fetchRealSlotBookings notice: $e');
+    }, onError: (e) {
+      debugPrint('TimeSlotSelectionScreen: slots stream notice: $e');
+    });
+  }
+
+  void _recomputeSelection() {
+    if (!_currentSelectedSlot.isSelectable) {
+      final firstAvailable = _slots.firstWhere(
+        (s) => s.isSelectable,
+        orElse: () => _slots.first,
+      );
+      _selectedSlotId = firstAvailable.id;
     }
   }
 
