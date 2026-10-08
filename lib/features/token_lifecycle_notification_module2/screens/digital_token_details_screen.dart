@@ -185,7 +185,7 @@ Time: $timeSlot
       await FileSaver.instance.saveFile(
         name: 'MediQ_$tokenCode',
         bytes: pngBytes,
-        fileExtension: 'png',
+        ext: 'png',
         mimeType: MimeType.png,
       );
 
