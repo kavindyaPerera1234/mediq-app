@@ -124,4 +124,47 @@ class HospitalAdminService {
       return false;
     }
   }
+
+  /// Delete a government hospital from Firestore and optionally its associated departments
+  Future<bool> deleteHospital(String id, {String? hospitalName}) async {
+    try {
+      await _firestore.collection('hospitals').doc(id).delete();
+
+      // Also clean up matching custom departments if hospitalName provided
+      if (hospitalName != null && hospitalName.isNotEmpty) {
+        final deptQuery = await _firestore
+            .collection('departments')
+            .where('hospitalName', isEqualTo: hospitalName)
+            .get();
+        for (var doc in deptQuery.docs) {
+          await doc.reference.delete();
+        }
+      }
+      return true;
+    } catch (e) {
+      debugPrint('HospitalAdminService: deleteHospital error $e');
+      return false;
+    }
+  }
+
+  /// Delete all test hospitals created during testing (e.g. named 'test')
+  Future<int> cleanupTestHospitals() async {
+    try {
+      final query = await _firestore.collection('hospitals').get();
+      int count = 0;
+      for (var doc in query.docs) {
+        final data = doc.data();
+        final name = (data['name'] ?? '').toString().toLowerCase().trim();
+        final id = doc.id.toLowerCase();
+        if (name == 'test' || name.startsWith('test ') || name.contains('test') || id.startsWith('hosp_17')) {
+          await doc.reference.delete();
+          count++;
+        }
+      }
+      return count;
+    } catch (e) {
+      debugPrint('HospitalAdminService: cleanupTestHospitals error $e');
+      return 0;
+    }
+  }
 }

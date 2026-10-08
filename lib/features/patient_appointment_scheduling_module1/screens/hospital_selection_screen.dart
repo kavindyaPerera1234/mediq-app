@@ -116,9 +116,7 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
   }
 
   void _mergeHospitals([List<QueryDocumentSnapshot<Map<String, dynamic>>>? firestoreDocs]) {
-    final Map<String, GovernmentHospital> map = {
-      for (var h in GovernmentHospital.getSampleHospitals()) h.id.toLowerCase(): h,
-    };
+    final Map<String, GovernmentHospital> map = {};
 
     if (firestoreDocs != null) {
       for (var doc in firestoreDocs) {
@@ -129,7 +127,6 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
 
         final isActive = data['isActive'] == true || data['isOpdAvailable'] == true;
         if (!isActive) {
-          map.remove(id);
           continue;
         }
 
@@ -143,6 +140,18 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
           doc.id,
           customClinics: customClinics,
         );
+      }
+    }
+
+    // Add default hospitals only if not already represented in Firestore (deduplicate)
+    for (var def in GovernmentHospital.getSampleHospitals()) {
+      final defClean = def.name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+      final alreadyExists = map.values.any((h) {
+        final hClean = h.name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+        return h.id.toLowerCase() == def.id.toLowerCase() || hClean.contains(defClean) || defClean.contains(hClean);
+      });
+      if (!alreadyExists && !map.containsKey(def.id.toLowerCase())) {
+        map[def.id.toLowerCase()] = def;
       }
     }
 

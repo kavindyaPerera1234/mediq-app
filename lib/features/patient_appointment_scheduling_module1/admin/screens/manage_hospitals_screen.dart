@@ -115,10 +115,9 @@ class _ManageHospitalsScreenState extends State<ManageHospitalsScreen> {
         .collection('hospitals')
         .snapshots()
         .listen((snapshot) {
-      final Map<String, HospitalItem> map = {
-        for (var h in _defaultHospitals) h.id: h,
-      };
+      final Map<String, HospitalItem> map = {};
 
+      // 1. Load from Firestore
       for (var doc in snapshot.docs) {
         final data = doc.data();
         final id = doc.id;
@@ -139,6 +138,18 @@ class _ManageHospitalsScreenState extends State<ManageHospitalsScreen> {
         );
       }
 
+      // 2. Add default hospitals only if not already saved in Firestore (deduplicate)
+      for (var def in _defaultHospitals) {
+        final defClean = def.name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+        final alreadyExists = map.values.any((h) {
+          final hClean = h.name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+          return h.id == def.id || hClean.contains(defClean) || defClean.contains(hClean);
+        });
+        if (!alreadyExists && !map.containsKey(def.id)) {
+          map[def.id] = def;
+        }
+      }
+
       if (mounted) {
         setState(() {
           _hospitals = map.values.toList();
@@ -153,6 +164,103 @@ class _ManageHospitalsScreenState extends State<ManageHospitalsScreen> {
         });
       }
     });
+  }
+
+  void _confirmDeleteHospital(HospitalItem hosp) {
+    final messenger = ScaffoldMessenger.of(context);
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.delete_forever_rounded, color: AppColors.error, size: 24),
+            SizedBox(width: 8),
+            Text('Delete Hospital', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to delete "${hosp.name}"? This hospital will be permanently removed from the patient app.',
+          style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () async {
+              Navigator.pop(dialogCtx);
+              setState(() {
+                _hospitals.removeWhere((h) => h.id == hosp.id);
+              });
+              final success = await HospitalAdminService().deleteHospital(hosp.id, hospitalName: hosp.name);
+              messenger.showSnackBar(
+                SnackBar(
+                  content: Text(success ? '"${hosp.name}" deleted successfully' : 'Failed to delete hospital'),
+                  backgroundColor: success ? AppColors.statusGreen : AppColors.error,
+                ),
+              );
+            },
+            child: const Text('Delete', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmCleanAllTestHospitals() {
+    final messenger = ScaffoldMessenger.of(context);
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.cleaning_services_rounded, color: AppColors.statusOrange, size: 24),
+            SizedBox(width: 8),
+            Text('Clean Test Hospitals', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+          ],
+        ),
+        content: const Text(
+          'Are you sure you want to delete all "test" hospitals created during testing? This action cannot be undone.',
+          style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.statusOrange,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () async {
+              Navigator.pop(dialogCtx);
+              final deletedCount = await HospitalAdminService().cleanupTestHospitals();
+              messenger.showSnackBar(
+                SnackBar(
+                  content: Text('Cleaned $deletedCount test hospital(s) successfully!'),
+                  backgroundColor: AppColors.statusGreen,
+                ),
+              );
+            },
+            child: const Text('Clean All Test Entries', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showAddEditHospitalDialog([HospitalItem? existing]) {
@@ -416,6 +524,26 @@ class _ManageHospitalsScreenState extends State<ManageHospitalsScreen> {
                               ),
                       ),
                     ),
+
+                    if (isEditing) ...[
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 44,
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error, size: 18),
+                          label: const Text('Delete Hospital', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: AppColors.error),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onPressed: () {
+                            Navigator.pop(context);
+                            _confirmDeleteHospital(existing);
+                          },
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -444,6 +572,13 @@ class _ManageHospitalsScreenState extends State<ManageHospitalsScreen> {
           tooltip: 'Back',
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.cleaning_services_rounded, color: Colors.white),
+            tooltip: 'Clean Test Hospitals',
+            onPressed: _confirmCleanAllTestHospitals,
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppColors.primary,
@@ -543,6 +678,11 @@ class _ManageHospitalsScreenState extends State<ManageHospitalsScreen> {
                                 icon: const Icon(Icons.edit_outlined, size: 20, color: AppColors.primary),
                                 tooltip: 'Edit Hospital',
                                 onPressed: () => _showAddEditHospitalDialog(hosp),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppColors.error),
+                                tooltip: 'Delete Hospital',
+                                onPressed: () => _confirmDeleteHospital(hosp),
                               ),
                             ],
                           ),
