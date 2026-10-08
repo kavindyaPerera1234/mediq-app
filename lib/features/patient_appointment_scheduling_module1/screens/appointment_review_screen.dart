@@ -113,6 +113,7 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
           selectedDate: widget.selectedDate,
           selectedTimeSlot: widget.selectedTimeSlot,
           tokenNumber: token,
+          appointmentId: appointment.id,
           patientName: widget.patientName,
           patientNic: widget.patientNic,
           isCaregiverBooking: widget.isCaregiverBooking,
