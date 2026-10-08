@@ -366,7 +366,7 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
                                           child: Text(
                                             isFull
                                                 ? 'All 150 OPD Slots Fully Booked for this date'
-                                                : 'Sessions Open (8 AM - 2 PM) • $available spots available',
+                                                : 'Sessions Open (8 AM - 2 PM) • $available/150 spots available',
                                             style: TextStyle(
                                               fontSize: 12,
                                               fontWeight: FontWeight.w600,

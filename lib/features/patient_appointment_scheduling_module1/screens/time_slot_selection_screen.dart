@@ -519,7 +519,7 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
         crossAxisCount: 2,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
-        childAspectRatio: 2.1,
+        childAspectRatio: 1.95,
       ),
       itemCount: slots.length,
       itemBuilder: (context, index) {
@@ -546,7 +546,7 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
       borderRadius: BorderRadius.circular(12),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(
           color: isDisabled
               ? (AppColors.isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9))
@@ -586,29 +586,31 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
                     children: [
                       Icon(
                         Icons.access_time_rounded,
-                        size: 14,
+                        size: 13,
                         color: isDisabled
                             ? AppColors.bodyText
                             : isSelected
                                 ? AppColors.accentColor
                                 : AppColors.bodyText,
                       ),
-                      const SizedBox(width: 5),
+                      const SizedBox(width: 4),
                       Expanded(
-                        child: Text(
-                          slot.displayTime,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            decoration: isClosed ? TextDecoration.lineThrough : null,
-                            color: isDisabled
-                                ? AppColors.bodyText
-                                : isSelected
-                                    ? AppColors.accentColor
-                                    : AppColors.headingText,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            slot.displayTime,
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.bold,
+                              decoration: isClosed ? TextDecoration.lineThrough : null,
+                              color: isDisabled
+                                  ? AppColors.bodyText
+                                  : isSelected
+                                      ? AppColors.accentColor
+                                      : AppColors.headingText,
+                            ),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -670,10 +672,10 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
                 ),
                 child: Text(
                   isSelected
-                      ? 'Selected Slot'
+                      ? 'Selected (${slot.remainingSlots}/${slot.maxCapacity} left)'
                       : isAlmostFull
-                          ? 'Only ${slot.remainingSlots} left'
-                          : '${slot.remainingSlots} spots left',
+                          ? 'Only ${slot.remainingSlots}/${slot.maxCapacity} left'
+                          : '${slot.remainingSlots}/${slot.maxCapacity} spots left',
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
