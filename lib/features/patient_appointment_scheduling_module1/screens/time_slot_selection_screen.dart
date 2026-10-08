@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -45,8 +46,8 @@ class TimeSlotSelectionScreen extends StatefulWidget {
     required this.clinic,
     required this.selectedDate,
     this.isCaregiverBooking = false,
-    this.patientName = 'Sandeepani Perera',
-    this.patientNic = '200164801234',
+    this.patientName = 'Patient',
+    this.patientNic = '',
     this.relationship = 'Self',
     this.priority = 'normal',
   });
@@ -58,33 +59,38 @@ class TimeSlotSelectionScreen extends StatefulWidget {
 class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
   String _selectedSlotId = 'slot_1';
   Map<String, int> _realBookedCounts = {};
+  Map<String, int> _slotCapacities = {};
+  Map<String, bool> _closedSlots = {};
+
+  StreamSubscription<QuerySnapshot>? _appointmentsSub;
+  StreamSubscription<QuerySnapshot>? _slotsSub;
 
   final List<OpdTimeSlot> _baseSlots = const [
     // Morning Slots
     OpdTimeSlot(
       id: 'slot_1',
-      displayTime: '08:00 - 09:00 AM',
+      displayTime: '08:00 AM - 09:00 AM',
       session: 'morning',
       bookedCount: 0,
       maxCapacity: 25,
     ),
     OpdTimeSlot(
       id: 'slot_2',
-      displayTime: '09:00 - 10:00 AM',
+      displayTime: '09:00 AM - 10:00 AM',
       session: 'morning',
       bookedCount: 0,
       maxCapacity: 25,
     ),
     OpdTimeSlot(
       id: 'slot_3',
-      displayTime: '10:00 - 11:00 AM',
+      displayTime: '10:00 AM - 11:00 AM',
       session: 'morning',
       bookedCount: 0,
       maxCapacity: 25,
     ),
     OpdTimeSlot(
       id: 'slot_4',
-      displayTime: '11:00 - 12:00 PM',
+      displayTime: '11:00 AM - 12:00 PM',
       session: 'morning',
       bookedCount: 0,
       maxCapacity: 25,
@@ -93,30 +99,69 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
     // Afternoon Slots
     OpdTimeSlot(
       id: 'slot_5',
-      displayTime: '12:00 - 01:00 PM',
+      displayTime: '12:00 PM - 01:00 PM',
       session: 'afternoon',
       bookedCount: 0,
       maxCapacity: 25,
     ),
     OpdTimeSlot(
       id: 'slot_6',
-      displayTime: '01:00 - 02:00 PM',
+      displayTime: '01:00 PM - 02:00 PM',
       session: 'afternoon',
       bookedCount: 0,
       maxCapacity: 25,
     ),
   ];
 
+  int? _getSlotIndex(String s) {
+    final clean = s.toLowerCase().replaceAll(' ', '');
+    if (clean.contains('slot_1') || clean.contains('slot1')) return 0;
+    if (clean.contains('slot_2') || clean.contains('slot2')) return 1;
+    if (clean.contains('slot_3') || clean.contains('slot3')) return 2;
+    if (clean.contains('slot_4') || clean.contains('slot4')) return 3;
+    if (clean.contains('slot_5') || clean.contains('slot5')) return 4;
+    if (clean.contains('slot_6') || clean.contains('slot6')) return 5;
+
+    // Slot 0: 08:00 - 09:00
+    if ((clean.contains('08:') || clean.contains('8:') || clean.contains('8-') || clean.contains('08-')) &&
+        (clean.contains('09:') || clean.contains('9:') || clean.contains('-9') || clean.contains('-09'))) {
+      return 0;
+    }
+    // Slot 1: 09:00 - 10:00
+    if ((clean.contains('09:') || clean.contains('9:') || clean.contains('9-') || clean.contains('09-')) &&
+        clean.contains('10')) {
+      return 1;
+    }
+    // Slot 2: 10:00 - 11:00
+    if (clean.contains('10') && clean.contains('11')) return 2;
+    // Slot 3: 11:00 - 12:00
+    if (clean.contains('11') && clean.contains('12')) return 3;
+    // Slot 4: 12:00 - 01:00 PM (or 13:00)
+    if (clean.contains('12') && (clean.contains('1:') || clean.contains('01:') || clean.contains('-1') || clean.contains('-01') || clean.contains('13') || clean.contains('1pm') || clean.contains('01pm'))) {
+      return 4;
+    }
+    // Slot 5: 01:00 - 02:00 PM (or 14:00)
+    if ((clean.contains('1:') || clean.contains('01:') || clean.contains('1-') || clean.contains('01-') || clean.contains('13') || clean.contains('1pm') || clean.contains('01pm')) &&
+        (clean.contains('2:') || clean.contains('02:') || clean.contains('-2') || clean.contains('-02') || clean.contains('14') || clean.contains('2pm') || clean.contains('02pm'))) {
+      return 5;
+    }
+
+    return null;
+  }
+
   List<OpdTimeSlot> get _slots {
     return _baseSlots.map((base) {
-      final count = _realBookedCounts[base.displayTime] ?? 0;
+      final count = _realBookedCounts[base.id] ?? 0;
+      final capacity = _slotCapacities[base.id] ?? _slotCapacities[base.displayTime] ?? base.maxCapacity;
+      final isClosed = _closedSlots[base.id] == true || _closedSlots[base.displayTime] == true || base.isClosed;
+
       return OpdTimeSlot(
         id: base.id,
         displayTime: base.displayTime,
         session: base.session,
         bookedCount: count,
-        maxCapacity: base.maxCapacity,
-        isClosed: base.isClosed,
+        maxCapacity: capacity,
+        isClosed: isClosed,
       );
     }).toList();
   }
@@ -124,36 +169,160 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchRealSlotBookings();
+    _startRealtimeListeners();
   }
 
-  Future<void> _fetchRealSlotBookings() async {
-    try {
-      final formattedDate = DateFormat('yyyy-MM-dd').format(widget.selectedDate);
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('appointments')
-          .where('departmentId', isEqualTo: widget.clinic.id)
-          .where('appointmentDate', isEqualTo: formattedDate)
-          .get()
-          .timeout(const Duration(seconds: 4));
+  @override
+  void dispose() {
+    _appointmentsSub?.cancel();
+    _slotsSub?.cancel();
+    super.dispose();
+  }
 
+  void _startRealtimeListeners() {
+    final formattedDate = DateFormat('yyyy-MM-dd').format(widget.selectedDate);
+    final altDate = '${widget.selectedDate.year}-${widget.selectedDate.month}-${widget.selectedDate.day}';
+
+    _appointmentsSub?.cancel();
+    _slotsSub?.cancel();
+
+    // 1. Live stream of appointments for this date
+    _appointmentsSub = FirebaseFirestore.instance
+        .collection('appointments')
+        .where('appointmentDate', whereIn: [formattedDate, altDate])
+        .snapshots()
+        .listen((querySnapshot) {
       final Map<String, int> counts = {};
+
+      final currentHospId = widget.hospital.id.toLowerCase();
+      final currentHospName = widget.hospital.name.toLowerCase();
+      final currentDeptId = widget.clinic.id.toLowerCase();
+      final currentDeptName = widget.clinic.name.toLowerCase();
+
       for (final doc in querySnapshot.docs) {
         final data = doc.data();
         if (data['status'] == 'cancelled') continue;
-        final slotTime = data['timeSlot'] as String? ?? '';
-        if (slotTime.isNotEmpty) {
-          counts[slotTime] = (counts[slotTime] ?? 0) + 1;
+
+        final appHospitalId = (data['hospitalId'] ?? '').toString().toLowerCase();
+        final appHospitalName = (data['hospitalName'] ?? '').toString().toLowerCase();
+        final appDeptId = (data['departmentId'] ?? data['clinicId'] ?? '').toString().toLowerCase();
+        final appDeptName = (data['departmentName'] ?? data['clinicName'] ?? '').toString().toLowerCase();
+
+        // 1. Hospital match:
+        final bool isHospitalMatch = appHospitalId.isEmpty ||
+            appHospitalName.isEmpty ||
+            appHospitalId == currentHospId ||
+            currentHospId.contains(appHospitalId) ||
+            appHospitalId.contains(currentHospId) ||
+            appHospitalName == currentHospName ||
+            currentHospName.contains(appHospitalName) ||
+            appHospitalName.contains(currentHospName) ||
+            (currentHospName.contains('national') && (appHospitalName.contains('national') || appHospitalId.contains('nhsl') || appHospitalId.contains('hosp-001') || appHospitalId.contains('hosp_02'))) ||
+            (currentHospName.contains('colombo south') && (appHospitalName.contains('colombo south') || appHospitalId.contains('csth') || appHospitalName.contains('kalubowila'))) ||
+            (currentHospName.contains('teaching') && appHospitalName.contains('teaching')) ||
+            (currentHospName.contains('ridgeway') && (appHospitalName.contains('ridgeway') || appHospitalId.contains('lrh'))) ||
+            (currentHospName.contains('castle') && (appHospitalName.contains('castle') || appHospitalId.contains('cshw')));
+
+        // 2. Clinic match:
+        final bool isClinicMatch = appDeptId.isEmpty ||
+            appDeptName.isEmpty ||
+            appDeptId == currentDeptId ||
+            appDeptId.contains(currentDeptId) ||
+            currentDeptId.contains(appDeptId) ||
+            appDeptName == currentDeptName ||
+            currentDeptName.contains(appDeptName) ||
+            appDeptName.contains(currentDeptName) ||
+            (currentDeptName.contains('derma') && (appDeptName.contains('derma') || appDeptName.contains('skin') || appDeptId.contains('derma') || appDeptId.contains('dep-004'))) ||
+            (currentDeptName.contains('skin') && (appDeptName.contains('skin') || appDeptName.contains('derma') || appDeptId.contains('derma'))) ||
+            (currentDeptName.contains('general') && (appDeptName.contains('general') || appDeptId.contains('gen_med') || appDeptId.contains('dep-001'))) ||
+            (currentDeptName.contains('ortho') && (appDeptName.contains('ortho') || appDeptId.contains('ortho') || appDeptId.contains('bone'))) ||
+            (currentDeptName.contains('ent') && (appDeptName.contains('ent') || appDeptId.contains('ent') || appDeptId.contains('ear'))) ||
+            (currentDeptName.contains('pedia') && (appDeptName.contains('pedia') || appDeptId.contains('pedia') || appDeptId.contains('child')));
+
+        if (!isHospitalMatch || !isClinicMatch) continue;
+
+        String slotTime = (data['timeSlot'] as String? ?? '').trim();
+        if (slotTime.isEmpty) {
+          final sTime = (data['startTime'] as String? ?? '').trim();
+          final eTime = (data['endTime'] as String? ?? '').trim();
+          if (sTime.isNotEmpty && eTime.isNotEmpty) {
+            slotTime = '$sTime - $eTime';
+          }
+        }
+
+        final slotIdx = _getSlotIndex(slotTime.isNotEmpty ? slotTime : (data['slotId'] ?? ''));
+        if (slotIdx != null && slotIdx >= 0 && slotIdx < _baseSlots.length) {
+          final baseSlotId = _baseSlots[slotIdx].id;
+          counts[baseSlotId] = (counts[baseSlotId] ?? 0) + 1;
         }
       }
 
       if (mounted) {
         setState(() {
           _realBookedCounts = counts;
+          _recomputeSelection();
         });
       }
-    } catch (e) {
-      debugPrint('TimeSlotSelectionScreen: fetchRealSlotBookings notice: $e');
+    }, onError: (e) {
+      debugPrint('TimeSlotSelectionScreen: appointments stream notice: $e');
+    });
+
+    // 2. Live stream of admin slot capping and closures
+    _slotsSub = FirebaseFirestore.instance
+        .collection('appointment_slots')
+        .where('date', isEqualTo: formattedDate)
+        .snapshots()
+        .listen((slotSnap) {
+      final Map<String, int> customCapacities = {};
+      final Map<String, bool> closedStatuses = {};
+
+      for (final doc in slotSnap.docs) {
+        final data = doc.data();
+        final slotId = data['slotId'] as String? ?? '';
+        final slotRange = data['slotRange'] as String? ?? '';
+        final clinic = (data['clinic'] as String? ?? '').toLowerCase();
+
+        final clinicNameLower = widget.clinic.name.toLowerCase();
+        final clinicIdLower = widget.clinic.id.toLowerCase();
+        final isMatching = clinic.isEmpty ||
+            clinic.contains(clinicIdLower) ||
+            clinicIdLower.contains(clinic) ||
+            clinic.contains(clinicNameLower) ||
+            clinicNameLower.contains(clinic) ||
+            (clinicNameLower.contains('general') && clinic.contains('general'));
+
+        if (isMatching) {
+          if (data['capacity'] is num) {
+            final cap = (data['capacity'] as num).toInt();
+            if (slotId.isNotEmpty) customCapacities[slotId] = cap;
+            if (slotRange.isNotEmpty) customCapacities[slotRange] = cap;
+          }
+          if (data['isClosed'] == true) {
+            if (slotId.isNotEmpty) closedStatuses[slotId] = true;
+            if (slotRange.isNotEmpty) closedStatuses[slotRange] = true;
+          }
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _slotCapacities = customCapacities;
+          _closedSlots = closedStatuses;
+          _recomputeSelection();
+        });
+      }
+    }, onError: (e) {
+      debugPrint('TimeSlotSelectionScreen: slots stream notice: $e');
+    });
+  }
+
+  void _recomputeSelection() {
+    if (!_currentSelectedSlot.isSelectable) {
+      final firstAvailable = _slots.firstWhere(
+        (s) => s.isSelectable,
+        orElse: () => _slots.first,
+      );
+      _selectedSlotId = firstAvailable.id;
     }
   }
 
@@ -165,9 +334,12 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
   }
 
   void _proceedToReview() {
+    if (!_currentSelectedSlot.isSelectable) return;
+
     Navigator.push(
       context,
       MaterialPageRoute(
+        settings: const RouteSettings(name: 'AppointmentReview'),
         builder: (context) => AppointmentReviewScreen(
           hospital: widget.hospital,
           clinic: widget.clinic,
@@ -358,8 +530,10 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
 
   Widget _buildModernSlotCard(OpdTimeSlot slot) {
     final isSelected = _selectedSlotId == slot.id && slot.isSelectable;
+    final isClosed = slot.isClosed;
     final isFull = slot.isFull;
-    final isAlmostFull = !isFull && slot.remainingSlots <= 5;
+    final isAlmostFull = !isFull && !isClosed && slot.remainingSlots <= 5;
+    final isDisabled = isClosed || isFull;
 
     return InkWell(
       onTap: slot.isSelectable
@@ -374,18 +548,20 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: isFull
+          color: isDisabled
               ? (AppColors.isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9))
               : isSelected
                   ? AppColors.chipBg
                   : AppColors.cardSurface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isFull
-                ? AppColors.cardBorder
-                : isSelected
-                    ? AppColors.accentColor
-                    : AppColors.cardBorder,
+            color: isClosed
+                ? AppColors.error.withValues(alpha: 0.35)
+                : isFull
+                    ? AppColors.cardBorder
+                    : isSelected
+                        ? AppColors.accentColor
+                        : AppColors.cardBorder,
             width: isSelected ? 2 : 1,
           ),
           boxShadow: [
@@ -411,7 +587,7 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
                       Icon(
                         Icons.access_time_rounded,
                         size: 14,
-                        color: isFull
+                        color: isDisabled
                             ? AppColors.bodyText
                             : isSelected
                                 ? AppColors.accentColor
@@ -424,7 +600,8 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
-                            color: isFull
+                            decoration: isClosed ? TextDecoration.lineThrough : null,
+                            color: isDisabled
                                 ? AppColors.bodyText
                                 : isSelected
                                     ? AppColors.accentColor
@@ -439,6 +616,8 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
                 ),
                 if (isSelected)
                   Icon(Icons.check_circle_rounded, size: 16, color: AppColors.accentColor)
+                else if (isClosed)
+                  const Icon(Icons.block_rounded, size: 14, color: AppColors.error)
                 else if (isFull)
                   Icon(Icons.lock_outline_rounded, size: 14, color: AppColors.bodyText),
               ],
@@ -446,16 +625,32 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
             const SizedBox(height: 6),
 
             // Availability Badge
-            if (isFull)
+            if (isClosed)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'CLOSED (Doctor Leave)',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.error,
+                  ),
+                ),
+              )
+            else if (isFull)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: AppColors.errorLight,
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: const Text(
-                  'Full (25/25)',
-                  style: TextStyle(
+                child: Text(
+                  'Full (${slot.maxCapacity}/${slot.maxCapacity})',
+                  style: const TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
                     color: AppColors.error,
@@ -530,18 +725,62 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
           ),
           const SizedBox(height: 10),
 
-          // 5 Segments
+          // 5 Segments with interactive navigation
           Row(
             children: [
-              _buildStepSegment(isActive: false, isCompleted: true),
+              _buildStepSegment(
+                step: 1,
+                label: 'Patient',
+                isActive: false,
+                isCompleted: true,
+                onTap: () {
+                  Navigator.of(context).popUntil((route) => route.settings.name == 'CaregiverSetup' || route.isFirst);
+                },
+              ),
               const SizedBox(width: 6),
-              _buildStepSegment(isActive: false, isCompleted: true),
+              _buildStepSegment(
+                step: 2,
+                label: 'Hospital',
+                isActive: false,
+                isCompleted: true,
+                onTap: () {
+                  int count = 0;
+                  Navigator.of(context).popUntil((route) {
+                    return route.settings.name == 'HospitalSelection' || count++ == 3;
+                  });
+                },
+              ),
               const SizedBox(width: 6),
-              _buildStepSegment(isActive: false, isCompleted: true),
+              _buildStepSegment(
+                step: 3,
+                label: 'Clinic',
+                isActive: false,
+                isCompleted: true,
+                onTap: () {
+                  int count = 0;
+                  Navigator.of(context).popUntil((route) {
+                    return route.settings.name == 'ClinicSelection' || count++ == 2;
+                  });
+                },
+              ),
               const SizedBox(width: 6),
-              _buildStepSegment(isActive: false, isCompleted: true),
+              _buildStepSegment(
+                step: 4,
+                label: 'Date',
+                isActive: false,
+                isCompleted: true,
+                onTap: () {
+                  Navigator.of(context).pop();
+                },
+              ),
               const SizedBox(width: 6),
-              _buildStepSegment(isActive: true, isCompleted: false),
+              _buildStepSegment(
+                step: 5,
+                label: 'Slot',
+                isActive: true,
+                isCompleted: false,
+                onTap: null,
+              ),
             ],
           ),
         ],
@@ -549,17 +788,50 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
     );
   }
 
-  Widget _buildStepSegment({required bool isActive, required bool isCompleted}) {
+  Widget _buildStepSegment({
+    required int step,
+    required String label,
+    required bool isActive,
+    required bool isCompleted,
+    VoidCallback? onTap,
+  }) {
+    final color = isActive
+        ? AppColors.accentColor
+        : isCompleted
+            ? AppColors.statusGreen
+            : AppColors.cardBorder;
+
     return Expanded(
-      child: Container(
-        height: 6,
-        decoration: BoxDecoration(
-          color: isActive
-              ? AppColors.accentColor
-              : isCompleted
-                  ? AppColors.statusGreen
-                  : AppColors.cardBorder,
-          borderRadius: BorderRadius.circular(3),
+      child: Tooltip(
+        message: 'Step $step: $label${isCompleted ? ' (Tap to edit)' : ''}',
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(4),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Column(
+              children: [
+                Container(
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$step. $label',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: isActive || isCompleted ? FontWeight.bold : FontWeight.normal,
+                    color: isActive ? AppColors.accentColor : (isCompleted ? AppColors.headingText : AppColors.bodyText),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -646,6 +918,7 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
 
   // Bottom Action Button with Arrow Icon
   Widget _buildBottomActionBar() {
+    final canProceed = _currentSelectedSlot.isSelectable;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -664,9 +937,9 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
           width: double.infinity,
           height: 50,
           child: ElevatedButton(
-            onPressed: _proceedToReview,
+            onPressed: canProceed ? _proceedToReview : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accentColor,
+              backgroundColor: canProceed ? AppColors.accentColor : AppColors.cardBorder,
               foregroundColor: AppColors.isDark ? Colors.black : Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -677,19 +950,27 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  AppTranslations.tr('reviewAppointment'),
+                  canProceed
+                      ? AppTranslations.tr('reviewAppointment')
+                      : (_currentSelectedSlot.isClosed
+                          ? 'Selected Slot Closed'
+                          : 'Selected Slot Full'),
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.isDark ? Colors.black : Colors.white,
+                    color: canProceed
+                        ? (AppColors.isDark ? Colors.black : Colors.white)
+                        : AppColors.bodyText,
                   ),
                 ),
-                const SizedBox(width: 8),
-                Icon(
-                  Icons.arrow_forward_rounded,
-                  size: 18,
-                  color: AppColors.isDark ? Colors.black : Colors.white,
-                ),
+                if (canProceed) ...[
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.arrow_forward_rounded,
+                    size: 18,
+                    color: AppColors.isDark ? Colors.black : Colors.white,
+                  ),
+                ],
               ],
             ),
           ),

@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/patient_profile_model.dart';
 import '../../../auth_live_queue_module3/services/auth_service.dart';
+import '../../../../core/constants/app_accessibility.dart';
 
 class ProfileService {
   final FirebaseFirestore _firestore;
@@ -72,6 +73,9 @@ class ProfileService {
               phone: phone,
               email: email,
               bloodGroup: (data['bloodGroup'] ?? 'O+').toString(),
+              gender: (data['gender'] ?? 'Not Specified').toString(),
+              dateOfBirth: (data['dateOfBirth'] ?? '1995-01-01').toString(),
+              photoUrl: (data['photoUrl'] ?? user.photoURL ?? '').toString(),
             );
             activeProfileNotifier.value = newProfile;
             return newProfile;
@@ -84,6 +88,7 @@ class ProfileService {
             phone: user.phoneNumber ?? '',
             email: user.email ?? '',
             bloodGroup: 'O+',
+            photoUrl: user.photoURL ?? '',
           );
           activeProfileNotifier.value = newProfile;
           return newProfile;
@@ -92,6 +97,23 @@ class ProfileService {
     } catch (e) {
       debugPrint('ProfileService: syncWithCurrentUser error: $e');
     }
+
+    // Auto-sync accessibility settings into global AppAccessibility
+    try {
+      final currentNic = activeProfileNotifier.value.nic;
+      final currentUid = FirebaseAuth.instance.currentUser?.uid;
+      final accDocId = (currentNic.isNotEmpty && currentNic != 'N/A') ? currentNic : (currentUid ?? '');
+      if (accDocId.isNotEmpty) {
+        final acc = await getAccessibilitySettings(accDocId);
+        AppAccessibility.setLargeTextMode(acc['largeTextMode'] ?? false);
+        AppAccessibility.setHighContrastMode(acc['highContrastMode'] ?? false);
+        AppAccessibility.setSimplifiedNav(acc['simplifiedNav'] ?? false);
+        AppAccessibility.setVoiceGuidance(acc['voiceGuidance'] ?? false);
+      }
+    } catch (e) {
+      debugPrint('ProfileService: accessibility auto-sync: $e');
+    }
+
     return activeProfileNotifier.value;
   }
 
@@ -119,10 +141,28 @@ class ProfileService {
   Future<bool> savePatientProfile(PatientProfileModel profile) async {
     activeProfileNotifier.value = profile;
     try {
+      final currentUid = FirebaseAuth.instance.currentUser?.uid;
+      final docId = (profile.nic.isNotEmpty && profile.nic != 'N/A')
+          ? profile.nic
+          : (currentUid ?? profile.patientId);
+
       await _profilesRef
-          .doc(profile.nic)
+          .doc(docId)
           .set(profile.toMap(), SetOptions(merge: true))
           .timeout(const Duration(seconds: 4));
+
+      if (currentUid != null) {
+        await _firestore.collection('users').doc(currentUid).set({
+          'fullName': profile.fullName,
+          'phone': profile.phone,
+          'phoneNumber': profile.phone,
+          'email': profile.email,
+          'bloodGroup': profile.bloodGroup,
+          'gender': profile.gender,
+          'dateOfBirth': profile.dateOfBirth,
+          if (profile.photoUrl.isNotEmpty) 'photoUrl': profile.photoUrl,
+        }, SetOptions(merge: true)).catchError((_) {});
+      }
       return true;
     } catch (e) {
       debugPrint('ProfileService: savePatientProfile error: $e');
@@ -133,10 +173,22 @@ class ProfileService {
   /// Update profile photo URL directly
   Future<bool> updateProfilePhoto(String patientNic, String photoUrl) async {
     try {
+      activeProfileNotifier.value = activeProfileNotifier.value.copyWith(photoUrl: photoUrl);
+      final currentUid = FirebaseAuth.instance.currentUser?.uid;
+      final docId = (patientNic.isNotEmpty && patientNic != 'N/A')
+          ? patientNic
+          : (currentUid ?? 'default');
+
       await _profilesRef
-          .doc(patientNic)
+          .doc(docId)
           .set({'photoUrl': photoUrl, 'updatedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true))
           .timeout(const Duration(seconds: 4));
+
+      if (currentUid != null) {
+        await _firestore.collection('users').doc(currentUid).set({
+          'photoUrl': photoUrl,
+        }, SetOptions(merge: true)).catchError((_) {});
+      }
       return true;
     } catch (e) {
       debugPrint('ProfileService: updateProfilePhoto error: $e');
@@ -147,21 +199,27 @@ class ProfileService {
   /// Get accessibility settings from profile
   Future<Map<String, bool>> getAccessibilitySettings(String patientNic) async {
     try {
-      final doc = await _profilesRef.doc(patientNic).get().timeout(const Duration(seconds: 3));
-      if (doc.exists) {
-        final data = doc.data() as Map<String, dynamic>? ?? {};
-        return {
-          'largeTextMode': data['largeTextMode'] ?? true,
-          'highContrastMode': data['highContrastMode'] ?? false,
-          'simplifiedNav': data['simplifiedNav'] ?? false,
-          'voiceGuidance': data['voiceGuidance'] ?? false,
-        };
+      final currentUid = FirebaseAuth.instance.currentUser?.uid;
+      final docId = (patientNic.isNotEmpty && patientNic != 'N/A')
+          ? patientNic
+          : (currentUid ?? '');
+      if (docId.isNotEmpty) {
+        final doc = await _profilesRef.doc(docId).get().timeout(const Duration(seconds: 3));
+        if (doc.exists) {
+          final data = doc.data() as Map<String, dynamic>? ?? {};
+          return {
+            'largeTextMode': data['largeTextMode'] ?? false,
+            'highContrastMode': data['highContrastMode'] ?? false,
+            'simplifiedNav': data['simplifiedNav'] ?? false,
+            'voiceGuidance': data['voiceGuidance'] ?? false,
+          };
+        }
       }
     } catch (e) {
       debugPrint('ProfileService: getAccessibilitySettings fallback $e');
     }
     return {
-      'largeTextMode': true,
+      'largeTextMode': false,
       'highContrastMode': false,
       'simplifiedNav': false,
       'voiceGuidance': false,
@@ -177,7 +235,12 @@ class ProfileService {
     required bool voiceGuidance,
   }) async {
     try {
-      await _profilesRef.doc(patientNic).set({
+      final currentUid = FirebaseAuth.instance.currentUser?.uid;
+      final docId = (patientNic.isNotEmpty && patientNic != 'N/A')
+          ? patientNic
+          : (currentUid ?? 'default');
+
+      await _profilesRef.doc(docId).set({
         'isSeniorModeEnabled': largeTextMode || highContrastMode || simplifiedNav || voiceGuidance,
         'largeTextMode': largeTextMode,
         'highContrastMode': highContrastMode,
@@ -185,6 +248,16 @@ class ProfileService {
         'voiceGuidance': voiceGuidance,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true)).timeout(const Duration(seconds: 4));
+
+      if (currentUid != null) {
+        await _firestore.collection('users').doc(currentUid).set({
+          'isSeniorModeEnabled': largeTextMode || highContrastMode || simplifiedNav || voiceGuidance,
+          'largeTextMode': largeTextMode,
+          'highContrastMode': highContrastMode,
+          'simplifiedNav': simplifiedNav,
+          'voiceGuidance': voiceGuidance,
+        }, SetOptions(merge: true)).catchError((_) {});
+      }
     } catch (e) {
       debugPrint('ProfileService: saveAccessibilitySettings error: $e');
     }

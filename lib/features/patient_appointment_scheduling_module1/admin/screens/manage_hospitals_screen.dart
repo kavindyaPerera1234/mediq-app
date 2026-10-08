@@ -191,7 +191,7 @@ class _ManageHospitalsScreenState extends State<ManageHospitalsScreen> {
                       height: 48,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF1E293B),
+                          backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
@@ -266,13 +266,18 @@ class _ManageHospitalsScreenState extends State<ManageHospitalsScreen> {
           'Manage Government Hospitals',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
         ),
-        backgroundColor: const Color(0xFF1E293B),
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         centerTitle: true,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          tooltip: 'Back',
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: const Color(0xFF1E293B),
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_rounded),
         label: const Text('Add Hospital'),

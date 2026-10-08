@@ -73,8 +73,11 @@ class HospitalAdminService {
     String reason = '',
   }) async {
     try {
-      final docId = '${slotId}_$date';
-      await _firestore.collection('appointment_slots').doc(docId).set({
+      final clinicKey = clinic.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_').toLowerCase();
+      final clinicDocId = '${clinicKey}_${slotId}_$date';
+      final legacyDocId = '${slotId}_$date';
+
+      final data = {
         'slotId': slotId,
         'slotRange': slotRange,
         'date': date,
@@ -84,7 +87,10 @@ class HospitalAdminService {
         'isClosed': isClosed,
         'closureReason': reason,
         'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      };
+
+      await _firestore.collection('appointment_slots').doc(clinicDocId).set(data, SetOptions(merge: true));
+      await _firestore.collection('appointment_slots').doc(legacyDocId).set(data, SetOptions(merge: true));
       return true;
     } catch (e) {
       debugPrint('HospitalAdminService: updateSlotConfig error $e');

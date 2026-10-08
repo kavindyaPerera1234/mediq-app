@@ -13,20 +13,18 @@ class HospitalAdminDashboard extends StatelessWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
-          'Hospital Admin Console',
+          'Hospital & OPD Admin Console',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
-        backgroundColor: const Color(0xFF1E293B), // Slate / Admin theme
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         centerTitle: true,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout_rounded),
-            tooltip: 'Exit to Patient App',
-            onPressed: () => Navigator.pop(context),
-          ),
-        ],
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          tooltip: 'Back',
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: Center(
         child: ConstrainedBox(
@@ -42,14 +40,14 @@ class HospitalAdminDashboard extends StatelessWidget {
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFF1E293B), Color(0xFF334155)],
+                      colors: [AppColors.primary, AppColors.primaryDark],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
+                        color: AppColors.primary.withValues(alpha: 0.15),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -219,7 +217,7 @@ class HospitalAdminDashboard extends StatelessWidget {
                 ),
                 const SizedBox(height: 28),
 
-                // Return to Patient App button
+                // Back to Admin Dashboard button
                 SizedBox(
                   width: double.infinity,
                   height: 48,
@@ -227,12 +225,12 @@ class HospitalAdminDashboard extends StatelessWidget {
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.arrow_back_rounded, size: 18),
                     label: const Text(
-                      'Return to Patient Booking View',
+                      'Back to Main Admin Dashboard',
                       style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                     ),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF1E293B),
-                      side: const BorderSide(color: Color(0xFF1E293B)),
+                      foregroundColor: AppColors.primary,
+                      side: const BorderSide(color: AppColors.primary),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                   ),

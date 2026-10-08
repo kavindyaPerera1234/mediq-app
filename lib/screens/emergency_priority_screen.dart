@@ -199,7 +199,7 @@ class _EmergencyPriorityScreenState extends State<EmergencyPriorityScreen> {
                           const SizedBox(height: 12),
 
                           DropdownButtonFormField<String>(
-                            initialValue: _selectedQueueEntryId,
+                            value: _selectedQueueEntryId,
                             decoration: const InputDecoration(
                               hintText: 'Select patient from active queue',
                               prefixIcon: Icon(Icons.person_search_rounded, color: AppColors.primary),

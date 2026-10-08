@@ -19,6 +19,11 @@ class AppointmentModel {
   final String status; // 'confirmed', 'completed', 'cancelled'
   final DateTime? createdAt;
 
+  final String? userId;
+  final String? startTime;
+  final String? endTime;
+  final String? slotId;
+
   const AppointmentModel({
     required this.id,
     required this.patientId,
@@ -37,12 +42,32 @@ class AppointmentModel {
     required this.tokenCode,
     this.status = 'confirmed',
     this.createdAt,
+    this.userId,
+    this.startTime,
+    this.endTime,
+    this.slotId,
   });
 
+  static String _extractStartTime(String slot) {
+    if (slot.contains('-')) {
+      return slot.split('-').first.trim();
+    }
+    return slot;
+  }
+
+  static String _extractEndTime(String slot) {
+    if (slot.contains('-')) {
+      return slot.split('-').last.trim();
+    }
+    return slot;
+  }
+
   Map<String, dynamic> toMap() {
+    final effectiveUserId = userId ?? patientId;
     return {
       'appointmentId': id,
       'patientId': patientId,
+      'userId': effectiveUserId,
       'patientName': patientName,
       'patientNic': patientNic,
       'isCaregiverBooking': isCaregiverBooking,
@@ -52,10 +77,16 @@ class AppointmentModel {
       'hospitalName': hospitalName,
       'departmentId': departmentId,
       'departmentName': departmentName,
+      'clinicId': departmentId,
+      'clinicName': departmentName,
       'roomNumber': roomNumber,
       'appointmentDate': appointmentDate,
       'timeSlot': timeSlot,
+      'startTime': startTime ?? _extractStartTime(timeSlot),
+      'endTime': endTime ?? _extractEndTime(timeSlot),
+      'slotId': slotId ?? '',
       'tokenCode': tokenCode,
+      'tokenNumber': tokenCode,
       'status': status,
       'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : FieldValue.serverTimestamp(),
     };
@@ -70,9 +101,12 @@ class AppointmentModel {
       created = DateTime.tryParse(data['createdAt']);
     }
 
+    final tSlot = data['timeSlot'] ?? '';
+
     return AppointmentModel(
       id: doc.id,
-      patientId: data['patientId'] ?? '',
+      patientId: data['patientId'] ?? data['userId'] ?? '',
+      userId: data['userId'] ?? data['patientId'],
       patientName: data['patientName'] ?? 'Patient',
       patientNic: data['patientNic'] ?? '',
       isCaregiverBooking: data['isCaregiverBooking'] ?? false,
@@ -80,12 +114,15 @@ class AppointmentModel {
       priority: data['priority'] ?? 'normal',
       hospitalId: data['hospitalId'] ?? '',
       hospitalName: data['hospitalName'] ?? '',
-      departmentId: data['departmentId'] ?? '',
-      departmentName: data['departmentName'] ?? '',
+      departmentId: data['departmentId'] ?? data['clinicId'] ?? '',
+      departmentName: data['departmentName'] ?? data['clinicName'] ?? '',
       roomNumber: data['roomNumber'] ?? 'OPD Room 01',
       appointmentDate: data['appointmentDate'] ?? '',
-      timeSlot: data['timeSlot'] ?? '',
-      tokenCode: data['tokenCode'] ?? 'A-001',
+      timeSlot: tSlot,
+      startTime: data['startTime'] ?? _extractStartTime(tSlot),
+      endTime: data['endTime'] ?? _extractEndTime(tSlot),
+      slotId: data['slotId'],
+      tokenCode: data['tokenCode'] ?? data['tokenNumber'] ?? 'A-001',
       status: data['status'] ?? 'confirmed',
       createdAt: created,
     );

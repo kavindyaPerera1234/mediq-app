@@ -22,6 +22,38 @@ class AppointmentService {
     required String appointmentDate,
   }) async {
     try {
+      int highestTokenNumber = 0;
+
+      // 1. Query appointments collection to find the highest existing confirmed token number
+      final querySnap = await _appointmentsRef
+          .where('departmentId', isEqualTo: departmentId)
+          .where('appointmentDate', isEqualTo: appointmentDate)
+          .get()
+          .timeout(const Duration(seconds: 4));
+
+      for (final doc in querySnap.docs) {
+        final data = doc.data() as Map<String, dynamic>? ?? {};
+        if (data['status'] == 'cancelled') continue;
+        final rawToken = (data['tokenCode'] ?? data['tokenNumber'] ?? '').toString();
+        final match = RegExp(r'\d+').firstMatch(rawToken);
+        if (match != null) {
+          final val = int.tryParse(match.group(0) ?? '0') ?? 0;
+          if (val > highestTokenNumber) {
+            highestTokenNumber = val;
+          }
+        }
+      }
+
+      // Also ensure count is at least total confirmed docs
+      final validDocsCount = querySnap.docs.where((doc) {
+        final data = doc.data() as Map<String, dynamic>? ?? {};
+        return data['status'] != 'cancelled';
+      }).length;
+      if (validDocsCount > highestTokenNumber) {
+        highestTokenNumber = validDocsCount;
+      }
+
+      // 2. Also check appointment_slots document for recorded sequential counter
       final slotDocId = '${departmentId}_$appointmentDate';
       final slotSnap = await _firestore
           .collection('appointment_slots')
@@ -29,27 +61,15 @@ class AppointmentService {
           .get()
           .timeout(const Duration(seconds: 3));
 
-      int nextSeq = 1;
       if (slotSnap.exists && slotSnap.data() != null) {
         final data = slotSnap.data()!;
         final currentCount = (data['bookedCount'] is num) ? (data['bookedCount'] as num).toInt() : 0;
-        nextSeq = currentCount + 1;
-      } else {
-        // Query appointments collection to count existing confirmed appointments for this clinic & date
-        final querySnap = await _appointmentsRef
-            .where('departmentId', isEqualTo: departmentId)
-            .where('appointmentDate', isEqualTo: appointmentDate)
-            .get()
-            .timeout(const Duration(seconds: 3));
-
-        final validDocs = querySnap.docs.where((doc) {
-          final data = doc.data() as Map<String, dynamic>? ?? {};
-          return data['status'] != 'cancelled';
-        }).toList();
-
-        nextSeq = validDocs.length + 1;
+        if (currentCount > highestTokenNumber) {
+          highestTokenNumber = currentCount;
+        }
       }
 
+      final nextSeq = highestTokenNumber + 1;
       return 'A-${nextSeq.toString().padLeft(3, '0')}';
     } catch (e) {
       debugPrint('AppointmentService: generateNextTokenCode fallback: $e');
@@ -75,6 +95,7 @@ class AppointmentService {
       final toSave = AppointmentModel(
         id: docRef.id,
         patientId: appointment.patientId,
+        userId: appointment.userId ?? appointment.patientId,
         patientName: appointment.patientName,
         patientNic: appointment.patientNic,
         isCaregiverBooking: appointment.isCaregiverBooking,
@@ -87,6 +108,9 @@ class AppointmentService {
         roomNumber: appointment.roomNumber,
         appointmentDate: appointment.appointmentDate,
         timeSlot: appointment.timeSlot,
+        startTime: appointment.startTime,
+        endTime: appointment.endTime,
+        slotId: appointment.slotId,
         tokenCode: token,
         status: 'confirmed',
         createdAt: DateTime.now(),
@@ -109,6 +133,34 @@ class AppointmentService {
           'lastBookedAt': FieldValue.serverTimestamp(),
           'departmentId': appointment.departmentId,
           'appointmentDate': appointment.appointmentDate,
+        }, SetOptions(merge: true));
+      } catch (_) {}
+
+      // Dual-sync: create corresponding queue_entries document for Module 3 & Module 4 Live Queue
+      try {
+        final sessId = 'sess_${appointment.hospitalId}_${appointment.departmentId}_${appointment.appointmentDate}';
+        await _firestore.collection('queue_entries').doc(docRef.id).set({
+          'queueEntryId': docRef.id,
+          'appointmentId': docRef.id,
+          'patientId': appointment.patientId,
+          'userId': appointment.userId ?? appointment.patientId,
+          'patientNic': appointment.patientNic,
+          'patientName': appointment.patientName,
+          'hospitalId': appointment.hospitalId,
+          'hospitalName': appointment.hospitalName,
+          'departmentId': appointment.departmentId,
+          'departmentName': appointment.departmentName,
+          'roomNumber': appointment.roomNumber,
+          'tokenCode': token,
+          'tokenNumber': token,
+          'queueSessionId': sessId,
+          'status': 'waiting',
+          'priority': appointment.priority,
+          'appointmentDate': appointment.appointmentDate,
+          'timeSlot': appointment.timeSlot,
+          'queueOrder': tokenNum,
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
       } catch (_) {}
 

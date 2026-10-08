@@ -307,7 +307,7 @@ class BookingConfirmationScreen extends StatelessWidget {
                                       Navigator.pushAndRemoveUntil(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (context) => const PatientMainScreen(initialIndex: 4),
+                                          builder: (context) => const PatientMainScreen(initialIndex: 1),
                                         ),
                                         (route) => false,
                                       );
@@ -319,8 +319,8 @@ class BookingConfirmationScreen extends StatelessWidget {
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                     ),
                                     child: Text(
-                                      AppTranslations.tr('myProfile'),
-                                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                                      AppTranslations.tr('navAppointments'),
+                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                                     ),
                                   ),
                                 ),

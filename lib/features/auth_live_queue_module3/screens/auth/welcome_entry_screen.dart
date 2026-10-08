@@ -365,11 +365,11 @@ class _WelcomeEntryScreenState extends State<WelcomeEntryScreen> {
         onTap: () {
           setState(() => _selectedLanguage = lang);
           if (lang == AppLanguage.sinhala) {
-            core_lang.AppLanguage.setSinhala();
+            core_lang.AppLanguage.setSinhala(isExplicit: true);
           } else if (lang == AppLanguage.tamil) {
-            core_lang.AppLanguage.setTamil();
+            core_lang.AppLanguage.setTamil(isExplicit: true);
           } else {
-            core_lang.AppLanguage.setEnglish();
+            core_lang.AppLanguage.setEnglish(isExplicit: true);
           }
         },
         child: AnimatedContainer(

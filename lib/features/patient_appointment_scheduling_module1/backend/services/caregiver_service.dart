@@ -36,15 +36,24 @@ class CaregiverService {
   }
 
   /// Real-time stream of all dependents registered by this caregiver/patient
-  Stream<List<CaregiverPatientModel>> streamCaregiverPatients(String caregiverUserId) {
+  Stream<List<CaregiverPatientModel>> streamCaregiverPatients(String caregiverUserId, {String? patientNic}) {
     try {
-      final userIds = {caregiverUserId, 'user_sandeepani_001', 'user_200164801234', '200164801234'}.toList();
+      final userIds = <String>{};
+      if (caregiverUserId.isNotEmpty && caregiverUserId != 'N/A') {
+        userIds.add(caregiverUserId);
+      }
+      if (patientNic != null && patientNic.isNotEmpty && patientNic != 'N/A') {
+        userIds.add(patientNic);
+      }
+      if (userIds.isEmpty) {
+        return Stream.value([]);
+      }
       return _caregiversRef
-          .where('caregiverUserId', whereIn: userIds)
+          .where('caregiverUserId', whereIn: userIds.toList())
           .snapshots()
           .map((snapshot) {
         final list = snapshot.docs.map((doc) => CaregiverPatientModel.fromFirestore(doc)).toList();
-        // Deduplicate by patientNic in case of multiple legacy entries
+        // Deduplicate by patientNic in case of multiple entries
         final seen = <String>{};
         return list.where((item) => seen.add(item.patientNic)).toList();
       });

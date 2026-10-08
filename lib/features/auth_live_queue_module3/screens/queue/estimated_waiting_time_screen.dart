@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_accessibility.dart';
 import '../../models/queue_entry_model.dart';
 import '../../services/live_queue_service.dart';
 
@@ -23,41 +24,49 @@ class EstimatedWaitingTimeScreen extends StatelessWidget {
                 ? session.estimatedMinutesPerPatient + delayTime
                 : delayTime));
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(
-          'Estimated Waiting Time',
-          style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textPrimary),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Main Giant Timer Badge
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.border),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
+    return AnimatedBuilder(
+      animation: Listenable.merge([
+        queueService,
+        AppAccessibility.isHighContrastMode,
+      ]),
+      builder: (context, _) {
+        final isDark = AppAccessibility.isHighContrastMode.value;
+
+        return Scaffold(
+          backgroundColor: AppColors.pageBg,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            title: Text(
+              'Estimated Waiting Time',
+              style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.headingText),
+            ),
+            leading: IconButton(
+              icon: Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.headingText),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Main Giant Timer Badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+                    decoration: BoxDecoration(
+                      color: AppColors.cardSurface,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppColors.cardBorder),
+                      boxShadow: [
+                        BoxShadow(
+                          color: isDark ? Colors.black38 : Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
                 child: Column(
                   children: [
                     Container(
@@ -146,23 +155,23 @@ class EstimatedWaitingTimeScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryLight.withValues(alpha: 0.6),
+                  color: isDark ? const Color(0xFF1E293B) : AppColors.primaryLight.withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                  border: Border.all(color: isDark ? const Color(0xFF38BDF8) : AppColors.primary.withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.chair_outlined, color: AppColors.primary, size: 24),
+                        Icon(Icons.chair_outlined, color: AppColors.accentColor, size: 24),
                         const SizedBox(width: 10),
                         Text(
                           'Comfortable Waiting Advice',
                           style: GoogleFonts.inter(
                             fontSize: 15,
                             fontWeight: FontWeight.w800,
-                            color: AppColors.primaryDark,
+                            color: isDark ? const Color(0xFF38BDF8) : AppColors.primaryDark,
                           ),
                         ),
                       ],
@@ -174,7 +183,7 @@ class EstimatedWaitingTimeScreen extends StatelessWidget {
                       '• Free filtered drinking water and wheel-chair support are available near Counter 01.',
                       style: GoogleFonts.inter(
                         fontSize: 13,
-                        color: AppColors.textPrimary,
+                        color: AppColors.headingText,
                         height: 1.5,
                       ),
                     ),
@@ -187,6 +196,8 @@ class EstimatedWaitingTimeScreen extends StatelessWidget {
         ),
       ),
     );
+  },
+);
   }
 
   Widget _buildCalcRow({
@@ -196,22 +207,33 @@ class EstimatedWaitingTimeScreen extends StatelessWidget {
     required String subtext,
     bool isHighlight = false,
   }) {
+    final isDark = AppAccessibility.isHighContrastMode.value;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isHighlight ? const Color(0xFFFEF3C7) : AppColors.surface,
+        color: isHighlight
+            ? (isDark ? const Color(0xFF451A03) : const Color(0xFFFEF3C7))
+            : AppColors.cardSurface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: isHighlight ? const Color(0xFFF59E0B) : AppColors.border),
+        border: Border.all(
+          color: isHighlight ? const Color(0xFFF59E0B) : AppColors.cardBorder,
+        ),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: isHighlight ? const Color(0xFFFDE68A) : AppColors.primaryLight,
+              color: isHighlight
+                  ? (isDark ? const Color(0xFF78350F) : const Color(0xFFFDE68A))
+                  : (isDark ? const Color(0xFF243356) : AppColors.primaryLight),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: isHighlight ? const Color(0xFFD97706) : AppColors.primary, size: 22),
+            child: Icon(
+              icon,
+              color: isHighlight ? const Color(0xFFF59E0B) : AppColors.accentColor,
+              size: 22,
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -223,14 +245,18 @@ class EstimatedWaitingTimeScreen extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700),
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.headingText,
+                      ),
                     ),
                     Text(
                       math,
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
-                        color: isHighlight ? const Color(0xFFB45309) : AppColors.primary,
+                        color: isHighlight ? const Color(0xFFF59E0B) : AppColors.accentColor,
                       ),
                     ),
                   ],
@@ -238,7 +264,7 @@ class EstimatedWaitingTimeScreen extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   subtext,
-                  style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
+                  style: GoogleFonts.inter(fontSize: 12, color: AppColors.bodyText),
                 ),
               ],
             ),

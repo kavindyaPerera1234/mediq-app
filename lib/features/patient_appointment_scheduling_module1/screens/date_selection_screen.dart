@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -34,6 +36,8 @@ class DateSelectionScreen extends StatefulWidget {
 class _DateSelectionScreenState extends State<DateSelectionScreen> {
   late DateTime _focusedDay;
   late DateTime _selectedDay;
+  StreamSubscription<QuerySnapshot>? _appointmentsSub;
+  int _bookedCount = 0;
 
   @override
   void initState() {
@@ -42,12 +46,84 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
     final now = DateTime.now();
     _focusedDay = now;
     _selectedDay = now;
+    _listenForDateBookings();
+  }
+
+  @override
+  void dispose() {
+    _appointmentsSub?.cancel();
+    super.dispose();
+  }
+
+  void _listenForDateBookings() {
+    _appointmentsSub?.cancel();
+    final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDay);
+    final altDate = '${_selectedDay.year}-${_selectedDay.month}-${_selectedDay.day}';
+
+    _appointmentsSub = FirebaseFirestore.instance
+        .collection('appointments')
+        .where('appointmentDate', whereIn: [dateStr, altDate])
+        .snapshots()
+        .listen((snapshot) {
+      int count = 0;
+      final currentHospId = widget.hospital.id.toLowerCase();
+      final currentHospName = widget.hospital.name.toLowerCase();
+      final currentDeptId = widget.clinic.id.toLowerCase();
+      final currentDeptName = widget.clinic.name.toLowerCase();
+
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        if (data['status'] == 'cancelled') continue;
+
+        final appHospId = (data['hospitalId'] ?? '').toString().toLowerCase();
+        final appHospName = (data['hospitalName'] ?? '').toString().toLowerCase();
+        final appDeptId = (data['departmentId'] ?? data['clinicId'] ?? '').toString().toLowerCase();
+        final appDeptName = (data['departmentName'] ?? data['clinicName'] ?? '').toString().toLowerCase();
+
+        final bool hospMatch = appHospId.isEmpty ||
+            appHospName.isEmpty ||
+            appHospId == currentHospId ||
+            currentHospId.contains(appHospId) ||
+            appHospId.contains(currentHospId) ||
+            appHospName == currentHospName ||
+            currentHospName.contains(appHospName) ||
+            appHospName.contains(currentHospName) ||
+            (currentHospName.contains('national') && (appHospName.contains('national') || appHospId.contains('nhsl') || appHospId.contains('hosp-001') || appHospId.contains('hosp_02'))) ||
+            (currentHospName.contains('colombo south') && (appHospName.contains('colombo south') || appHospId.contains('csth') || appHospName.contains('kalubowila')));
+
+        final bool clinicMatch = appDeptId.isEmpty ||
+            appDeptName.isEmpty ||
+            appDeptId == currentDeptId ||
+            currentDeptId.contains(appDeptId) ||
+            appDeptId.contains(currentDeptId) ||
+            appDeptName == currentDeptName ||
+            currentDeptName.contains(appDeptName) ||
+            appDeptName.contains(currentDeptName) ||
+            (currentDeptName.contains('derma') && (appDeptName.contains('derma') || appDeptName.contains('skin') || appDeptId.contains('derma') || appDeptId.contains('dep-004'))) ||
+            (currentDeptName.contains('skin') && (appDeptName.contains('skin') || appDeptName.contains('derma') || appDeptId.contains('derma'))) ||
+            (currentDeptName.contains('general') && (appDeptName.contains('general') || appDeptId.contains('gen_med') || appDeptId.contains('dep-001'))) ||
+            (currentDeptName.contains('ortho') && (appDeptName.contains('ortho') || appDeptId.contains('ortho') || appDeptId.contains('bone'))) ||
+            (currentDeptName.contains('ent') && (appDeptName.contains('ent') || appDeptId.contains('ent') || appDeptId.contains('ear'))) ||
+            (currentDeptName.contains('pedia') && (appDeptName.contains('pedia') || appDeptId.contains('pedia') || appDeptId.contains('child')));
+
+        if (hospMatch && clinicMatch) {
+          count++;
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _bookedCount = count;
+        });
+      }
+    }, onError: (_) {});
   }
 
   void _proceedToTimeSlots() {
     Navigator.push(
       context,
       MaterialPageRoute(
+        settings: const RouteSettings(name: 'TimeSlotSelection'),
         builder: (context) => TimeSlotSelectionScreen(
           hospital: widget.hospital,
           clinic: widget.clinic,
@@ -156,6 +232,7 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
                                       _selectedDay = selectedDay;
                                       _focusedDay = focusedDay;
                                     });
+                                    _listenForDateBookings();
                                   },
                                   headerStyle: HeaderStyle(
                                     formatButtonVisible: false,
@@ -249,20 +326,58 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 6),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: const [
-                                    Icon(Icons.check_circle_rounded, size: 14, color: AppColors.statusGreen),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      'OPD Morning Session Available (8:00 AM - 12:00 PM)',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.statusGreen,
-                                      ),
-                                    ),
-                                  ],
+                                Builder(
+                                  builder: (_) {
+                                    final isSunday = _selectedDay.weekday == DateTime.sunday;
+                                    if (isSunday) {
+                                      return Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: const [
+                                          Icon(Icons.cancel_outlined, size: 14, color: AppColors.statusRed),
+                                          SizedBox(width: 4),
+                                          Flexible(
+                                            child: Text(
+                                              'Clinic Closed on Sundays • Select a Weekday',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                                color: AppColors.statusRed,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    }
+
+                                    final available = (150 - _bookedCount).clamp(0, 150);
+                                    final isFull = available == 0;
+
+                                    return Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          isFull ? Icons.warning_amber_rounded : Icons.check_circle_rounded,
+                                          size: 14,
+                                          color: isFull ? AppColors.statusOrange : AppColors.statusGreen,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Flexible(
+                                          child: Text(
+                                            isFull
+                                                ? 'All 150 OPD Slots Fully Booked for this date'
+                                                : 'Sessions Open (8 AM - 2 PM) • $available spots available',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: isFull ? AppColors.statusOrange : AppColors.statusGreen,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  },
                                 ),
                               ],
                             ),
@@ -284,7 +399,7 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
     );
   }
 
-  // Segmented 5-Step Stepper (Steps 1, 2, 3 Green, Step 4 Blue Active, Step 5 Grey)
+  // Segmented 5-Step Stepper with interactive tap-back
   Widget _buildSegmentedStepper() {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
@@ -318,18 +433,57 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
           ),
           const SizedBox(height: 10),
 
-          // 5 Segments
+          // 5 Segments with interactive navigation
           Row(
             children: [
-              _buildStepSegment(isActive: false, isCompleted: true),
+              _buildStepSegment(
+                step: 1,
+                label: 'Patient',
+                isActive: false,
+                isCompleted: true,
+                onTap: () {
+                  Navigator.of(context).popUntil((route) => route.settings.name == 'CaregiverSetup' || route.isFirst);
+                },
+              ),
               const SizedBox(width: 6),
-              _buildStepSegment(isActive: false, isCompleted: true),
+              _buildStepSegment(
+                step: 2,
+                label: 'Hospital',
+                isActive: false,
+                isCompleted: true,
+                onTap: () {
+                  int count = 0;
+                  Navigator.of(context).popUntil((route) {
+                    return route.settings.name == 'HospitalSelection' || count++ == 2;
+                  });
+                },
+              ),
               const SizedBox(width: 6),
-              _buildStepSegment(isActive: false, isCompleted: true),
+              _buildStepSegment(
+                step: 3,
+                label: 'Clinic',
+                isActive: false,
+                isCompleted: true,
+                onTap: () {
+                  Navigator.of(context).pop();
+                },
+              ),
               const SizedBox(width: 6),
-              _buildStepSegment(isActive: true, isCompleted: false),
+              _buildStepSegment(
+                step: 4,
+                label: 'Date',
+                isActive: true,
+                isCompleted: false,
+                onTap: null,
+              ),
               const SizedBox(width: 6),
-              _buildStepSegment(isActive: false, isCompleted: false),
+              _buildStepSegment(
+                step: 5,
+                label: 'Slot',
+                isActive: false,
+                isCompleted: false,
+                onTap: null,
+              ),
             ],
           ),
         ],
@@ -337,17 +491,50 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
     );
   }
 
-  Widget _buildStepSegment({required bool isActive, required bool isCompleted}) {
+  Widget _buildStepSegment({
+    required int step,
+    required String label,
+    required bool isActive,
+    required bool isCompleted,
+    VoidCallback? onTap,
+  }) {
+    final color = isActive
+        ? AppColors.accentColor
+        : isCompleted
+            ? AppColors.statusGreen
+            : AppColors.cardBorder;
+
     return Expanded(
-      child: Container(
-        height: 6,
-        decoration: BoxDecoration(
-          color: isActive
-              ? AppColors.accentColor
-              : isCompleted
-                  ? AppColors.statusGreen
-                  : AppColors.cardBorder,
-          borderRadius: BorderRadius.circular(3),
+      child: Tooltip(
+        message: 'Step $step: $label${isCompleted ? ' (Tap to edit)' : ''}',
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(4),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Column(
+              children: [
+                Container(
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$step. $label',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: isActive || isCompleted ? FontWeight.bold : FontWeight.normal,
+                    color: isActive ? AppColors.accentColor : (isCompleted ? AppColors.headingText : AppColors.bodyText),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -429,6 +616,10 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
 
   // Bottom Continue Action Button
   Widget _buildBottomActionBar() {
+    final isSunday = _selectedDay.weekday == DateTime.sunday;
+    final available = (150 - _bookedCount).clamp(0, 150);
+    final isFull = available == 0;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -447,10 +638,30 @@ class _DateSelectionScreenState extends State<DateSelectionScreen> {
           width: double.infinity,
           height: 50,
           child: ElevatedButton(
-            onPressed: _proceedToTimeSlots,
+            onPressed: isSunday
+                ? () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('OPD Clinic is closed on Sundays. Please select a weekday (Monday - Saturday).'),
+                        backgroundColor: AppColors.statusRed,
+                        duration: Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                : (isFull
+                    ? () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('All slots are fully booked for this date. Please select another date.'),
+                            backgroundColor: AppColors.statusOrange,
+                            duration: Duration(seconds: 3),
+                          ),
+                        );
+                      }
+                    : _proceedToTimeSlots),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accentColor,
-              foregroundColor: AppColors.isDark ? Colors.black : Colors.white,
+              backgroundColor: isSunday || isFull ? AppColors.cardBorder : AppColors.accentColor,
+              foregroundColor: isSunday || isFull ? AppColors.bodyText : (AppColors.isDark ? Colors.black : Colors.white),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),

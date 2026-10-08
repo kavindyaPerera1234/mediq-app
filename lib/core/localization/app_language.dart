@@ -5,24 +5,57 @@ import '../constants/app_accessibility.dart';
 class AppLanguage {
   static final ValueNotifier<String> currentLanguage = ValueNotifier<String>('en');
 
-  static bool get isEnglish => currentLanguage.value == 'en';
-  static bool get isSinhala => currentLanguage.value == 'si';
-  static bool get isTamil => currentLanguage.value == 'ta';
+  /// Tracks whether the user explicitly changed language during this app session
+  static bool hasUserExplicitlySelected = false;
 
-  static String get code => currentLanguage.value;
+  static bool _initialized = false;
+  static void ensureInitialized() {
+    if (_initialized) return;
+    _initialized = true;
+    AppAccessibility.onLanguageChanged = (lang) {
+      if (currentLanguage.value != lang) {
+        currentLanguage.value = lang;
+      }
+      hasUserExplicitlySelected = true;
+    };
+  }
 
-  static void setLanguage(String langCode) {
+  static bool get isEnglish {
+    ensureInitialized();
+    return currentLanguage.value == 'en';
+  }
+
+  static bool get isSinhala {
+    ensureInitialized();
+    return currentLanguage.value == 'si';
+  }
+
+  static bool get isTamil {
+    ensureInitialized();
+    return currentLanguage.value == 'ta';
+  }
+
+  static String get code {
+    ensureInitialized();
+    return currentLanguage.value;
+  }
+
+  static void setLanguage(String langCode, {bool isExplicit = false}) {
+    ensureInitialized();
     if (langCode == 'en' || langCode == 'si' || langCode == 'ta') {
+      if (isExplicit) {
+        hasUserExplicitlySelected = true;
+      }
       if (currentLanguage.value != langCode) {
         currentLanguage.value = langCode;
       }
       if (AppAccessibility.currentLanguage.value != langCode) {
-        AppAccessibility.setLanguage(langCode);
+        AppAccessibility.currentLanguage.value = langCode;
       }
     }
   }
 
-  static void setEnglish() => setLanguage('en');
-  static void setSinhala() => setLanguage('si');
-  static void setTamil() => setLanguage('ta');
+  static void setEnglish({bool isExplicit = false}) => setLanguage('en', isExplicit: isExplicit);
+  static void setSinhala({bool isExplicit = false}) => setLanguage('si', isExplicit: isExplicit);
+  static void setTamil({bool isExplicit = false}) => setLanguage('ta', isExplicit: isExplicit);
 }

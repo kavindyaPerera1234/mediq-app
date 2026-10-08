@@ -91,4 +91,36 @@ class UserModel {
       updatedAt: map['updatedAt'] != null ? parseDate(map['updatedAt']) : null,
     );
   }
+
+  UserModel copyWith({
+    String? userId,
+    String? fullName,
+    String? phoneNumber,
+    String? email,
+    String? nic,
+    int? age,
+    UserRole? role,
+    bool? isCaregiver,
+    String? linkedPatientId,
+    String? preferredLanguage,
+    bool? isActive,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return UserModel(
+      userId: userId ?? this.userId,
+      fullName: fullName ?? this.fullName,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      email: email ?? this.email,
+      nic: nic ?? this.nic,
+      age: age ?? this.age,
+      role: role ?? this.role,
+      isCaregiver: isCaregiver ?? this.isCaregiver,
+      linkedPatientId: linkedPatientId ?? this.linkedPatientId,
+      preferredLanguage: preferredLanguage ?? this.preferredLanguage,
+      isActive: isActive ?? this.isActive,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 }

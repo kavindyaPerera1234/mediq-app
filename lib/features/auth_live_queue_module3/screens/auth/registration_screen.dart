@@ -5,6 +5,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../services/auth_service.dart';
 import 'verification_code_screen.dart';
 import '../../../../core/localization/app_strings.dart';
+import '../../../../core/localization/app_language.dart' as core_lang;
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -62,6 +63,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         nic: nicToSave,
         age: int.tryParse(_ageController.text.trim()),
         isCaregiver: _isCaregiver,
+        preferredLanguage: core_lang.AppLanguage.code,
       );
 
       setState(() => _isLoading = false);

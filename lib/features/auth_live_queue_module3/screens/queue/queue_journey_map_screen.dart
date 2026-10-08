@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_accessibility.dart';
 import '../../services/live_queue_service.dart';
 import '../../models/queue_entry_model.dart';
 import '../states/your_turn_fullscreen_screen.dart';
@@ -13,11 +14,15 @@ class QueueJourneyMapScreen extends StatelessWidget {
     final queueService = LiveQueueService();
 
     return AnimatedBuilder(
-      animation: queueService,
+      animation: Listenable.merge([
+        queueService,
+        AppAccessibility.isHighContrastMode,
+      ]),
       builder: (context, _) {
         final session = queueService.session;
         final myEntry = queueService.myEntry;
         final status = myEntry.status;
+        final isDark = AppAccessibility.isHighContrastMode.value;
 
         final bool isWaiting = status == PatientQueueStatus.waiting ||
             status == PatientQueueStatus.approaching ||
@@ -32,20 +37,20 @@ class QueueJourneyMapScreen extends StatelessWidget {
         final waitMins = myEntry.estimatedWaitMinutes;
 
         return Scaffold(
-          backgroundColor: AppColors.background,
+          backgroundColor: AppColors.pageBg,
           appBar: AppBar(
             backgroundColor: Colors.transparent,
-            elevation: 0,
+            elevation: isDark ? 1 : 0,
             title: Text(
               'Queue Journey Map',
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
+                color: AppColors.headingText,
               ),
             ),
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textPrimary),
+              icon: Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.headingText),
               onPressed: () => Navigator.pop(context),
             ),
           ),
@@ -60,13 +65,13 @@ class QueueJourneyMapScreen extends StatelessWidget {
                     style: GoogleFonts.inter(
                       fontSize: 24,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary,
+                      color: AppColors.headingText,
                     ),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     'Real-time checkpoints for Token $token at $dept ($room).',
-                    style: GoogleFonts.inter(fontSize: 14, color: AppColors.textSecondary, height: 1.4),
+                    style: GoogleFonts.inter(fontSize: 14, color: AppColors.bodyText, height: 1.4),
                   ),
 
                   const SizedBox(height: 28),
@@ -168,13 +173,13 @@ class QueueJourneyMapScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
+                      color: AppColors.cardSurface,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(color: AppColors.cardBorder),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.navigation_rounded, color: AppColors.primary, size: 28),
+                        Icon(Icons.navigation_rounded, color: AppColors.accentColor, size: 28),
                         const SizedBox(width: 14),
                         Expanded(
                           child: Column(
@@ -182,11 +187,15 @@ class QueueJourneyMapScreen extends StatelessWidget {
                             children: [
                               Text(
                                 'Hospital Navigation Assist',
-                                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700),
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.headingText,
+                                ),
                               ),
                               Text(
                                 'Follow the Blue Floor Line to reach $room and Pharmacy directly.',
-                                style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
+                                style: GoogleFonts.inter(fontSize: 12, color: AppColors.bodyText),
                               ),
                             ],
                           ),
@@ -266,10 +275,14 @@ class QueueJourneyMapScreen extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: isCurrent ? AppColors.primaryLight.withValues(alpha: 0.5) : AppColors.surface,
+                  color: isCurrent
+                      ? (AppColors.isDark ? const Color(0xFF243356) : AppColors.primaryLight.withValues(alpha: 0.5))
+                      : AppColors.cardSurface,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: isCurrent ? AppColors.primary : AppColors.border,
+                    color: isCurrent
+                        ? (AppColors.isDark ? const Color(0xFF38BDF8) : AppColors.primary)
+                        : AppColors.cardBorder,
                     width: isCurrent ? 2 : 1,
                   ),
                 ),
@@ -285,7 +298,9 @@ class QueueJourneyMapScreen extends StatelessWidget {
                             style: GoogleFonts.inter(
                               fontSize: 15,
                               fontWeight: FontWeight.w800,
-                              color: isCurrent ? AppColors.primaryDark : AppColors.textPrimary,
+                              color: isCurrent
+                                  ? (AppColors.isDark ? const Color(0xFF38BDF8) : AppColors.primaryDark)
+                                  : AppColors.headingText,
                             ),
                           ),
                         ),
@@ -293,7 +308,7 @@ class QueueJourneyMapScreen extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: AppColors.primary,
+                              color: AppColors.isDark ? const Color(0xFF38BDF8) : AppColors.primary,
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
@@ -310,7 +325,7 @@ class QueueJourneyMapScreen extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      style: GoogleFonts.inter(fontSize: 13, color: AppColors.textSecondary),
+                      style: GoogleFonts.inter(fontSize: 13, color: AppColors.bodyText),
                     ),
                     const SizedBox(height: 8),
                     Row(

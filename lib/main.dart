@@ -102,20 +102,20 @@ class MediQApp extends StatelessWidget {
   static ThemeData _buildHighContrastTheme() {
     return ThemeData(
       brightness: Brightness.dark,
-      scaffoldBackgroundColor: const Color(0xFF0F172A),
-      primaryColor: const Color(0xFF38BDF8),
-      cardColor: const Color(0xFF1E293B),
-      dividerColor: const Color(0xFF334155),
+      scaffoldBackgroundColor: AppColors.seniorHighContrastBg,
+      primaryColor: AppColors.seniorHighContrastAccent,
+      cardColor: AppColors.seniorHighContrastSurface,
+      dividerColor: AppColors.seniorHighContrastBorder,
       appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF1E293B),
+        backgroundColor: AppColors.seniorHighContrastSurface,
         foregroundColor: Colors.white,
         elevation: 1,
       ),
       textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
       colorScheme: const ColorScheme.dark(
-        primary: Color(0xFF38BDF8),
+        primary: AppColors.seniorHighContrastAccent,
         secondary: Color(0xFF818CF8),
-        surface: Color(0xFF1E293B),
+        surface: AppColors.seniorHighContrastSurface,
         onPrimary: Colors.black,
         onSurface: Colors.white,
         brightness: Brightness.dark,

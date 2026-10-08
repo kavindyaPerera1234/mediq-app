@@ -15,34 +15,7 @@ class SeniorModeSettingsScreen extends StatefulWidget {
 
 class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
   final ProfileService _profileService = ProfileService();
-  final String _patientNic = '200164801234';
-
-  bool _largeTextMode = true;
-  bool _highContrastMode = false;
-  bool _simplifiedNav = false;
-  bool _voiceGuidance = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadSettings();
-  }
-
-  Future<void> _loadSettings() async {
-    final settings = await _profileService.getAccessibilitySettings(_patientNic);
-    if (mounted) {
-      setState(() {
-        _largeTextMode = settings['largeTextMode'] ?? true;
-        _highContrastMode = settings['highContrastMode'] ?? false;
-        _simplifiedNav = settings['simplifiedNav'] ?? false;
-        _voiceGuidance = settings['voiceGuidance'] ?? false;
-      });
-      AppAccessibility.setLargeTextMode(_largeTextMode);
-      AppAccessibility.setHighContrastMode(_highContrastMode);
-      AppAccessibility.setSimplifiedNav(_simplifiedNav);
-      AppAccessibility.setVoiceGuidance(_voiceGuidance);
-    }
-  }
+  String get _patientNic => ProfileService.activeProfileNotifier.value.nic;
 
   Future<void> _updateSetting({
     bool? largeText,
@@ -50,46 +23,41 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
     bool? simplified,
     bool? voice,
   }) async {
-    setState(() {
-      if (largeText != null) {
-        _largeTextMode = largeText;
-        AppAccessibility.setLargeTextMode(largeText);
+    if (largeText != null) {
+      AppAccessibility.setLargeTextMode(largeText);
+    }
+    if (highContrast != null) {
+      AppAccessibility.setHighContrastMode(highContrast);
+    }
+    if (simplified != null) {
+      AppAccessibility.setSimplifiedNav(simplified);
+    }
+    if (voice != null) {
+      AppAccessibility.setVoiceGuidance(voice);
+      if (voice) {
+        VoiceGuidanceService.speak(
+          AppAccessibility.currentLanguage.value == 'si'
+              ? "හඬ මඟපෙන්වීම සක්‍රිය කරන ලදී"
+              : "Voice Guidance is activated. OPD tokens and screen navigation will be announced aloud.",
+          context: context,
+        );
+      } else {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Voice Guidance disabled."),
+            duration: Duration(milliseconds: 1500),
+          ),
+        );
       }
-      if (highContrast != null) {
-        _highContrastMode = highContrast;
-        AppAccessibility.setHighContrastMode(highContrast);
-      }
-      if (simplified != null) {
-        _simplifiedNav = simplified;
-        AppAccessibility.setSimplifiedNav(simplified);
-      }
-      if (voice != null) {
-        _voiceGuidance = voice;
-        AppAccessibility.setVoiceGuidance(voice);
-      }
-    });
-
-    if (voice == true) {
-      VoiceGuidanceService.speak(
-        "Voice Guidance is activated. OPD tokens and screen navigation will be announced aloud.",
-        context: context,
-      );
-    } else if (voice == false) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Voice Guidance disabled."),
-          duration: Duration(milliseconds: 1500),
-        ),
-      );
     }
 
     await _profileService.saveAccessibilitySettings(
       patientNic: _patientNic,
-      largeTextMode: _largeTextMode,
-      highContrastMode: _highContrastMode,
-      simplifiedNav: _simplifiedNav,
-      voiceGuidance: _voiceGuidance,
+      largeTextMode: AppAccessibility.isLargeTextMode.value,
+      highContrastMode: AppAccessibility.isHighContrastMode.value,
+      simplifiedNav: AppAccessibility.isSimplifiedNav.value,
+      voiceGuidance: AppAccessibility.isVoiceGuidance.value,
     );
   }
 
@@ -97,11 +65,17 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: Listenable.merge([
+        AppAccessibility.isLargeTextMode,
         AppAccessibility.isHighContrastMode,
+        AppAccessibility.isSimplifiedNav,
+        AppAccessibility.isVoiceGuidance,
         AppAccessibility.currentLanguage,
       ]),
       builder: (context, _) {
-        final isDark = _highContrastMode;
+        final isDark = AppAccessibility.isHighContrastMode.value;
+        final isLargeText = AppAccessibility.isLargeTextMode.value;
+        final isSimplified = AppAccessibility.isSimplifiedNav.value;
+        final isVoice = AppAccessibility.isVoiceGuidance.value;
 
         return Scaffold(
           backgroundColor: isDark ? const Color(0xFF0B132B) : AppColors.background,
@@ -155,7 +129,7 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                       title: AppTranslations.tr('largeText'),
                       subtitle: AppTranslations.tr('largeTextDesc'),
                       icon: Icons.text_fields_outlined,
-                      isActive: _largeTextMode,
+                      isActive: isLargeText,
                       onChanged: (val) => _updateSetting(largeText: val),
                       isDark: isDark,
                     ),
@@ -166,7 +140,7 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                       title: AppTranslations.tr('highContrast'),
                       subtitle: AppTranslations.tr('highContrastDesc'),
                       icon: Icons.contrast_outlined,
-                      isActive: _highContrastMode,
+                      isActive: isDark,
                       onChanged: (val) => _updateSetting(highContrast: val),
                       isDark: isDark,
                     ),
@@ -177,7 +151,7 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                       title: AppTranslations.tr('simplifiedNav'),
                       subtitle: AppTranslations.tr('simplifiedNavDesc'),
                       icon: Icons.grid_view_outlined,
-                      isActive: _simplifiedNav,
+                      isActive: isSimplified,
                       onChanged: (val) => _updateSetting(simplified: val),
                       isDark: isDark,
                     ),
@@ -188,7 +162,7 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                       title: AppTranslations.tr('voiceGuidance'),
                       subtitle: AppTranslations.tr('voiceGuidanceDesc'),
                       icon: Icons.volume_up_outlined,
-                      isActive: _voiceGuidance,
+                      isActive: isVoice,
                       onChanged: (val) => _updateSetting(voice: val),
                       isDark: isDark,
                     ),
@@ -267,15 +241,15 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                             child: Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: _largeTextMode
+                                color: isLargeText
                                     ? (isDark ? const Color(0xFF243356) : AppColors.primaryLight.withValues(alpha: 0.5))
                                     : (isDark ? const Color(0xFF0B132B) : const Color(0xFFF8FAFC)),
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
-                                  color: _largeTextMode
+                                  color: isLargeText
                                       ? (isDark ? const Color(0xFF38BDF8) : AppColors.primary)
                                       : (isDark ? const Color(0xFF3A506B) : AppColors.border),
-                                  width: _largeTextMode ? 1.5 : 1,
+                                  width: isLargeText ? 1.5 : 1,
                                 ),
                               ),
                               child: Column(
@@ -286,7 +260,7 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                                     style: GoogleFonts.inter(
                                       fontSize: 11,
                                       fontWeight: FontWeight.w600,
-                                      color: _largeTextMode
+                                      color: isLargeText
                                           ? (isDark ? const Color(0xFF38BDF8) : AppColors.primary)
                                           : (isDark ? const Color(0xFF94A3B8) : AppColors.textSecondary),
                                     ),
@@ -299,7 +273,7 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                                     style: GoogleFonts.inter(
                                       fontSize: 22,
                                       fontWeight: FontWeight.w800,
-                                      color: _largeTextMode
+                                      color: isLargeText
                                           ? (isDark ? const Color(0xFF38BDF8) : AppColors.primary)
                                           : (isDark ? Colors.white : AppColors.textPrimary),
                                     ),

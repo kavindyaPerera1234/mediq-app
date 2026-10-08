@@ -182,18 +182,50 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
           ),
           const SizedBox(height: 10),
 
-          // 5 Segments: Segment 1 (Green / Completed), Segment 2 (Blue / Active), 3-5 (Grey)
+          // 5 Segments with interactive navigation
           Row(
             children: [
-              _buildStepSegment(isActive: false, isCompleted: true),
+              _buildStepSegment(
+                step: 1,
+                label: 'Patient',
+                isActive: false,
+                isCompleted: true,
+                onTap: () {
+                  Navigator.of(context).pop();
+                },
+              ),
               const SizedBox(width: 6),
-              _buildStepSegment(isActive: true, isCompleted: false),
+              _buildStepSegment(
+                step: 2,
+                label: 'Hospital',
+                isActive: true,
+                isCompleted: false,
+                onTap: null,
+              ),
               const SizedBox(width: 6),
-              _buildStepSegment(isActive: false, isCompleted: false),
+              _buildStepSegment(
+                step: 3,
+                label: 'Clinic',
+                isActive: false,
+                isCompleted: false,
+                onTap: null,
+              ),
               const SizedBox(width: 6),
-              _buildStepSegment(isActive: false, isCompleted: false),
+              _buildStepSegment(
+                step: 4,
+                label: 'Date',
+                isActive: false,
+                isCompleted: false,
+                onTap: null,
+              ),
               const SizedBox(width: 6),
-              _buildStepSegment(isActive: false, isCompleted: false),
+              _buildStepSegment(
+                step: 5,
+                label: 'Slot',
+                isActive: false,
+                isCompleted: false,
+                onTap: null,
+              ),
             ],
           ),
         ],
@@ -201,17 +233,50 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
     );
   }
 
-  Widget _buildStepSegment({required bool isActive, required bool isCompleted}) {
+  Widget _buildStepSegment({
+    required int step,
+    required String label,
+    required bool isActive,
+    required bool isCompleted,
+    VoidCallback? onTap,
+  }) {
+    final color = isActive
+        ? AppColors.accentColor
+        : isCompleted
+            ? AppColors.statusGreen
+            : AppColors.cardBorder;
+
     return Expanded(
-      child: Container(
-        height: 6,
-        decoration: BoxDecoration(
-          color: isActive
-              ? AppColors.accentColor
-              : isCompleted
-                  ? AppColors.statusGreen
-                  : AppColors.cardBorder,
-          borderRadius: BorderRadius.circular(3),
+      child: Tooltip(
+        message: 'Step $step: $label${isCompleted ? ' (Tap to edit)' : ''}',
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(4),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Column(
+              children: [
+                Container(
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$step. $label',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: isActive || isCompleted ? FontWeight.bold : FontWeight.normal,
+                    color: isActive ? AppColors.accentColor : (isCompleted ? AppColors.headingText : AppColors.bodyText),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -315,6 +380,7 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
+            settings: const RouteSettings(name: 'ClinicSelection'),
             builder: (context) => ClinicSelectionScreen(
               hospital: hospital,
               isCaregiverBooking: widget.isCaregiverBooking,

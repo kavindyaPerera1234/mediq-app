@@ -52,7 +52,11 @@ class AuthService extends ChangeNotifier {
 
       if (doc.exists) {
         _currentUser = UserModel.fromMap(doc.data()!, id: doc.id);
-        if (_currentUser!.preferredLanguage.isNotEmpty) {
+        final activeLang = core_lang.AppLanguage.code;
+        if (core_lang.AppLanguage.hasUserExplicitlySelected || activeLang != 'en') {
+          _currentUser = _currentUser!.copyWith(preferredLanguage: activeLang);
+          core_lang.AppLanguage.setLanguage(activeLang, isExplicit: true);
+        } else if (_currentUser!.preferredLanguage.isNotEmpty) {
           core_lang.AppLanguage.setLanguage(_currentUser!.preferredLanguage);
         }
         ProfileService().syncWithCurrentUser();
@@ -144,9 +148,20 @@ class AuthService extends ChangeNotifier {
 
       if (doc.exists) {
         _currentUser = UserModel.fromMap(doc.data()!, id: doc.id);
-        if (_currentUser!.preferredLanguage.isNotEmpty) {
+        
+        final activeLang = core_lang.AppLanguage.code;
+        if (core_lang.AppLanguage.hasUserExplicitlySelected || activeLang != 'en') {
+          _currentUser = _currentUser!.copyWith(preferredLanguage: activeLang);
+          try {
+            await _firestore.collection(AppConstants.usersCollection).doc(uid).update({
+              'preferredLanguage': activeLang,
+            });
+          } catch (_) {}
+          core_lang.AppLanguage.setLanguage(activeLang, isExplicit: true);
+        } else if (_currentUser!.preferredLanguage.isNotEmpty && _currentUser!.preferredLanguage != 'en') {
           core_lang.AppLanguage.setLanguage(_currentUser!.preferredLanguage);
         }
+        
         ProfileService().syncWithCurrentUser();
         if (!_currentUser!.isActive) {
           await _auth.signOut();
@@ -190,13 +205,66 @@ class AuthService extends ChangeNotifier {
 
   // ── Password Reset ────────────────────────────────────────────────────────
 
-  Future<void> sendPasswordReset(String email) async {
+  Future<String> sendPasswordReset(String emailOrPhone) async {
     try {
-      await _auth.sendPasswordResetEmail(email: email.trim());
+      String targetEmail = emailOrPhone.trim();
+      if (!targetEmail.contains('@')) {
+        final rawPhone = targetEmail;
+        final formattedPhone = formatToE164(rawPhone);
+        var q = await _firestore.collection(AppConstants.usersCollection).where('phoneNumber', isEqualTo: rawPhone).limit(1).get();
+        if (q.docs.isEmpty) {
+          q = await _firestore.collection(AppConstants.usersCollection).where('phoneNumber', isEqualTo: formattedPhone).limit(1).get();
+        }
+        if (q.docs.isEmpty) {
+          q = await _firestore.collection(AppConstants.usersCollection).where('phone', isEqualTo: rawPhone).limit(1).get();
+        }
+        if (q.docs.isEmpty) {
+          q = await _firestore.collection(AppConstants.usersCollection).where('phone', isEqualTo: formattedPhone).limit(1).get();
+        }
+        if (q.docs.isNotEmpty) {
+          final data = q.docs.first.data();
+          final stored = (data['email'] ?? '').toString().trim();
+          if (stored.contains('@')) {
+            targetEmail = stored;
+          }
+        }
+      }
+      if (!targetEmail.contains('@')) {
+        throw FirebaseAuthException(
+          code: 'user-not-found',
+          message: 'No registered email was found linked to this phone number. Please sign in via SMS OTP.',
+        );
+      }
+      await _auth.sendPasswordResetEmail(email: targetEmail.trim());
+      return targetEmail;
     } on FirebaseAuthException catch (e) {
       debugPrint("Password reset error: ${e.code} - ${e.message}");
       rethrow;
     }
+  }
+
+  /// Updates or sets password for current authenticated user
+  Future<void> updateUserPassword(String newPassword) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'no-current-user',
+        message: 'No active session found. Please sign in first.',
+      );
+    }
+
+    final targetEmail = _currentUser?.email ?? user.email ?? '';
+    if (targetEmail.isNotEmpty && targetEmail.contains('@')) {
+      try {
+        final cred = EmailAuthProvider.credential(email: targetEmail, password: newPassword.trim());
+        await user.linkWithCredential(cred);
+        return;
+      } catch (linkErr) {
+        debugPrint('Link credential notice (may already be linked): $linkErr');
+      }
+    }
+
+    await user.updatePassword(newPassword.trim());
   }
 
   // ── Registration: Patient or Caregiver ───────────────────────────────────
@@ -344,6 +412,18 @@ class AuthService extends ChangeNotifier {
       if (query.docs.isNotEmpty) {
         final doc = query.docs.first;
         _currentUser = UserModel.fromMap(doc.data(), id: doc.id);
+        final activeLang = core_lang.AppLanguage.code;
+        if (core_lang.AppLanguage.hasUserExplicitlySelected || activeLang != 'en') {
+          _currentUser = _currentUser!.copyWith(preferredLanguage: activeLang);
+          try {
+            await _firestore.collection(AppConstants.usersCollection).doc(doc.id).update({
+              'preferredLanguage': activeLang,
+            });
+          } catch (_) {}
+          core_lang.AppLanguage.setLanguage(activeLang, isExplicit: true);
+        } else if (_currentUser!.preferredLanguage.isNotEmpty && _currentUser!.preferredLanguage != 'en') {
+          core_lang.AppLanguage.setLanguage(_currentUser!.preferredLanguage);
+        }
         LiveQueueService().refresh();
         notifyListeners();
         return true;
@@ -420,7 +500,10 @@ class AuthService extends ChangeNotifier {
       );
     } else {
       // Patient or caregiver -> Module 1 Patient Dashboard
-      if (_currentUser != null && _currentUser!.preferredLanguage.isNotEmpty) {
+      final activeLang = core_lang.AppLanguage.code;
+      if (core_lang.AppLanguage.hasUserExplicitlySelected || activeLang != 'en') {
+        core_lang.AppLanguage.setLanguage(activeLang, isExplicit: true);
+      } else if (_currentUser != null && _currentUser!.preferredLanguage.isNotEmpty) {
         core_lang.AppLanguage.setLanguage(_currentUser!.preferredLanguage);
       }
       ProfileService().syncWithCurrentUser();

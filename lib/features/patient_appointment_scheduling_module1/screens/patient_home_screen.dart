@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
@@ -5,8 +6,11 @@ import '../../../core/constants/app_accessibility.dart';
 import '../../../core/constants/app_translations.dart';
 import '../backend/backend.dart';
 import 'senior_mode_settings_screen.dart';
+import 'caregiver_setup_screen.dart';
+import 'patient_profile_screen.dart';
 import '../../auth_live_queue_module3/screens/auth/welcome_entry_screen.dart';
 import '../../auth_live_queue_module3/services/auth_service.dart';
+import '../../token_lifecycle_notification_module2/screens/digital_token_details_screen.dart';
 
 class PatientHomeScreen extends StatelessWidget {
   final ValueChanged<int> onNavigateTab;
@@ -104,7 +108,7 @@ class PatientHomeScreen extends StatelessWidget {
                         if (activeAppointments.isNotEmpty) {
                           return _buildActiveTokenCard(context, activeAppointments.first);
                         } else {
-                          return _buildNoActiveTokenCard();
+                          return _buildNoActiveTokenCard(context);
                         }
                       },
                     ),
@@ -118,7 +122,7 @@ class PatientHomeScreen extends StatelessWidget {
                       style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.headingText),
                     ),
                     const SizedBox(height: 10),
-                    _buildQuickActionsGrid(),
+                    _buildQuickActionsGrid(context),
                     const SizedBox(height: 20),
 
                     // 4. Ministry of Health Guidelines
@@ -181,6 +185,28 @@ class PatientHomeScreen extends StatelessWidget {
     }
   }
 
+  ImageProvider? _getProfileImage(String url) {
+    final clean = url.trim();
+    if (clean.isEmpty) return null;
+    if (clean.startsWith('data:image') || clean.startsWith('data:;base64,')) {
+      try {
+        final commaIdx = clean.indexOf(',');
+        final base64Str = commaIdx != -1 ? clean.substring(commaIdx + 1) : clean;
+        return MemoryImage(base64Decode(base64Str));
+      } catch (_) {
+        return null;
+      }
+    } else if (clean.startsWith('http://') || clean.startsWith('https://')) {
+      return NetworkImage(clean);
+    } else {
+      try {
+        return MemoryImage(base64Decode(clean));
+      } catch (_) {
+        return null;
+      }
+    }
+  }
+
   Widget _buildWelcomeHeader() {
     final profile = ProfileService.activeProfileNotifier.value;
     final fullName = profile.fullName;
@@ -221,7 +247,11 @@ class PatientHomeScreen extends StatelessWidget {
           CircleAvatar(
             radius: 26,
             backgroundColor: AppColors.chipBg,
-            child: Text(initial, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.accentColor)),
+            backgroundImage: _getProfileImage(profile.photoUrl),
+            onBackgroundImageError: profile.photoUrl.isNotEmpty ? (_, __) {} : null,
+            child: (profile.photoUrl.isNotEmpty && _getProfileImage(profile.photoUrl) != null)
+                ? null
+                : Text(initial, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.accentColor)),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -347,7 +377,18 @@ class PatientHomeScreen extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               ElevatedButton(
-                onPressed: () => onNavigateTab(4), // Go to Profile
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DigitalTokenDetailsScreen(
+                        appointmentId: appointment.id.isNotEmpty
+                            ? appointment.id
+                            : appointment.tokenCode,
+                      ),
+                    ),
+                  );
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: AppColors.primaryDark,
@@ -364,7 +405,7 @@ class PatientHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildNoActiveTokenCard() {
+  Widget _buildNoActiveTokenCard(BuildContext context) {
     final lang = AppAccessibility.currentLanguage.value;
     String title;
     String subtitle;
@@ -449,7 +490,12 @@ class PatientHomeScreen extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () => onNavigateTab(1),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CaregiverSetupScreen()),
+                );
+              },
               icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
               label: Text(
                 buttonText,
@@ -471,7 +517,7 @@ class PatientHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildQuickActionsGrid() {
+  Widget _buildQuickActionsGrid(BuildContext context) {
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -485,7 +531,12 @@ class PatientHomeScreen extends StatelessWidget {
           subtitle: 'Choose hospital & time',
           icon: Icons.calendar_month_rounded,
           color: AppColors.accentColor,
-          onTap: () => onNavigateTab(1),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CaregiverSetupScreen()),
+            );
+          },
         ),
         _buildActionCard(
           title: AppTranslations.tr('trackLiveQueue'),
@@ -506,7 +557,10 @@ class PatientHomeScreen extends StatelessWidget {
           subtitle: 'Caregiver management',
           icon: Icons.person_pin_rounded,
           color: Colors.purple.shade400,
-          onTap: () => onNavigateTab(4),
+          onTap: () {
+            PatientProfileScreen.selectedTabNotifier.value = 1;
+            onNavigateTab(4);
+          },
         ),
       ],
     );
