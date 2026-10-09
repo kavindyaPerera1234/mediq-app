@@ -28,20 +28,19 @@ class HospitalSelectionScreen extends StatefulWidget {
 }
 
 class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
-  late List<GovernmentHospital> _allHospitals;
-  late List<GovernmentHospital> _filteredHospitals;
+  List<GovernmentHospital> _allHospitals = [];
+  List<GovernmentHospital> _filteredHospitals = [];
   final TextEditingController _searchController = TextEditingController();
 
   StreamSubscription<QuerySnapshot>? _hospitalsSub;
   StreamSubscription<QuerySnapshot>? _departmentsSub;
   final Map<String, List<OpdClinic>> _hospitalClinics = {};
   List<QueryDocumentSnapshot<Map<String, dynamic>>> _lastHospitalDocs = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _allHospitals = GovernmentHospital.getSampleHospitals();
-    _filteredHospitals = List.from(_allHospitals);
     _startRealtimeListeners();
   }
 
@@ -159,27 +158,14 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
       );
     }
 
-    // Add default hospitals only if they were NOT explicitly disabled in Firestore
-    for (var def in GovernmentHospital.getSampleHospitals()) {
-      final defId = def.id.toLowerCase();
-      final defClean = def.name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-
-      final isExplicitlyDisabled = disabledHospitalKeys.contains(defId) ||
-          disabledHospitalKeys.any((k) => defClean.contains(k) || k.contains(defClean));
-
-      if (isExplicitlyDisabled) {
-        continue;
-      }
-
-      final alreadyExists = map.values.any((h) {
-        final hClean = h.name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-        return h.id.toLowerCase() == defId || hClean.contains(defClean) || defClean.contains(hClean);
-      });
-      if (!alreadyExists && !map.containsKey(defId)) {
-        map[defId] = def;
+    // Only fallback to hardcoded samples if Firestore had 0 hospital records
+    if (_lastHospitalDocs.isEmpty) {
+      for (var def in GovernmentHospital.getSampleHospitals()) {
+        map[def.id.toLowerCase()] = def;
       }
     }
 
+    _isLoading = false;
     _allHospitals = map.values.where((h) => h.isOpdAvailable).toList();
     _filterHospitals(_searchController.text);
   }
@@ -274,17 +260,21 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
 
                           // Hospitals List
                           Expanded(
-                            child: _filteredHospitals.isEmpty
-                                ? _buildEmptyState()
-                                : ListView.separated(
-                                    padding: const EdgeInsets.only(bottom: 24),
-                                    itemCount: _filteredHospitals.length,
-                                    separatorBuilder: (context, index) => const SizedBox(height: 12),
-                                    itemBuilder: (context, index) {
-                                      final hospital = _filteredHospitals[index];
-                                      return _buildHospitalCard(hospital);
-                                    },
-                                  ),
+                            child: _isLoading
+                                ? Center(
+                                    child: CircularProgressIndicator(color: AppColors.accentColor),
+                                  )
+                                : _filteredHospitals.isEmpty
+                                    ? _buildEmptyState()
+                                    : ListView.separated(
+                                        padding: const EdgeInsets.only(bottom: 24),
+                                        itemCount: _filteredHospitals.length,
+                                        separatorBuilder: (context, index) => const SizedBox(height: 12),
+                                        itemBuilder: (context, index) {
+                                          final hospital = _filteredHospitals[index];
+                                          return _buildHospitalCard(hospital);
+                                        },
+                                      ),
                           ),
                         ],
                       ),
