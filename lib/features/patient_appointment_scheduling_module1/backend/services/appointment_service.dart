@@ -317,4 +317,17 @@ class AppointmentService {
       return false;
     }
   }
+
+  /// Permanently delete an appointment record from history
+  Future<bool> deleteAppointment(String appointmentId) async {
+    try {
+      if (appointmentId.isNotEmpty) {
+        await _appointmentsRef.doc(appointmentId).delete();
+      }
+      return true;
+    } catch (e) {
+      debugPrint('AppointmentService: deleteAppointment error $e');
+      return false;
+    }
+  }
 }

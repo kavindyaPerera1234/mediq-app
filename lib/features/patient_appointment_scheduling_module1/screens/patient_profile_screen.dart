@@ -2415,6 +2415,21 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                                     Row(
                                       children: [
                                         _buildAppointmentStatusBadge(app, isUpcoming),
+                                        if (!isUpcoming) ...[
+                                          const SizedBox(width: 6),
+                                          InkWell(
+                                            borderRadius: BorderRadius.circular(6),
+                                            onTap: () => _confirmDeletePastAppointment(app),
+                                            child: Container(
+                                              padding: const EdgeInsets.all(4),
+                                              decoration: BoxDecoration(
+                                                color: AppColors.error.withValues(alpha: 0.1),
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: const Icon(Icons.delete_outline_rounded, size: 15, color: AppColors.error),
+                                            ),
+                                          ),
+                                        ],
                                         const SizedBox(width: 4),
                                         Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.bodyText),
                                       ],
@@ -2466,6 +2481,22 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                                         child: const Text(
                                           'Cancel Slot',
                                           style: TextStyle(fontSize: 11, color: AppColors.error, fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 14),
+                                    ] else ...[
+                                      GestureDetector(
+                                        onTap: () => _confirmDeletePastAppointment(app),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.delete_outline_rounded, size: 13, color: AppColors.error),
+                                            SizedBox(width: 3),
+                                            Text(
+                                              'Delete Record',
+                                              style: TextStyle(fontSize: 11, color: AppColors.error, fontWeight: FontWeight.bold),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                       const SizedBox(width: 14),
@@ -2620,6 +2651,24 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                   ),
                 ),
                 const SizedBox(height: 10),
+              ] else ...[
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error, size: 18),
+                    label: const Text('Delete Past Record', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.error),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _confirmDeletePastAppointment(app);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 10),
               ],
 
               SizedBox(
@@ -2696,6 +2745,57 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                 );
               },
               child: const Text('Yes, Cancel', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _confirmDeletePastAppointment(AppointmentModel app) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.delete_outline_rounded, color: AppColors.error),
+              SizedBox(width: 8),
+              Text('Delete Past Record?', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: Text(
+            'Are you sure you want to delete token ${app.tokenCode} (${app.departmentName} on ${app.appointmentDate}) from your past history?\n\nThis record will be permanently removed.',
+            style: const TextStyle(fontSize: 13, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.error,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () async {
+                Navigator.pop(dialogCtx);
+                final success = await _appointmentService.deleteAppointment(app.id);
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      success
+                          ? 'Token ${app.tokenCode} history removed successfully.'
+                          : 'Failed to delete record. Please check connection.',
+                    ),
+                    backgroundColor: success ? AppColors.textDark : AppColors.error,
+                  ),
+                );
+              },
+              child: const Text('Delete Record', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
         );
