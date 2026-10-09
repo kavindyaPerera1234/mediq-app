@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_accessibility.dart';
 import '../../../core/constants/app_translations.dart';
@@ -2169,28 +2168,38 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
     String label;
 
     final status = app.status.toLowerCase().trim();
-    if (status == 'confirmed') {
-      if (isUpcoming) {
-        bg = AppColors.statusGreen.withValues(alpha: 0.12);
-        fg = AppColors.statusGreen;
-        label = 'CONFIRMED';
-      } else {
-        bg = Colors.blueGrey.withValues(alpha: 0.12);
-        fg = Colors.blueGrey;
-        label = 'COMPLETED';
-      }
+    if (status == 'called') {
+      bg = Colors.blue.withValues(alpha: 0.12);
+      fg = Colors.blue;
+      label = 'CALLED';
+    } else if (status == 'serving' || status == 'in_consultation') {
+      bg = Colors.teal.withValues(alpha: 0.12);
+      fg = Colors.teal;
+      label = 'IN ROOM';
     } else if (status == 'rescheduled') {
       bg = AppColors.statusOrange.withValues(alpha: 0.15);
       fg = AppColors.statusOrange;
       label = 'RESCHEDULED';
     } else if (status == 'waiting') {
-      bg = AppColors.statusGreen.withValues(alpha: 0.12);
-      fg = AppColors.statusGreen;
-      label = 'WAITING';
-    } else if (status == 'called') {
-      bg = Colors.blue.withValues(alpha: 0.12);
-      fg = Colors.blue;
-      label = 'CALLED';
+      if (isUpcoming) {
+        bg = AppColors.statusGreen.withValues(alpha: 0.12);
+        fg = AppColors.statusGreen;
+        label = 'WAITING';
+      } else {
+        bg = Colors.deepOrange.withValues(alpha: 0.12);
+        fg = Colors.deepOrange;
+        label = 'EXPIRED';
+      }
+    } else if (status == 'confirmed') {
+      if (isUpcoming) {
+        bg = AppColors.statusGreen.withValues(alpha: 0.12);
+        fg = AppColors.statusGreen;
+        label = 'CONFIRMED';
+      } else {
+        bg = Colors.deepOrange.withValues(alpha: 0.12);
+        fg = Colors.deepOrange;
+        label = 'MISSED';
+      }
     } else if (status == 'cancelled') {
       bg = AppColors.error.withValues(alpha: 0.12);
       fg = AppColors.error;
@@ -2262,22 +2271,9 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
               }
 
               final list = snapshot.data ?? [];
-              final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
-              final upcomingList = list.where((app) {
-                final st = app.status.toLowerCase().trim();
-                final isLiveActive = st == 'called' || st == 'serving' || st == 'in_consultation' || st == 'arrived' || st == 'on_hold';
-                final isFutureOrToday = app.appointmentDate.compareTo(todayStr) >= 0;
-                final isActiveStatus = st == 'confirmed' || st == 'rescheduled' || st == 'waiting' || isLiveActive;
-                return (isFutureOrToday && isActiveStatus) || isLiveActive;
-              }).toList();
-
-              final pastList = list.where((app) {
-                final st = app.status.toLowerCase().trim();
-                final isPastDate = app.appointmentDate.compareTo(todayStr) < 0;
-                final isClosedStatus = st == 'completed' || st == 'cancelled' || st == 'missed';
-                return isPastDate || isClosedStatus;
-              }).toList();
+              final upcomingList = list.where((app) => !app.isExpiredOrPassed).toList();
+              final pastList = list.where((app) => app.isExpiredOrPassed).toList();
 
               final displayedList = _appointmentFilter == 'upcoming' ? upcomingList : pastList;
 
@@ -2369,9 +2365,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     )
                   else
                     ...displayedList.map((app) {
-                      final appSt = app.status.toLowerCase().trim();
-                      final isUpcoming = (appSt != 'completed' && appSt != 'cancelled' && appSt != 'missed') &&
-                          (app.appointmentDate.compareTo(todayStr) >= 0 || appSt == 'called' || appSt == 'serving' || appSt == 'in_consultation');
+                      final isUpcoming = !app.isExpiredOrPassed;
 
                       return Container(
                         margin: const EdgeInsets.only(bottom: 10),
