@@ -46,7 +46,7 @@ class HospitalAdminService {
           'hospitalId': id,
           'hospitalName': name,
           'roomNumber': 'OPD Room 01',
-          'operatingHours': '8:00 AM - 12:00 PM',
+          'operatingHours': '8:00 AM - 02:00 PM',
           'capacityLimit': 25,
           'isActive': isActive,
           'createdAt': FieldValue.serverTimestamp(),
@@ -106,13 +106,13 @@ class HospitalAdminService {
   }) async {
     try {
       final standardClinics = [
-        {'name': 'General Medicine OPD', 'room': 'OPD Room 01', 'hours': '8:00 AM - 12:00 PM', 'cap': 25},
-        {'name': 'Pediatric Clinic', 'room': 'OPD Room 02', 'hours': '8:30 AM - 12:30 PM', 'cap': 20},
-        {'name': 'Cardiology Clinic', 'room': 'OPD Room 03', 'hours': '9:00 AM - 1:00 PM', 'cap': 15},
-        {'name': 'Ophthalmology (Eye Clinic)', 'room': 'OPD Room 04', 'hours': '8:00 AM - 12:00 PM', 'cap': 20},
-        {'name': 'ENT & Audiology Clinic', 'room': 'OPD Room 05', 'hours': '9:00 AM - 1:00 PM', 'cap': 18},
-        {'name': 'Dental & Maxillofacial OPD', 'room': 'Dental Unit 01', 'hours': '8:00 AM - 12:00 PM', 'cap': 15},
-        {'name': 'Orthopedic Clinic', 'room': 'OPD Room 07', 'hours': '8:30 AM - 12:30 PM', 'cap': 20},
+        {'name': 'General Medicine OPD', 'room': 'OPD Room 01', 'hours': '8:00 AM - 02:00 PM', 'cap': 25},
+        {'name': 'Pediatric Clinic', 'room': 'OPD Room 02', 'hours': '8:00 AM - 02:00 PM', 'cap': 20},
+        {'name': 'Cardiology Clinic', 'room': 'OPD Room 03', 'hours': '8:00 AM - 01:00 PM', 'cap': 15},
+        {'name': 'Ophthalmology (Eye Clinic)', 'room': 'OPD Room 04', 'hours': '8:00 AM - 02:00 PM', 'cap': 20},
+        {'name': 'ENT & Audiology Clinic', 'room': 'OPD Room 05', 'hours': '8:00 AM - 01:00 PM', 'cap': 18},
+        {'name': 'Dental & Maxillofacial OPD', 'room': 'Dental Unit 01', 'hours': '8:00 AM - 02:00 PM', 'cap': 15},
+        {'name': 'Orthopedic Clinic', 'room': 'OPD Room 07', 'hours': '8:00 AM - 02:00 PM', 'cap': 20},
       ];
 
       final cleanHosp = hospitalName.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_').toLowerCase();

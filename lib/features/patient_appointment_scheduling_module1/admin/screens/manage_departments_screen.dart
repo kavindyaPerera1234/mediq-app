@@ -150,7 +150,7 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
         ? existing.hospitalName
         : _selectedHospitalFilter;
     final roomController = TextEditingController(text: existing?.roomNumber ?? 'OPD Room 01');
-    final hoursController = TextEditingController(text: existing?.operatingHours ?? '8:00 AM - 12:00 PM');
+    final hoursController = TextEditingController(text: existing?.operatingHours ?? '8:00 AM - 02:00 PM');
     int capacity = existing?.defaultCapacity ?? 25;
     bool isActive = existing?.isActive ?? true;
     bool isSubmitting = false;
@@ -310,10 +310,10 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                         spacing: 6,
                         runSpacing: 6,
                         children: [
-                          '8:00 AM - 12:00 PM',
-                          '8:00 AM - 01:00 PM',
                           '8:00 AM - 02:00 PM',
-                          '12:00 PM - 04:00 PM',
+                          '8:00 AM - 12:00 PM',
+                          '12:00 PM - 02:00 PM',
+                          '8:00 AM - 01:00 PM',
                         ].map((preset) {
                           return InkWell(
                             onTap: () {
