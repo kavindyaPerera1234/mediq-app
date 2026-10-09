@@ -176,6 +176,7 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
   }
 
   void _showAddEditDepartmentDialog([DepartmentItem? existing]) {
+    final formKey = GlobalKey<FormState>();
     final isEditing = existing != null;
     final nameController = TextEditingController(text: existing?.name ?? '');
     String selectedHosp = (existing != null && _hospitalNames.contains(existing.hospitalName))
@@ -206,232 +207,263 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                 borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
               ),
               child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          isEditing ? 'Edit OPD Department' : 'Add OPD Department / Clinic',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close_rounded),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                      ],
-                    ),
-                    const Divider(color: AppColors.border),
-                    const SizedBox(height: 12),
-
-                    // Hospital selector
-                    const Text('Government Hospital', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                    const SizedBox(height: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: AppColors.background,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppColors.border),
+                child: Form(
+                  key: formKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            isEditing ? 'Edit OPD Department' : 'Add OPD Department / Clinic',
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
                       ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: _hospitalNames.contains(selectedHosp) ? selectedHosp : (_hospitalNames.isNotEmpty ? _hospitalNames.first : null),
-                          isExpanded: true,
-                          items: _hospitalNames.map((name) {
-                            return DropdownMenuItem(
-                              value: name,
-                              child: Text(name, style: const TextStyle(fontSize: 13, color: AppColors.textDark), overflow: TextOverflow.ellipsis),
-                            );
-                          }).toList(),
-                          onChanged: (val) {
-                            if (val != null) {
+                      const Divider(color: AppColors.border),
+                      const SizedBox(height: 12),
+
+                      // Hospital selector
+                      const Text('Government Hospital *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _hospitalNames.contains(selectedHosp) ? selectedHosp : (_hospitalNames.isNotEmpty ? _hospitalNames.first : null),
+                            isExpanded: true,
+                            items: _hospitalNames.map((name) {
+                              return DropdownMenuItem(
+                                value: name,
+                                child: Text(name, style: const TextStyle(fontSize: 13, color: AppColors.textDark), overflow: TextOverflow.ellipsis),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setModalState(() {
+                                  selectedHosp = val;
+                                });
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Department Name
+                      const Text('Department / Clinic Name *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: nameController,
+                        style: const TextStyle(fontSize: 14, color: AppColors.textDark),
+                        decoration: InputDecoration(
+                          hintText: 'e.g. Ophthalmology (Eye Clinic)',
+                          filled: true,
+                          fillColor: AppColors.background,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
+                          errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.error)),
+                          focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.error, width: 1.5)),
+                        ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return 'Please enter department / clinic name';
+                          }
+                          if (val.trim().length < 3) {
+                            return 'Department name must be at least 3 characters';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Room Number
+                      const Text('Assigned Room / Unit *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: roomController,
+                        style: const TextStyle(fontSize: 14, color: AppColors.textDark),
+                        decoration: InputDecoration(
+                          hintText: 'e.g. OPD Room 08',
+                          filled: true,
+                          fillColor: AppColors.background,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
+                          errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.error)),
+                          focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.error, width: 1.5)),
+                        ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return 'Please enter assigned room / unit';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Operating Hours
+                      const Text('Operating Hours *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: hoursController,
+                        style: const TextStyle(fontSize: 14, color: AppColors.textDark),
+                        decoration: InputDecoration(
+                          hintText: 'e.g. 8:00 AM - 12:00 PM',
+                          filled: true,
+                          fillColor: AppColors.background,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
+                          errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.error)),
+                          focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.error, width: 1.5)),
+                        ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return 'Please enter clinic operating hours';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Slot Capacity
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Max Capacity Per Time Slot', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                              Text('Standard MOH cap is 25', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.remove_circle_outline, color: AppColors.primary),
+                                onPressed: capacity > 5
+                                    ? () {
+                                        setModalState(() {
+                                          capacity -= 5;
+                                        });
+                                      }
+                                    : null,
+                              ),
+                              Text('$capacity', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primaryDark)),
+                              IconButton(
+                                icon: const Icon(Icons.add_circle_outline, color: AppColors.primary),
+                                onPressed: capacity < 60
+                                    ? () {
+                                        setModalState(() {
+                                          capacity += 5;
+                                        });
+                                      }
+                                    : null,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Active Toggle
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Active for Patient Appointments', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                          Switch(
+                            value: isActive,
+                            activeColor: AppColors.statusGreen,
+                            onChanged: (val) {
                               setModalState(() {
-                                selectedHosp = val;
+                                isActive = val;
                               });
-                            }
-                          },
-                        ),
+                            },
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 14),
+                      const SizedBox(height: 20),
 
-                    // Department Name
-                    const Text('Department / Clinic Name', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                    const SizedBox(height: 6),
-                    TextField(
-                      controller: nameController,
-                      style: const TextStyle(fontSize: 14, color: AppColors.textDark),
-                      decoration: InputDecoration(
-                        hintText: 'e.g. Ophthalmology (Eye Clinic)',
-                        filled: true,
-                        fillColor: AppColors.background,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
+                      // Save Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onPressed: isSubmitting
+                              ? null
+                              : () async {
+                                  if (!formKey.currentState!.validate()) {
+                                    return;
+                                  }
 
-                    // Room Number
-                    const Text('Assigned Room / Unit', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                    const SizedBox(height: 6),
-                    TextField(
-                      controller: roomController,
-                      style: const TextStyle(fontSize: 14, color: AppColors.textDark),
-                      decoration: InputDecoration(
-                        hintText: 'e.g. OPD Room 08',
-                        filled: true,
-                        fillColor: AppColors.background,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
+                                  final name = nameController.text.trim();
+                                  final room = roomController.text.trim();
+                                  final hours = hoursController.text.trim();
 
-                    // Operating Hours
-                    const Text('Operating Hours', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                    const SizedBox(height: 6),
-                    TextField(
-                      controller: hoursController,
-                      style: const TextStyle(fontSize: 14, color: AppColors.textDark),
-                      decoration: InputDecoration(
-                        hintText: 'e.g. 8:00 AM - 12:00 PM',
-                        filled: true,
-                        fillColor: AppColors.background,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
+                                  setModalState(() {
+                                    isSubmitting = true;
+                                  });
 
-                    // Slot Capacity
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Max Capacity Per Time Slot', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                            Text('Standard MOH cap is 25', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                          ],
-                        ),
-                        Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.remove_circle_outline, color: AppColors.primary),
-                              onPressed: capacity > 5
-                                  ? () {
-                                      setModalState(() {
-                                        capacity -= 5;
-                                      });
-                                    }
-                                  : null,
-                            ),
-                            Text('$capacity', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primaryDark)),
-                            IconButton(
-                              icon: const Icon(Icons.add_circle_outline, color: AppColors.primary),
-                              onPressed: capacity < 60
-                                  ? () {
-                                      setModalState(() {
-                                        capacity += 5;
-                                      });
-                                    }
-                                  : null,
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
+                                  final deptId = existing?.id ?? 'dept_${DateTime.now().millisecondsSinceEpoch}';
 
-                    // Active Toggle
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Active for Patient Appointments', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                        Switch(
-                          value: isActive,
-                          activeColor: AppColors.statusGreen,
-                          onChanged: (val) {
-                            setModalState(() {
-                              isActive = val;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
+                                  // Save via dedicated HospitalAdminService
+                                  final success = await HospitalAdminService().saveDepartment(
+                                    id: deptId,
+                                    name: name,
+                                    hospitalName: selectedHosp,
+                                    roomNumber: room,
+                                    operatingHours: hours,
+                                    capacityLimit: capacity,
+                                    isActive: isActive,
+                                  );
 
-                    // Save Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        onPressed: isSubmitting
-                            ? null
-                            : () async {
-                                final name = nameController.text.trim();
-                                final room = roomController.text.trim();
-                                final hours = hoursController.text.trim();
-
-                                if (name.isEmpty) {
+                                  if (!context.mounted) return;
+                                  Navigator.pop(context);
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Please enter a department name'),
-                                      backgroundColor: AppColors.statusOrange,
+                                    SnackBar(
+                                      content: Text(
+                                        success
+                                            ? (isEditing ? '$name updated successfully' : '$name added successfully')
+                                            : 'Failed to save department to Firestore.',
+                                      ),
+                                      backgroundColor: success ? AppColors.statusGreen : AppColors.error,
                                     ),
                                   );
-                                  return;
-                                }
-
-                                setModalState(() {
-                                  isSubmitting = true;
-                                });
-
-                                final deptId = existing?.id ?? 'dept_${DateTime.now().millisecondsSinceEpoch}';
-
-                                // Save via dedicated HospitalAdminService
-                                final success = await HospitalAdminService().saveDepartment(
-                                  id: deptId,
-                                  name: name,
-                                  hospitalName: selectedHosp,
-                                  roomNumber: room,
-                                  operatingHours: hours,
-                                  capacityLimit: capacity,
-                                  isActive: isActive,
-                                );
-
-                                if (!context.mounted) return;
-                                Navigator.pop(context);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      success
-                                          ? (isEditing ? '$name updated successfully' : '$name added successfully')
-                                          : 'Failed to save department to Firestore.',
-                                    ),
-                                    backgroundColor: success ? AppColors.statusGreen : AppColors.error,
-                                  ),
-                                );
-                              },
-                        child: isSubmitting
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                              )
-                            : Text(
-                                isEditing ? 'Save Changes' : 'Add OPD Department',
-                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                              ),
+                                },
+                          child: isSubmitting
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : Text(
+                                  isEditing ? 'Save Changes' : 'Add OPD Department',
+                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                                ),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             );
