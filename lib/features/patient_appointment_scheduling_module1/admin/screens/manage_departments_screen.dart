@@ -155,31 +155,6 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
     bool isActive = existing?.isActive ?? true;
     bool isSubmitting = false;
 
-    final standardSpecialties = [
-      {'name': 'General Medicine OPD', 'room': 'OPD Room 01', 'hours': '8:00 AM - 12:00 PM', 'cap': 25, 'icon': Icons.medical_services_outlined, 'label': 'General Medicine'},
-      {'name': 'Pediatric Clinic', 'room': 'OPD Room 02', 'hours': '8:30 AM - 12:30 PM', 'cap': 20, 'icon': Icons.child_care_outlined, 'label': 'Pediatric'},
-      {'name': 'Cardiology Clinic', 'room': 'OPD Room 03', 'hours': '9:00 AM - 1:00 PM', 'cap': 15, 'icon': Icons.favorite_outline_rounded, 'label': 'Cardiology'},
-      {'name': 'Ophthalmology (Eye Clinic)', 'room': 'OPD Room 04', 'hours': '8:00 AM - 12:00 PM', 'cap': 20, 'icon': Icons.visibility_outlined, 'label': 'Eye Clinic'},
-      {'name': 'ENT & Audiology Clinic', 'room': 'OPD Room 05', 'hours': '9:00 AM - 1:00 PM', 'cap': 18, 'icon': Icons.hearing_outlined, 'label': 'ENT Clinic'},
-      {'name': 'Dental & Maxillofacial OPD', 'room': 'Dental Unit 01', 'hours': '8:00 AM - 12:00 PM', 'cap': 15, 'icon': Icons.clean_hands_outlined, 'label': 'Dental Clinic'},
-      {'name': 'Orthopedic Clinic', 'room': 'OPD Room 07', 'hours': '8:30 AM - 12:30 PM', 'cap': 20, 'icon': Icons.accessibility_new_outlined, 'label': 'Orthopedic'},
-      {'name': 'Dermatology (Skin Clinic)', 'room': 'OPD Room 08', 'hours': '9:00 AM - 1:00 PM', 'cap': 20, 'icon': Icons.healing_outlined, 'label': 'Dermatology'},
-      {'name': 'Gynecology & Antenatal', 'room': 'OPD Room 09', 'hours': '8:00 AM - 12:00 PM', 'cap': 20, 'icon': Icons.pregnant_woman_rounded, 'label': 'Gynecology'},
-    ];
-
-    IconData getPreviewIcon(String deptName) {
-      final l = deptName.toLowerCase();
-      if (l.contains('pediatric') || l.contains('child')) return Icons.child_care_outlined;
-      if (l.contains('ortho') || l.contains('bone')) return Icons.accessibility_new_outlined;
-      if (l.contains('ent') || l.contains('ear') || l.contains('audio')) return Icons.hearing_outlined;
-      if (l.contains('derma') || l.contains('skin')) return Icons.healing_outlined;
-      if (l.contains('cardio') || l.contains('heart')) return Icons.favorite_outline_rounded;
-      if (l.contains('dental') || l.contains('tooth') || l.contains('oral')) return Icons.clean_hands_outlined;
-      if (l.contains('eye') || l.contains('ophthal')) return Icons.visibility_outlined;
-      if (l.contains('gyn') || l.contains('antenatal') || l.contains('maternity')) return Icons.pregnant_woman_rounded;
-      return Icons.medical_services_outlined;
-    }
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -196,7 +171,7 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
               ),
               decoration: const BoxDecoration(
                 color: AppColors.surface,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
               ),
               child: SingleChildScrollView(
                 child: Form(
@@ -209,19 +184,9 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                isEditing ? 'Edit OPD Department' : 'Add OPD Department / Clinic',
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                              ),
-                              const SizedBox(height: 2),
-                              const Text(
-                                'Configure clinics synced directly to the Patient Booking Portal',
-                                style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                              ),
-                            ],
+                          Text(
+                            isEditing ? 'Edit OPD Department' : 'Add OPD Department / Clinic',
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
                           ),
                           IconButton(
                             icon: const Icon(Icons.close_rounded),
@@ -230,66 +195,7 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                         ],
                       ),
                       const Divider(color: AppColors.border),
-                      const SizedBox(height: 10),
-
-                      // Quick Specialty Presets
-                      Row(
-                        children: const [
-                          Icon(Icons.auto_awesome_rounded, size: 14, color: AppColors.primary),
-                          SizedBox(width: 4),
-                          Text('Quick Specialty Presets (1-Tap Fill):', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary)),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: standardSpecialties.map((spec) {
-                            final isSelected = nameController.text == spec['name'];
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 6),
-                              child: InkWell(
-                                onTap: () {
-                                  setModalState(() {
-                                    nameController.text = spec['name'] as String;
-                                    roomController.text = spec['room'] as String;
-                                    hoursController.text = spec['hours'] as String;
-                                    capacity = spec['cap'] as int;
-                                  });
-                                },
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                                  decoration: BoxDecoration(
-                                    color: isSelected ? AppColors.primary.withValues(alpha: 0.12) : AppColors.background,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: isSelected ? AppColors.primary : AppColors.border,
-                                      width: isSelected ? 1.5 : 1,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(spec['icon'] as IconData, size: 13, color: isSelected ? AppColors.primary : AppColors.textSecondary),
-                                      const SizedBox(width: 5),
-                                      Text(
-                                        spec['label'] as String,
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                          color: isSelected ? AppColors.primary : AppColors.textDark,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 12),
 
                       // Hospital selector
                       const Text('Government Hospital *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
@@ -308,15 +214,7 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                             items: _hospitalNames.map((name) {
                               return DropdownMenuItem(
                                 value: name,
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.local_hospital_outlined, size: 16, color: AppColors.primary),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(name, style: const TextStyle(fontSize: 13, color: AppColors.textDark), overflow: TextOverflow.ellipsis),
-                                    ),
-                                  ],
-                                ),
+                                child: Text(name, style: const TextStyle(fontSize: 13, color: AppColors.textDark), overflow: TextOverflow.ellipsis),
                               );
                             }).toList(),
                             onChanged: (val) {
@@ -339,7 +237,6 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                         style: const TextStyle(fontSize: 14, color: AppColors.textDark),
                         decoration: InputDecoration(
                           hintText: 'e.g. Ophthalmology (Eye Clinic)',
-                          prefixIcon: const Icon(Icons.medical_information_outlined, size: 20, color: AppColors.primary),
                           filled: true,
                           fillColor: AppColors.background,
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -348,7 +245,6 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                           errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.error)),
                           focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.error, width: 1.5)),
                         ),
-                        onChanged: (_) => setModalState(() {}),
                         validator: (val) {
                           if (val == null || val.trim().isEmpty) {
                             return 'Please enter department / clinic name';
@@ -369,7 +265,6 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                         style: const TextStyle(fontSize: 14, color: AppColors.textDark),
                         decoration: InputDecoration(
                           hintText: 'e.g. OPD Room 01',
-                          prefixIcon: const Icon(Icons.meeting_room_outlined, size: 20, color: AppColors.primary),
                           filled: true,
                           fillColor: AppColors.background,
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -378,51 +273,12 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                           errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.error)),
                           focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.error, width: 1.5)),
                         ),
-                        onChanged: (_) => setModalState(() {}),
                         validator: (val) {
                           if (val == null || val.trim().isEmpty) {
                             return 'Please enter assigned room / unit';
                           }
                           return null;
                         },
-                      ),
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [
-                          'OPD Room 01',
-                          'OPD Room 02',
-                          'OPD Room 03',
-                          'OPD Room 04',
-                          'Dental Unit 01',
-                          'Eye Clinic Unit',
-                        ].map((rm) {
-                          return InkWell(
-                            onTap: () {
-                              setModalState(() {
-                                roomController.text = rm;
-                              });
-                            },
-                            borderRadius: BorderRadius.circular(6),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: roomController.text == rm ? AppColors.primary.withValues(alpha: 0.12) : AppColors.background,
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: roomController.text == rm ? AppColors.primary : AppColors.border),
-                              ),
-                              child: Text(
-                                rm,
-                                style: TextStyle(
-                                  fontSize: 10.5,
-                                  fontWeight: roomController.text == rm ? FontWeight.bold : FontWeight.normal,
-                                  color: roomController.text == rm ? AppColors.primary : AppColors.textSecondary,
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
                       ),
                       const SizedBox(height: 14),
 
@@ -434,7 +290,6 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                         style: const TextStyle(fontSize: 14, color: AppColors.textDark),
                         decoration: InputDecoration(
                           hintText: 'e.g. 8:00 AM - 12:00 PM',
-                          prefixIcon: const Icon(Icons.access_time_rounded, size: 20, color: AppColors.primary),
                           filled: true,
                           fillColor: AppColors.background,
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -443,7 +298,6 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                           errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.error)),
                           focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.error, width: 1.5)),
                         ),
-                        onChanged: (_) => setModalState(() {}),
                         validator: (val) {
                           if (val == null || val.trim().isEmpty) {
                             return 'Please enter clinic operating hours';
@@ -458,8 +312,6 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                         children: [
                           '8:00 AM - 12:00 PM',
                           '8:00 AM - 01:00 PM',
-                          '8:30 AM - 12:30 PM',
-                          '9:00 AM - 01:00 PM',
                           '8:00 AM - 02:00 PM',
                           '12:00 PM - 04:00 PM',
                         ].map((preset) {
@@ -505,7 +357,7 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text('Max Capacity Per Time Slot', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                              Text('Standard MOH limit per 1-hour slot (15 - 30)', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                              Text('Standard MOH cap is 25', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
                             ],
                           ),
                           Row(
@@ -535,22 +387,13 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 10),
 
                       // Active Toggle
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Active for Patient Appointments', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                              Text(
-                                isActive ? 'Visible & open for booking on patient app' : 'Hidden from patient booking list',
-                                style: TextStyle(fontSize: 11, color: isActive ? AppColors.statusGreen : AppColors.textSecondary),
-                              ),
-                            ],
-                          ),
+                          const Text('Active for Patient Appointments', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
                           Switch(
                             value: isActive,
                             activeColor: AppColors.statusGreen,
@@ -561,87 +404,6 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                             },
                           ),
                         ],
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Live Patient View Preview Card
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.background,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: const [
-                                Icon(Icons.phone_android_rounded, size: 14, color: AppColors.primary),
-                                SizedBox(width: 4),
-                                Text(
-                                  'PATIENT APP LIVE PREVIEW',
-                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.primary, letterSpacing: 0.5),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: AppColors.surface,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primary.withValues(alpha: 0.1),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      getPreviewIcon(nameController.text),
-                                      color: AppColors.primary,
-                                      size: 22,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          nameController.text.isNotEmpty ? nameController.text : 'Clinic Name',
-                                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          '${roomController.text.isNotEmpty ? roomController.text : "OPD Room"} • ${hoursController.text}',
-                                          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: isActive ? AppColors.statusGreen.withValues(alpha: 0.12) : AppColors.error.withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      isActive ? 'Open Today' : 'Closed',
-                                      style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: isActive ? AppColors.statusGreen : AppColors.error),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
                       ),
                       const SizedBox(height: 20),
 
