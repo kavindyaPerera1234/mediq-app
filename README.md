@@ -1,4 +1,4 @@
-# 🏥 MediQ - Smart OPD Appointment Scheduling & Live Queue Management System
+# 🏥 Appointment booking and queue management for government hospital OPDs (MediQ)
 
 [![Flutter Version](https://img.shields.io/badge/Flutter-3.24%2B-blue.svg?logo=flutter)](https://flutter.dev)
 [![Dart Version](https://img.shields.io/badge/Dart-3.5%2B-0175C2.svg?logo=dart)](https://dart.dev)
