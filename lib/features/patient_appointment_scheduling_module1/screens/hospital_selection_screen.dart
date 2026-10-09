@@ -64,16 +64,24 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
 
         IconData icon = Icons.medical_services_outlined;
         final lowerName = name.toLowerCase();
-        if (lowerName.contains('pediatric') || lowerName.contains('child')) {
+        if (lowerName.contains('pediatric') || lowerName.contains('child') || lowerName.contains('baby')) {
           icon = Icons.child_care_outlined;
-        } else if (lowerName.contains('ortho') || lowerName.contains('bone')) {
+        } else if (lowerName.contains('ortho') || lowerName.contains('bone') || lowerName.contains('fracture')) {
           icon = Icons.accessibility_new_outlined;
-        } else if (lowerName.contains('ent') || lowerName.contains('ear')) {
+        } else if (lowerName.contains('ent') || lowerName.contains('ear') || lowerName.contains('audio') || lowerName.contains('throat')) {
           icon = Icons.hearing_outlined;
         } else if (lowerName.contains('derma') || lowerName.contains('skin')) {
           icon = Icons.healing_outlined;
         } else if (lowerName.contains('cardio') || lowerName.contains('heart')) {
           icon = Icons.favorite_outline_rounded;
+        } else if (lowerName.contains('dental') || lowerName.contains('teeth') || lowerName.contains('tooth') || lowerName.contains('oral')) {
+          icon = Icons.clean_hands_outlined;
+        } else if (lowerName.contains('eye') || lowerName.contains('ophthal') || lowerName.contains('vision')) {
+          icon = Icons.visibility_outlined;
+        } else if (lowerName.contains('gyn') || lowerName.contains('antenatal') || lowerName.contains('maternity') || lowerName.contains('women')) {
+          icon = Icons.pregnant_woman_rounded;
+        } else if (lowerName.contains('neuro') || lowerName.contains('brain') || lowerName.contains('psych')) {
+          icon = Icons.psychology_outlined;
         }
 
         final clinic = OpdClinic(
