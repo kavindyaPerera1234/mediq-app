@@ -236,7 +236,9 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
     final dateStr = "${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}";
     final sessionId = '${hId.isNotEmpty ? hId : 'nhsl'}_${dId.isNotEmpty ? dId : 'gen_med'}_$dateStr';
 
-    final staffName = staffUser?.fullName ?? 'Dr. Silva';
+    final staffName = (staffUser?.fullName != null && staffUser!.fullName.isNotEmpty)
+        ? staffUser.fullName
+        : 'OPD Medical Officer';
 
     return Scaffold(
       backgroundColor: AppColors.background,

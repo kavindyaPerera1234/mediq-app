@@ -64,7 +64,7 @@ class AuthService {
     currentUserModel ??= UserModel(
       uid: uid,
       email: authUser?.email ?? 'doctor@mediq.lk',
-      fullName: fallbackName.isNotEmpty ? fallbackName : 'Dr. Silva',
+      fullName: (fallbackName.isNotEmpty && fallbackName != 'Doctor') ? fallbackName : 'Dr. S. Perera',
       phone: authUser?.phoneNumber ?? '0771234567',
       nic: '198512345678',
       role: 'doctor',
