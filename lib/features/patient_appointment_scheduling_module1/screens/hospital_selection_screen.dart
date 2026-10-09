@@ -586,19 +586,19 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.accentColor.withValues(alpha: 0.08)
+              ? const Color(0xFFF4F8FC)
               : AppColors.cardSurface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? AppColors.accentColor : AppColors.cardBorder,
-            width: isSelected ? 2.0 : 1.0,
+            color: isSelected ? AppColors.primary : AppColors.cardBorder,
+            width: isSelected ? 1.8 : 1.0,
           ),
           boxShadow: [
             BoxShadow(
               color: isSelected
-                  ? AppColors.accentColor.withValues(alpha: 0.2)
-                  : (AppColors.isDark ? Colors.black26 : AppColors.textDark.withValues(alpha: 0.03)),
-              blurRadius: isSelected ? 10 : 6,
+                  ? AppColors.primary.withValues(alpha: 0.08)
+                  : (AppColors.isDark ? Colors.black26 : AppColors.textDark.withValues(alpha: 0.02)),
+              blurRadius: isSelected ? 6 : 4,
               offset: const Offset(0, 2),
             ),
           ],
@@ -611,13 +611,13 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppColors.accentColor
+                    ? AppColors.primary.withValues(alpha: 0.1)
                     : AppColors.chipBg,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 Icons.local_hospital_rounded,
-                color: isSelected ? Colors.white : AppColors.accentColor,
+                color: AppColors.primary,
                 size: 24,
               ),
             ),
@@ -633,7 +633,7 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: isSelected ? AppColors.accentColor : AppColors.headingText,
+                      color: isSelected ? AppColors.primary : AppColors.headingText,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -703,47 +703,38 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
 
             const SizedBox(width: 10),
 
-            // Prominent Action Button
-            GestureDetector(
-              onTap: () {
-                setState(() {
-                  _selectedHospitalId = hospital.id;
-                  _selectedHospital = hospital;
-                });
-                _proceedToClinicSelection();
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
+            // Subtle & Clean Selection Indicator Badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppColors.statusGreenLight
+                    : AppColors.background,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
                   color: isSelected
-                      ? AppColors.accentColor
-                      : AppColors.accentColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: isSelected
-                        ? AppColors.accentColor
-                        : AppColors.accentColor.withValues(alpha: 0.3),
+                      ? AppColors.statusGreen.withValues(alpha: 0.5)
+                      : AppColors.cardBorder,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                    size: 14,
+                    color: isSelected ? AppColors.statusGreen : AppColors.bodyText,
                   ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      isSelected ? 'Selected' : 'Select',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: isSelected ? Colors.white : AppColors.accentColor,
-                      ),
+                  const SizedBox(width: 4),
+                  Text(
+                    isSelected ? 'Selected' : 'Select',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      color: isSelected ? AppColors.statusGreen : AppColors.bodyText,
                     ),
-                    const SizedBox(width: 4),
-                    Icon(
-                      isSelected ? Icons.check_circle_rounded : Icons.arrow_forward_rounded,
-                      size: 14,
-                      color: isSelected ? Colors.white : AppColors.accentColor,
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ],
