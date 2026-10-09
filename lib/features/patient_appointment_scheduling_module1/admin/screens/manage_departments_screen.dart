@@ -145,11 +145,41 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
   void _showAddEditDepartmentDialog([DepartmentItem? existing]) {
     final formKey = GlobalKey<FormState>();
     final isEditing = existing != null;
-    final nameController = TextEditingController(text: existing?.name ?? '');
+
+    const standardClinics = [
+      'General Medicine OPD',
+      'Pediatric Clinic',
+      'Cardiology Clinic',
+      'Ophthalmology (Eye Clinic)',
+      'ENT & Audiology Clinic',
+      'Dental & Maxillofacial OPD',
+      'Orthopedic Clinic',
+      'Dermatology Clinic',
+      'Obstetrics & Gynecology Clinic',
+      'Psychiatric Clinic',
+      'Rheumatology Clinic',
+      'Surgical OPD / Clinic',
+      'Other / Custom Clinic',
+    ];
+
+    String selectedClinicType = 'General Medicine OPD';
+    if (existing != null && existing.name.isNotEmpty) {
+      if (standardClinics.contains(existing.name)) {
+        selectedClinicType = existing.name;
+      } else {
+        selectedClinicType = 'Other / Custom Clinic';
+      }
+    }
+
+    final nameController = TextEditingController(
+      text: existing?.name ?? (selectedClinicType == 'Other / Custom Clinic' ? '' : selectedClinicType),
+    );
     String selectedHosp = (existing != null && _hospitalNames.contains(existing.hospitalName))
         ? existing.hospitalName
         : _selectedHospitalFilter;
-    final roomController = TextEditingController(text: existing?.roomNumber ?? 'OPD Room 01');
+    final roomController = TextEditingController(
+      text: existing?.roomNumber ?? 'OPD Room 01',
+    );
     final hoursController = TextEditingController(text: existing?.operatingHours ?? '8:00 AM - 02:00 PM');
     int capacity = existing?.defaultCapacity ?? 25;
     bool isActive = existing?.isActive ?? true;
@@ -229,32 +259,109 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                       ),
                       const SizedBox(height: 14),
 
-                      // Department Name
+                      // Department / Clinic Selection Dropdown
                       const Text('Department / Clinic Name *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
                       const SizedBox(height: 6),
-                      TextFormField(
-                        controller: nameController,
-                        style: const TextStyle(fontSize: 14, color: AppColors.textDark),
-                        decoration: InputDecoration(
-                          hintText: 'e.g. Ophthalmology (Eye Clinic)',
-                          filled: true,
-                          fillColor: AppColors.background,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
-                          errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.error)),
-                          focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.error, width: 1.5)),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.border),
                         ),
-                        validator: (val) {
-                          if (val == null || val.trim().isEmpty) {
-                            return 'Please enter department / clinic name';
-                          }
-                          if (val.trim().length < 3) {
-                            return 'Department name must be at least 3 characters';
-                          }
-                          return null;
-                        },
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: standardClinics.contains(selectedClinicType) ? selectedClinicType : standardClinics.first,
+                            isExpanded: true,
+                            icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primary),
+                            items: standardClinics.map((clinicName) {
+                              final isCustom = clinicName == 'Other / Custom Clinic';
+                              return DropdownMenuItem<String>(
+                                value: clinicName,
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      isCustom ? Icons.edit_note_rounded : Icons.local_hospital_rounded,
+                                      size: 18,
+                                      color: isCustom ? AppColors.accentColor : AppColors.primary,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        clinicName,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: isCustom ? FontWeight.bold : FontWeight.w500,
+                                          color: isCustom ? AppColors.accentColor : AppColors.textDark,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setModalState(() {
+                                  selectedClinicType = val;
+                                  if (val != 'Other / Custom Clinic') {
+                                    nameController.text = val;
+                                    if (!isEditing) {
+                                      if (val.contains('Dental')) {
+                                        roomController.text = 'Dental Unit 01';
+                                      } else if (val.contains('Pediatric')) {
+                                        roomController.text = 'OPD Room 02';
+                                      } else if (val.contains('Cardiology')) {
+                                        roomController.text = 'OPD Room 03';
+                                      } else if (val.contains('Ophthalmology') || val.contains('Eye')) {
+                                        roomController.text = 'OPD Room 04';
+                                      } else if (val.contains('ENT')) {
+                                        roomController.text = 'OPD Room 05';
+                                      } else if (val.contains('Orthopedic')) {
+                                        roomController.text = 'OPD Room 07';
+                                      } else {
+                                        roomController.text = 'OPD Room 01';
+                                      }
+                                    }
+                                  } else {
+                                    if (!isEditing) nameController.clear();
+                                  }
+                                });
+                              }
+                            },
+                          ),
+                        ),
                       ),
+
+                      // If "Other / Custom Clinic" is chosen, show text input
+                      if (selectedClinicType == 'Other / Custom Clinic') ...[
+                        const SizedBox(height: 10),
+                        TextFormField(
+                          controller: nameController,
+                          style: const TextStyle(fontSize: 14, color: AppColors.textDark),
+                          decoration: InputDecoration(
+                            labelText: 'Custom Clinic / Department Name *',
+                            hintText: 'e.g. Diabetic Clinic / Oncology Clinic',
+                            filled: true,
+                            fillColor: AppColors.background,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
+                            errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.error)),
+                            focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.error, width: 1.5)),
+                          ),
+                          validator: (val) {
+                            if (val == null || val.trim().isEmpty) {
+                              return 'Please enter custom clinic name';
+                            }
+                            if (val.trim().length < 3) {
+                              return 'Clinic name must be at least 3 characters';
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
                       const SizedBox(height: 14),
 
                       // Room Number
