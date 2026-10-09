@@ -57,6 +57,7 @@ class AppointmentService {
       // Also ensure count is at least total confirmed docs
       final validDocsCount = querySnap.docs.where((doc) {
         final data = doc.data() as Map<String, dynamic>? ?? {};
+
         return data['status'] != 'cancelled';
       }).length;
 
@@ -126,20 +127,22 @@ class AppointmentService {
           continue;
         }
 
-        final hosp = (data['hospitalName'] ??
-                data['hospitalId'] ??
-                '')
-            .toString()
-            .toLowerCase()
-            .trim();
+        final hosp =
+            (data['hospitalName'] ??
+                    data['hospitalId'] ??
+                    '')
+                .toString()
+                .toLowerCase()
+                .trim();
 
-        final dept = (data['departmentName'] ??
-                data['clinicName'] ??
-                data['departmentId'] ??
-                '')
-            .toString()
-            .toLowerCase()
-            .trim();
+        final dept =
+            (data['departmentName'] ??
+                    data['clinicName'] ??
+                    data['departmentId'] ??
+                    '')
+                .toString()
+                .toLowerCase()
+                .trim();
 
         final slot =
             (data['timeSlot'] ?? '').toString().trim();
@@ -168,13 +171,13 @@ class AppointmentService {
 
         final hospMatch =
             cleanHosp1 == cleanHosp2 ||
-                cleanHosp1.contains(cleanHosp2) ||
-                cleanHosp2.contains(cleanHosp1);
+            cleanHosp1.contains(cleanHosp2) ||
+            cleanHosp2.contains(cleanHosp1);
 
         final deptMatch =
             cleanDept1 == cleanDept2 ||
-                cleanDept1.contains(cleanDept2) ||
-                cleanDept2.contains(cleanDept1);
+            cleanDept1.contains(cleanDept2) ||
+            cleanDept2.contains(cleanDept1);
 
         if (hospMatch && deptMatch) {
           // Check slot matching
@@ -186,8 +189,8 @@ class AppointmentService {
 
           final slotMatches =
               slotClean1 == slotClean2 ||
-                  slotClean1.contains(slotClean2) ||
-                  slotClean2.contains(slotClean1);
+              slotClean1.contains(slotClean2) ||
+              slotClean2.contains(slotClean1);
 
           if (slotMatches) {
             // Check patient identity match
@@ -332,8 +335,7 @@ class AppointmentService {
       // Extract number from token, e.g., 'A-033' -> 33
       int tokenNum = 1;
 
-      final match =
-          RegExp(r'\d+').firstMatch(token);
+      final match = RegExp(r'\d+').firstMatch(token);
 
       if (match != null) {
         tokenNum =
@@ -350,12 +352,9 @@ class AppointmentService {
             .doc(slotDocId)
             .set({
           'bookedCount': tokenNum,
-          'lastBookedAt':
-              FieldValue.serverTimestamp(),
-          'departmentId':
-              appointment.departmentId,
-          'appointmentDate':
-              appointment.appointmentDate,
+          'lastBookedAt': FieldValue.serverTimestamp(),
+          'departmentId': appointment.departmentId,
+          'appointmentDate': appointment.appointmentDate,
         }, SetOptions(merge: true));
       } catch (_) {}
 
@@ -378,22 +377,18 @@ class AppointmentService {
           'hospitalId': appointment.hospitalId,
           'hospitalName': appointment.hospitalName,
           'departmentId': appointment.departmentId,
-          'departmentName':
-              appointment.departmentName,
+          'departmentName': appointment.departmentName,
           'roomNumber': appointment.roomNumber,
           'tokenCode': token,
           'tokenNumber': token,
           'queueSessionId': sessId,
           'status': 'waiting',
           'priority': appointment.priority,
-          'appointmentDate':
-              appointment.appointmentDate,
+          'appointmentDate': appointment.appointmentDate,
           'timeSlot': appointment.timeSlot,
           'queueOrder': tokenNum,
-          'createdAt':
-              FieldValue.serverTimestamp(),
-          'updatedAt':
-              FieldValue.serverTimestamp(),
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
       } catch (_) {}
 
@@ -408,8 +403,7 @@ class AppointmentService {
   }
 
   /// Real-time stream of patient's booked appointments
-  Stream<List<AppointmentModel>>
-      streamPatientAppointments(
+  Stream<List<AppointmentModel>> streamPatientAppointments(
     String patientNic,
   ) {
     try {
@@ -421,8 +415,7 @@ class AppointmentService {
         );
       }
 
-      final currentAuth =
-          AuthService().currentUser;
+      final currentAuth = AuthService().currentUser;
 
       if (currentAuth != null) {
         if (currentAuth.nic != null &&
@@ -432,23 +425,15 @@ class AppointmentService {
           );
         }
 
-        if (currentAuth.phoneNumber
-            .trim()
-            .isNotEmpty) {
+        if (currentAuth.phoneNumber.trim().isNotEmpty) {
           lookupIds.add(
-            currentAuth.phoneNumber
-                .trim()
-                .toLowerCase(),
+            currentAuth.phoneNumber.trim().toLowerCase(),
           );
         }
 
-        if (currentAuth.userId
-            .trim()
-            .isNotEmpty) {
+        if (currentAuth.userId.trim().isNotEmpty) {
           lookupIds.add(
-            currentAuth.userId
-                .trim()
-                .toLowerCase(),
+            currentAuth.userId.trim().toLowerCase(),
           );
         }
       }
@@ -458,28 +443,14 @@ class AppointmentService {
 
       if (activeProfile.nic.trim().isNotEmpty) {
         lookupIds.add(
-          activeProfile.nic
-              .trim()
-              .toLowerCase(),
+          activeProfile.nic.trim().toLowerCase(),
         );
       }
 
-      if (activeProfile.phone
-          .trim()
-          .isNotEmpty) {
+      if (activeProfile.phone.trim().isNotEmpty) {
         lookupIds.add(
-          activeProfile.phone
-              .trim()
-              .toLowerCase(),
+          activeProfile.phone.trim().toLowerCase(),
         );
-      }
-      if (activeProfile.patientId.trim().isNotEmpty && activeProfile.patientId.trim() != 'patient_default') {
-        lookupIds.add(activeProfile.patientId.trim().toLowerCase());
-      }
-
-      // If no valid patient identity is available, do not return other people's appointments
-      if (lookupIds.isEmpty) {
-        return Stream.value([]);
       }
 
       return _appointmentsRef
@@ -498,9 +469,7 @@ class AppointmentService {
               app.patientId.trim().toLowerCase();
 
           final aUid =
-              (app.userId ?? '')
-                  .trim()
-                  .toLowerCase();
+              (app.userId ?? '').trim().toLowerCase();
 
           if (lookupIds.contains(aNic) ||
               lookupIds.contains(aId) ||
@@ -528,8 +497,7 @@ class AppointmentService {
 
           if (comp != 0) return comp;
 
-          return (b.createdAt ??
-                  DateTime(2020))
+          return (b.createdAt ?? DateTime(2020))
               .compareTo(
             a.createdAt ?? DateTime(2020),
           );
@@ -546,6 +514,25 @@ class AppointmentService {
     }
   }
 
+  /// Delete an appointment
+  Future<bool> deleteAppointment(
+    String appointmentId,
+  ) async {
+    try {
+      await _appointmentsRef
+          .doc(appointmentId)
+          .delete();
+
+      return true;
+    } catch (e) {
+      debugPrint(
+        'AppointmentService: deleteAppointment error $e',
+      );
+
+      return false;
+    }
+  }
+
   /// Cancel an appointment
   Future<bool> cancelAppointment(
     String appointmentId,
@@ -555,8 +542,7 @@ class AppointmentService {
           .doc(appointmentId)
           .update({
         'status': 'cancelled',
-        'cancelledAt':
-            FieldValue.serverTimestamp(),
+        'cancelledAt': FieldValue.serverTimestamp(),
       });
 
       return true;
