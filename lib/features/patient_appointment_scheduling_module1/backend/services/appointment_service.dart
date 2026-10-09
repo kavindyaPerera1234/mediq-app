@@ -127,22 +127,20 @@ class AppointmentService {
           continue;
         }
 
-        final hosp =
-            (data['hospitalName'] ??
-                    data['hospitalId'] ??
-                    '')
-                .toString()
-                .toLowerCase()
-                .trim();
+        final hosp = (data['hospitalName'] ??
+                data['hospitalId'] ??
+                '')
+            .toString()
+            .toLowerCase()
+            .trim();
 
-        final dept =
-            (data['departmentName'] ??
-                    data['clinicName'] ??
-                    data['departmentId'] ??
-                    '')
-                .toString()
-                .toLowerCase()
-                .trim();
+        final dept = (data['departmentName'] ??
+                data['clinicName'] ??
+                data['departmentId'] ??
+                '')
+            .toString()
+            .toLowerCase()
+            .trim();
 
         final slot =
             (data['timeSlot'] ?? '').toString().trim();
@@ -156,7 +154,7 @@ class AppointmentService {
         final targetDept =
             departmentName.toLowerCase().trim();
 
-        // Check if hospital and department match (with clean alphanumeric comparison)
+        // Check if hospital and department match
         final cleanHosp1 =
             hosp.replaceAll(RegExp(r'[^a-z0-9]'), '');
 
@@ -335,7 +333,8 @@ class AppointmentService {
       // Extract number from token, e.g., 'A-033' -> 33
       int tokenNum = 1;
 
-      final match = RegExp(r'\d+').firstMatch(token);
+      final match =
+          RegExp(r'\d+').firstMatch(token);
 
       if (match != null) {
         tokenNum =
@@ -352,9 +351,12 @@ class AppointmentService {
             .doc(slotDocId)
             .set({
           'bookedCount': tokenNum,
-          'lastBookedAt': FieldValue.serverTimestamp(),
-          'departmentId': appointment.departmentId,
-          'appointmentDate': appointment.appointmentDate,
+          'lastBookedAt':
+              FieldValue.serverTimestamp(),
+          'departmentId':
+              appointment.departmentId,
+          'appointmentDate':
+              appointment.appointmentDate,
         }, SetOptions(merge: true));
       } catch (_) {}
 
@@ -377,18 +379,22 @@ class AppointmentService {
           'hospitalId': appointment.hospitalId,
           'hospitalName': appointment.hospitalName,
           'departmentId': appointment.departmentId,
-          'departmentName': appointment.departmentName,
+          'departmentName':
+              appointment.departmentName,
           'roomNumber': appointment.roomNumber,
           'tokenCode': token,
           'tokenNumber': token,
           'queueSessionId': sessId,
           'status': 'waiting',
           'priority': appointment.priority,
-          'appointmentDate': appointment.appointmentDate,
+          'appointmentDate':
+              appointment.appointmentDate,
           'timeSlot': appointment.timeSlot,
           'queueOrder': tokenNum,
-          'createdAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
+          'createdAt':
+              FieldValue.serverTimestamp(),
+          'updatedAt':
+              FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
       } catch (_) {}
 
@@ -415,7 +421,8 @@ class AppointmentService {
         );
       }
 
-      final currentAuth = AuthService().currentUser;
+      final currentAuth =
+          AuthService().currentUser;
 
       if (currentAuth != null) {
         if (currentAuth.nic != null &&
@@ -425,15 +432,23 @@ class AppointmentService {
           );
         }
 
-        if (currentAuth.phoneNumber.trim().isNotEmpty) {
+        if (currentAuth.phoneNumber
+            .trim()
+            .isNotEmpty) {
           lookupIds.add(
-            currentAuth.phoneNumber.trim().toLowerCase(),
+            currentAuth.phoneNumber
+                .trim()
+                .toLowerCase(),
           );
         }
 
-        if (currentAuth.userId.trim().isNotEmpty) {
+        if (currentAuth.userId
+            .trim()
+            .isNotEmpty) {
           lookupIds.add(
-            currentAuth.userId.trim().toLowerCase(),
+            currentAuth.userId
+                .trim()
+                .toLowerCase(),
           );
         }
       }
@@ -443,13 +458,19 @@ class AppointmentService {
 
       if (activeProfile.nic.trim().isNotEmpty) {
         lookupIds.add(
-          activeProfile.nic.trim().toLowerCase(),
+          activeProfile.nic
+              .trim()
+              .toLowerCase(),
         );
       }
 
-      if (activeProfile.phone.trim().isNotEmpty) {
+      if (activeProfile.phone
+          .trim()
+          .isNotEmpty) {
         lookupIds.add(
-          activeProfile.phone.trim().toLowerCase(),
+          activeProfile.phone
+              .trim()
+              .toLowerCase(),
         );
       }
 
@@ -469,7 +490,9 @@ class AppointmentService {
               app.patientId.trim().toLowerCase();
 
           final aUid =
-              (app.userId ?? '').trim().toLowerCase();
+              (app.userId ?? '')
+                  .trim()
+                  .toLowerCase();
 
           if (lookupIds.contains(aNic) ||
               lookupIds.contains(aId) ||
@@ -497,7 +520,8 @@ class AppointmentService {
 
           if (comp != 0) return comp;
 
-          return (b.createdAt ?? DateTime(2020))
+          return (b.createdAt ??
+                  DateTime(2020))
               .compareTo(
             a.createdAt ?? DateTime(2020),
           );
@@ -542,7 +566,8 @@ class AppointmentService {
           .doc(appointmentId)
           .update({
         'status': 'cancelled',
-        'cancelledAt': FieldValue.serverTimestamp(),
+        'cancelledAt':
+            FieldValue.serverTimestamp(),
       });
 
       return true;
