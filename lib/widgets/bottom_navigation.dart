@@ -81,7 +81,7 @@ class StaffBottomNavigation extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                user?.fullName ?? 'Dr. Silva',
+                user?.fullName ?? 'OPD Staff',
                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 4),

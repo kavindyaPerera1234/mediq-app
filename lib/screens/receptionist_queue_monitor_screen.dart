@@ -89,7 +89,7 @@ class _ReceptionistQueueMonitorScreenState extends State<ReceptionistQueueMonito
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            staffUser?.fullName ?? 'Receptionist Silva',
+                            staffUser?.fullName ?? 'Receptionist Desk',
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -155,7 +155,7 @@ class _ReceptionistQueueMonitorScreenState extends State<ReceptionistQueueMonito
 
                       return _buildDepartmentMonitorCard(
                         department: 'General Medicine OPD',
-                        doctorName: 'Dr. Silva',
+                        doctorName: 'Dr. S. Perera',
                         status: session.status,
                         currentToken: session.currentTokenNumber,
                         waitingCount: waitingCount,

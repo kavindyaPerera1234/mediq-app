@@ -48,7 +48,7 @@ class AuthService {
     currentUserModel ??= UserModel(
       uid: uid,
       email: 'doctor@mediq.lk',
-      fullName: 'Dr. Silva',
+      fullName: 'Dr. Perera',
       phone: '0771234567',
       nic: '198512345678',
       role: 'doctor',

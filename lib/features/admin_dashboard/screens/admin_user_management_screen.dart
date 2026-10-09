@@ -21,9 +21,9 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
   bool _isSeeding = false;
 
   final List<Map<String, String>> _demoUsers = [
-    {'name': 'Dr. Silva', 'email': 'doctor@mediq.lk', 'role': 'doctor', 'dept': 'General Medicine OPD', 'status': 'active'},
+    {'name': 'Dr. S. Perera', 'email': 'doctor@mediq.lk', 'role': 'doctor', 'dept': 'General Medicine OPD', 'status': 'active'},
     {'name': 'Nurse Fernando', 'email': 'nurse@mediq.lk', 'role': 'nurse', 'dept': 'General Medicine OPD', 'status': 'active'},
-    {'name': 'Receptionist Silva', 'email': 'receptionist@mediq.lk', 'role': 'receptionist', 'dept': 'OPD Desk', 'status': 'active'},
+    {'name': 'Receptionist Nimali', 'email': 'receptionist@mediq.lk', 'role': 'receptionist', 'dept': 'OPD Desk', 'status': 'active'},
     {'name': 'Nimal Perera', 'email': 'pat-018@patient.mediq.lk', 'role': 'patient', 'dept': 'Patient', 'status': 'active'},
     {'name': 'Nimali Wijesekera', 'email': 'pat-019@patient.mediq.lk', 'role': 'patient', 'dept': 'Patient', 'status': 'active'},
     {'name': 'Suresh Kumar', 'email': 'pat-020@patient.mediq.lk', 'role': 'patient', 'dept': 'Patient', 'status': 'active'},

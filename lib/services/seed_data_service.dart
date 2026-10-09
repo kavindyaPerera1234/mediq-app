@@ -51,7 +51,7 @@ class SeedDataService {
         {
           'uid': 'doc-silva-uid',
           'email': 'doctor@mediq.lk',
-          'fullName': 'Dr. Silva',
+          'fullName': 'Dr. S. Perera',
           'phone': '0771234567',
           'nic': '198512345678',
           'role': 'doctor',
@@ -87,7 +87,7 @@ class SeedDataService {
         {
           'uid': 'rec-silva-uid',
           'email': 'receptionist@mediq.lk',
-          'fullName': 'Receptionist Silva',
+          'fullName': 'Receptionist Nimali',
           'phone': '0773456789',
           'nic': '199234567890',
           'role': 'receptionist',
