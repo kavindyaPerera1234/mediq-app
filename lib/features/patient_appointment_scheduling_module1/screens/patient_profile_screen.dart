@@ -1451,8 +1451,9 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                 VoiceGuidanceService.speak(
                   AppAccessibility.currentLanguage.value == 'si'
                       ? 'හඬ මඟපෙන්වීම සක්‍රිය කරන ලදී'
-                      : 'Voice Guidance is activated',
+                      : (AppAccessibility.currentLanguage.value == 'ta' ? 'குரல் வழிகாட்டுதல் இயக்கப்பட்டது' : 'Voice Guidance is activated'),
                   context: context,
+                  force: true,
                 );
               }
               _profileService.saveAccessibilitySettings(

@@ -38,8 +38,9 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
         VoiceGuidanceService.speak(
           AppAccessibility.currentLanguage.value == 'si'
               ? "හඬ මඟපෙන්වීම සක්‍රිය කරන ලදී"
-              : "Voice Guidance is activated. OPD tokens and screen navigation will be announced aloud.",
+              : (AppAccessibility.currentLanguage.value == 'ta' ? 'குரல் வழிகாட்டுதல் இயக்கப்பட்டது' : "Voice Guidance is activated. OPD tokens and screen navigation will be announced aloud."),
           context: context,
+          force: true,
         );
       } else {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -344,6 +345,7 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                               VoiceGuidanceService.speak(
                                 'Token Number A-024, please proceed to OPD Room 01 for consultation.',
                                 context: context,
+                                force: true,
                               );
                             },
                           ),
@@ -360,6 +362,7 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                               VoiceGuidanceService.speak(
                                 'ටෝකන් අංක ඒ බිංදුවයි විසි හතර, කරුණාකර අංක එක කාමරයට පැමිණෙන්න.',
                                 context: context,
+                                force: true,
                               );
                             },
                           ),
@@ -376,6 +379,7 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                               VoiceGuidanceService.speak(
                                 'டோக்கன் எண் ஏ இருபத்தி நான்கு, தயவுசெய்து அறை ஒன்றுக்கு செல்லவும்.',
                                 context: context,
+                                force: true,
                               );
                             },
                           ),
