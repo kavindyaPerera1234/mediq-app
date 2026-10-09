@@ -11,13 +11,24 @@ import '../../auth_live_queue_module3/screens/auth/welcome_entry_screen.dart';
 import '../../auth_live_queue_module3/services/auth_service.dart';
 import '../../token_lifecycle_notification_module2/screens/digital_token_details_screen.dart';
 
-class PatientHomeScreen extends StatelessWidget {
+class PatientHomeScreen extends StatefulWidget {
   final ValueChanged<int> onNavigateTab;
 
   const PatientHomeScreen({
     super.key,
     required this.onNavigateTab,
   });
+
+  @override
+  State<PatientHomeScreen> createState() => _PatientHomeScreenState();
+}
+
+class _PatientHomeScreenState extends State<PatientHomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    ProfileService().syncWithCurrentUser();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -307,7 +318,7 @@ class PatientHomeScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         onTap: () {
           if (isCalled) {
-            onNavigateTab(2);
+            widget.onNavigateTab(2);
           } else {
             Navigator.push(
               context,
@@ -467,7 +478,7 @@ class PatientHomeScreen extends StatelessWidget {
                     children: [
                       if (isCalled) ...[
                         ElevatedButton.icon(
-                          onPressed: () => onNavigateTab(2),
+                          onPressed: () => widget.onNavigateTab(2),
                           icon: const Icon(Icons.arrow_forward_rounded, size: 14),
                           label: const Text('Live Queue', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                           style: ElevatedButton.styleFrom(
@@ -699,14 +710,14 @@ class PatientHomeScreen extends StatelessWidget {
           subtitle: 'Real-time room tracking',
           icon: Icons.format_list_numbered_rounded,
           color: AppColors.statusGreen,
-          onTap: () => onNavigateTab(2),
+          onTap: () => widget.onNavigateTab(2),
         ),
         _buildActionCard(
           title: AppTranslations.tr('navAlerts'),
           subtitle: 'Token notifications',
           icon: Icons.sms_outlined,
           color: AppColors.statusOrange,
-          onTap: () => onNavigateTab(3),
+          onTap: () => widget.onNavigateTab(3),
         ),
         _buildActionCard(
           title: AppTranslations.tr('patientDependents'),
@@ -715,7 +726,7 @@ class PatientHomeScreen extends StatelessWidget {
           color: Colors.purple.shade400,
           onTap: () {
             PatientProfileScreen.selectedTabNotifier.value = 1;
-            onNavigateTab(4);
+            widget.onNavigateTab(4);
           },
         ),
       ],

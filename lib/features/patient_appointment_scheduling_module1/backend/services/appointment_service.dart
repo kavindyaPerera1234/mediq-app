@@ -248,10 +248,14 @@ class AppointmentService {
   Stream<List<AppointmentModel>> streamPatientAppointments(String patientNic) {
     try {
       final lookupIds = <String>{};
-      if (patientNic.trim().isNotEmpty) lookupIds.add(patientNic.trim().toLowerCase());
+      final cleanNic = patientNic.trim().toLowerCase();
+      if (cleanNic.isNotEmpty && cleanNic != 'n/a') {
+        lookupIds.add(cleanNic);
+      }
+
       final currentAuth = AuthService().currentUser;
       if (currentAuth != null) {
-        if (currentAuth.nic != null && currentAuth.nic!.trim().isNotEmpty) {
+        if (currentAuth.nic != null && currentAuth.nic!.trim().isNotEmpty && currentAuth.nic!.trim().toLowerCase() != 'n/a') {
           lookupIds.add(currentAuth.nic!.trim().toLowerCase());
         }
         if (currentAuth.phoneNumber.trim().isNotEmpty) {
@@ -261,12 +265,21 @@ class AppointmentService {
           lookupIds.add(currentAuth.userId.trim().toLowerCase());
         }
       }
+
       final activeProfile = ProfileService.activeProfileNotifier.value;
-      if (activeProfile.nic.trim().isNotEmpty) {
+      if (activeProfile.nic.trim().isNotEmpty && activeProfile.nic.trim().toLowerCase() != 'n/a') {
         lookupIds.add(activeProfile.nic.trim().toLowerCase());
       }
       if (activeProfile.phone.trim().isNotEmpty) {
         lookupIds.add(activeProfile.phone.trim().toLowerCase());
+      }
+      if (activeProfile.patientId.trim().isNotEmpty && activeProfile.patientId.trim() != 'patient_default') {
+        lookupIds.add(activeProfile.patientId.trim().toLowerCase());
+      }
+
+      // If no valid patient identity is available, do not return other people's appointments
+      if (lookupIds.isEmpty) {
+        return Stream.value([]);
       }
 
       return _appointmentsRef
@@ -279,15 +292,9 @@ class AppointmentService {
               final aId = app.patientId.trim().toLowerCase();
               final aUid = (app.userId ?? '').trim().toLowerCase();
 
-              if (lookupIds.contains(aNic) || lookupIds.contains(aId) || lookupIds.contains(aUid)) {
-                return true;
-              }
-              if (app.isCaregiverBooking) {
-                return app.patientName.toLowerCase().contains('perera') ||
-                       app.patientNic.startsWith('19') ||
-                       app.relationship != 'Self';
-              }
-              return false;
+              return (aNic.isNotEmpty && lookupIds.contains(aNic)) ||
+                     (aId.isNotEmpty && lookupIds.contains(aId)) ||
+                     (aUid.isNotEmpty && lookupIds.contains(aUid));
             })
             .toList();
         // Sort newest date & time first
