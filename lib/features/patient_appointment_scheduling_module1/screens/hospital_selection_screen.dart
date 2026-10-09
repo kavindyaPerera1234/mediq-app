@@ -38,6 +38,25 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
   List<QueryDocumentSnapshot<Map<String, dynamic>>> _lastHospitalDocs = [];
   bool _isLoading = true;
   String? _selectedHospitalId;
+  GovernmentHospital? _selectedHospital;
+
+  void _proceedToClinicSelection() {
+    if (_selectedHospital == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        settings: const RouteSettings(name: 'ClinicSelection'),
+        builder: (context) => ClinicSelectionScreen(
+          hospital: _selectedHospital!,
+          isCaregiverBooking: widget.isCaregiverBooking,
+          patientName: widget.patientName,
+          patientNic: widget.patientNic,
+          relationship: widget.relationship,
+          priority: widget.priority,
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -319,6 +338,7 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
               ),
             ),
           ),
+          bottomNavigationBar: _buildBottomContinueBar(),
         );
       },
     );
@@ -557,21 +577,8 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
       onTap: () {
         setState(() {
           _selectedHospitalId = hospital.id;
+          _selectedHospital = hospital;
         });
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            settings: const RouteSettings(name: 'ClinicSelection'),
-            builder: (context) => ClinicSelectionScreen(
-              hospital: hospital,
-              isCaregiverBooking: widget.isCaregiverBooking,
-              patientName: widget.patientName,
-              patientNic: widget.patientNic,
-              relationship: widget.relationship,
-              priority: widget.priority,
-            ),
-          ),
-        );
       },
       borderRadius: BorderRadius.circular(16),
       child: AnimatedContainer(
@@ -579,7 +586,7 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.accentColor.withValues(alpha: 0.07)
+              ? AppColors.accentColor.withValues(alpha: 0.08)
               : AppColors.cardSurface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
@@ -589,7 +596,7 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
           boxShadow: [
             BoxShadow(
               color: isSelected
-                  ? AppColors.accentColor.withValues(alpha: 0.18)
+                  ? AppColors.accentColor.withValues(alpha: 0.2)
                   : (AppColors.isDark ? Colors.black26 : AppColors.textDark.withValues(alpha: 0.03)),
               blurRadius: isSelected ? 10 : 6,
               offset: const Offset(0, 2),
@@ -697,37 +704,123 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
             const SizedBox(width: 10),
 
             // Prominent Action Button
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.accentColor
-                    : AppColors.accentColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  _selectedHospitalId = hospital.id;
+                  _selectedHospital = hospital;
+                });
+                _proceedToClinicSelection();
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
                   color: isSelected
                       ? AppColors.accentColor
-                      : AppColors.accentColor.withValues(alpha: 0.3),
+                      : AppColors.accentColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isSelected
+                        ? AppColors.accentColor
+                        : AppColors.accentColor.withValues(alpha: 0.3),
+                  ),
                 ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    isSelected ? 'Selected' : 'Select',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      isSelected ? 'Selected' : 'Select',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: isSelected ? Colors.white : AppColors.accentColor,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      isSelected ? Icons.check_circle_rounded : Icons.arrow_forward_rounded,
+                      size: 14,
                       color: isSelected ? Colors.white : AppColors.accentColor,
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(
-                    isSelected ? Icons.check_circle_rounded : Icons.arrow_forward_rounded,
-                    size: 14,
-                    color: isSelected ? Colors.white : AppColors.accentColor,
-                  ),
-                ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Sticky Bottom Navigation Bar for deliberate user-controlled step navigation
+  Widget _buildBottomContinueBar() {
+    final hasSelection = _selectedHospital != null;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.cardSurface,
+        border: Border(top: BorderSide(color: AppColors.cardBorder, width: 1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, -3),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (hasSelection)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle_rounded, size: 14, color: AppColors.statusGreen),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Selected: ${_selectedHospital!.name}',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.headingText),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: hasSelection ? _proceedToClinicSelection : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: hasSelection ? AppColors.accentColor : AppColors.cardBorder,
+                  foregroundColor: hasSelection ? Colors.white : AppColors.bodyText,
+                  disabledBackgroundColor: AppColors.cardBorder.withValues(alpha: 0.5),
+                  disabledForegroundColor: AppColors.bodyText.withValues(alpha: 0.6),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      hasSelection ? 'Continue to OPD Clinic' : 'Select a Hospital to Continue',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: hasSelection ? Colors.white : AppColors.bodyText,
+                      ),
+                    ),
+                    if (hasSelection) ...[
+                      const SizedBox(width: 8),
+                      const Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white),
+                    ],
+                  ],
+                ),
               ),
             ),
           ],
