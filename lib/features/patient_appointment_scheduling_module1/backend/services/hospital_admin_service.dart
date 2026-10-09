@@ -99,6 +99,51 @@ class HospitalAdminService {
     }
   }
 
+  /// Populate standard OPD clinics for a specific hospital (e.g., General Medicine, Pediatrics, Eye Clinic, etc.)
+  Future<int> populateStandardClinics({
+    required String hospitalName,
+    String? hospitalId,
+  }) async {
+    try {
+      final standardClinics = [
+        {'name': 'General Medicine OPD', 'room': 'OPD Room 01', 'hours': '8:00 AM - 12:00 PM', 'cap': 25},
+        {'name': 'Pediatric Clinic', 'room': 'OPD Room 02', 'hours': '8:30 AM - 12:30 PM', 'cap': 20},
+        {'name': 'Cardiology Clinic', 'room': 'OPD Room 03', 'hours': '9:00 AM - 1:00 PM', 'cap': 15},
+        {'name': 'Ophthalmology (Eye Clinic)', 'room': 'OPD Room 04', 'hours': '8:00 AM - 12:00 PM', 'cap': 20},
+        {'name': 'ENT & Audiology Clinic', 'room': 'OPD Room 05', 'hours': '9:00 AM - 1:00 PM', 'cap': 18},
+        {'name': 'Dental & Maxillofacial OPD', 'room': 'Dental Unit 01', 'hours': '8:00 AM - 12:00 PM', 'cap': 15},
+        {'name': 'Orthopedic Clinic', 'room': 'OPD Room 07', 'hours': '8:30 AM - 12:30 PM', 'cap': 20},
+      ];
+
+      final cleanHosp = hospitalName.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_').toLowerCase();
+      int added = 0;
+
+      for (var c in standardClinics) {
+        final cleanClinic = c['name']!.toString().replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_').toLowerCase();
+        final docId = 'dept_${cleanHosp}_$cleanClinic';
+
+        await _firestore.collection('departments').doc(docId).set({
+          'departmentId': docId,
+          'id': docId,
+          'name': c['name'],
+          'hospitalName': hospitalName,
+          'hospitalId': hospitalId ?? cleanHosp,
+          'roomNumber': c['room'],
+          'operatingHours': c['hours'],
+          'capacityLimit': c['cap'],
+          'isActive': true,
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+        added++;
+      }
+      return added;
+    } catch (e) {
+      debugPrint('HospitalAdminService: populateStandardClinics error $e');
+      return 0;
+    }
+  }
+
   /// Update Slot Capping & Emergency Status
   Future<bool> updateSlotConfig({
     required String slotId,

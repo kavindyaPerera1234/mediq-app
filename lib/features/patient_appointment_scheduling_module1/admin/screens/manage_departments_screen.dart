@@ -105,7 +105,19 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
         final name = (data['name'] ?? '').toString().trim();
         if (name.isEmpty) continue;
 
-        final hospName = (data['hospitalName'] ?? _selectedHospitalFilter).toString();
+        String hospName = (data['hospitalName'] ?? '').toString().trim();
+        final hospId = (data['hospitalId'] ?? '').toString().trim();
+        if (hospName.isEmpty && hospId.isNotEmpty) {
+          for (var hName in _hospitalNames) {
+            final cleanH = hName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+            final cleanId = hospId.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+            if (cleanH.contains(cleanId) || cleanId.contains(cleanH)) {
+              hospName = hName;
+              break;
+            }
+          }
+        }
+
         final room = (data['roomNumber'] ?? 'OPD Room 01').toString();
         final hours = (data['operatingHours'] ?? '8:00 AM - 12:00 PM').toString();
         final cap = (data['capacityLimit'] is num) ? (data['capacityLimit'] as num).toInt() : 25;
@@ -580,11 +592,60 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
     );
   }
 
+  void _confirmPopulateStandardClinics() {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          title: const Row(
+            children: [
+              Icon(Icons.medical_services_rounded, color: AppColors.primary),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text('Auto-Populate Clinics', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          content: Text('This will generate all standard OPD clinics (General Medicine, Pediatrics, Cardiology, Ophthalmology, ENT, Dental, Orthopedics) for "$_selectedHospitalFilter". Continue?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                Navigator.pop(ctx);
+                final count = await HospitalAdminService().populateStandardClinics(
+                  hospitalName: _selectedHospitalFilter,
+                );
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(count > 0 ? '$count standard OPD clinics added successfully!' : 'Failed to populate clinics.'),
+                    backgroundColor: AppColors.statusGreen,
+                  ),
+                );
+              },
+              child: const Text('Populate Clinics'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final filtered = _departments.where((d) {
+      if (d.hospitalName.trim().isEmpty) return false;
       final hospA = d.hospitalName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
       final hospB = _selectedHospitalFilter.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+      if (hospA.isEmpty || hospB.isEmpty) return false;
       return hospA.contains(hospB) || hospB.contains(hospA);
     }).toList();
 
@@ -605,6 +666,11 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.playlist_add_check_rounded, color: Colors.white),
+            tooltip: 'Auto-Populate Standard Clinics',
+            onPressed: _confirmPopulateStandardClinics,
+          ),
           IconButton(
             icon: const Icon(Icons.cleaning_services_rounded, color: Colors.white),
             tooltip: 'Clean Duplicate Clinics',
@@ -679,10 +745,24 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                             const SizedBox(height: 10),
                             const Text('No clinics configured for this hospital', style: TextStyle(color: AppColors.textSecondary)),
                             const SizedBox(height: 12),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
-                              onPressed: () => _showAddEditDepartmentDialog(),
-                              child: const Text('Add First Clinic'),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              alignment: WrapAlignment.center,
+                              children: [
+                                ElevatedButton.icon(
+                                  icon: const Icon(Icons.playlist_add_check_rounded, size: 18),
+                                  label: const Text('Populate Standard Clinics'),
+                                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+                                  onPressed: _confirmPopulateStandardClinics,
+                                ),
+                                OutlinedButton.icon(
+                                  icon: const Icon(Icons.add_rounded, size: 18),
+                                  label: const Text('Add Custom Clinic'),
+                                  style: OutlinedButton.styleFrom(foregroundColor: AppColors.primary),
+                                  onPressed: () => _showAddEditDepartmentDialog(),
+                                ),
+                              ],
                             ),
                           ],
                         ),
