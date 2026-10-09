@@ -69,12 +69,23 @@ class HospitalAdminService {
     required String operatingHours,
     required int capacityLimit,
     required bool isActive,
+    String? hospitalId,
   }) async {
     try {
+      String resolvedHospId = hospitalId ?? '';
+      if (resolvedHospId.isEmpty) {
+        final q = await _firestore.collection('hospitals').where('name', isEqualTo: hospitalName).limit(1).get();
+        if (q.docs.isNotEmpty) {
+          resolvedHospId = q.docs.first.id;
+        }
+      }
+
       await _firestore.collection('departments').doc(id).set({
+        'id': id,
         'departmentId': id,
         'name': name,
         'hospitalName': hospitalName,
+        'hospitalId': resolvedHospId,
         'roomNumber': roomNumber,
         'operatingHours': operatingHours,
         'capacityLimit': capacityLimit,

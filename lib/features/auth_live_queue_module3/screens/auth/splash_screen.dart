@@ -71,13 +71,17 @@ class _SplashScreenState extends State<SplashScreen>
         _navigateTo(const WelcomeEntryScreen());
       } else if (role == 'admin') {
         // Admin session → Admin Dashboard Screen
-        _navigateTo(AdminDashboardScreen(authService: root_auth.AuthService()));
+        final rootAuth = root_auth.AuthService();
+        await rootAuth.loadCurrentStaffProfile();
+        _navigateTo(AdminDashboardScreen(authService: rootAuth));
       } else if (role == 'patient' || role == 'caregiver') {
         // Patient session → Patient main (booking tab)
         _navigateTo(const PatientMainScreen());
       } else {
         // Staff session (doctor, nurse, receptionist, staff)
-        _navigateTo(StaffDashboardScreen(authService: root_auth.AuthService()));
+        final rootAuth = root_auth.AuthService();
+        await rootAuth.loadCurrentStaffProfile();
+        _navigateTo(StaffDashboardScreen(authService: rootAuth));
       }
     } catch (e) {
       debugPrint("Splash session check error: $e");

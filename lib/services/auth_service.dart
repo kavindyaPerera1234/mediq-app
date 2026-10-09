@@ -34,9 +34,22 @@ class AuthService {
       final staffDoc = await _db.collection(AppConstants.staffProfilesCollection).doc(uid).get();
       if (staffDoc.exists) {
         currentStaffProfile = StaffProfile.fromFirestore(staffDoc);
+      } else if (userDoc.exists) {
+        final data = userDoc.data() ?? {};
+        final hId = data['hospitalId'] ?? data['hospital'] ?? 'nhsl';
+        final dId = data['departmentId'] ?? data['department'] ?? 'gen_med';
+        currentStaffProfile = StaffProfile(
+          userId: uid,
+          staffId: data['staffId'] ?? 'DOC-${uid.substring(0, uid.length > 5 ? 5 : uid.length).toUpperCase()}',
+          role: currentUserModel?.role ?? data['role'] ?? 'doctor',
+          hospitalId: hId.toString(),
+          departmentId: dId.toString(),
+          employeeNumber: data['employeeNumber'] ?? 'EMP-01',
+          isActive: currentUserModel?.isActive ?? true,
+        );
       }
     } catch (e) {
-      // Fallback
+      // Fallback if network or firestore error
     }
 
     if (currentUserModel == null || currentStaffProfile == null) {
@@ -45,11 +58,14 @@ class AuthService {
   }
 
   Future<void> _loadFallbackStaffData(String uid) async {
+    final authUser = _auth.currentUser;
+    final fallbackName = authUser?.displayName ?? (authUser?.email != null ? authUser!.email!.split('@').first : 'Doctor');
+
     currentUserModel ??= UserModel(
       uid: uid,
-      email: 'doctor@mediq.lk',
-      fullName: 'Dr. Silva',
-      phone: '0771234567',
+      email: authUser?.email ?? 'doctor@mediq.lk',
+      fullName: fallbackName.isNotEmpty ? fallbackName : 'Dr. Silva',
+      phone: authUser?.phoneNumber ?? '0771234567',
       nic: '198512345678',
       role: 'doctor',
       isActive: true,
@@ -57,10 +73,10 @@ class AuthService {
 
     currentStaffProfile ??= StaffProfile(
       userId: uid,
-      staffId: 'DOC-001',
-      role: 'doctor',
-      hospitalId: 'HOSP-001',
-      departmentId: 'DEPT-001',
+      staffId: 'DOC-${uid.substring(0, uid.length > 5 ? 5 : uid.length).toUpperCase()}',
+      role: currentUserModel?.role ?? 'doctor',
+      hospitalId: 'nhsl',
+      departmentId: 'gen_med',
       employeeNumber: 'EMP-101',
       isActive: true,
     );
