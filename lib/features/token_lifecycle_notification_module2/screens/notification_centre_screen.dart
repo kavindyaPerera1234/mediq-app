@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_accessibility.dart';
 import '../../auth_live_queue_module3/services/auth_service.dart';
 import '../models/notification_model.dart';
 import 'notification_detail_screen.dart';
@@ -88,59 +89,64 @@ class NotificationCentreScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: Navigator.canPop(context)
-            ? IconButton(
-                icon: const Icon(
-                  Icons.arrow_back_ios_new,
-                  color: AppColors.textPrimary,
+    return AnimatedBuilder(
+      animation: AppAccessibility.isHighContrastMode,
+      builder: (context, _) {
+        final isDark = AppAccessibility.isHighContrastMode.value;
+
+        return Scaffold(
+          backgroundColor: isDark ? AppColors.seniorHighContrastBg : AppColors.background,
+          appBar: AppBar(
+            backgroundColor: isDark ? AppColors.seniorHighContrastSurface : Colors.white,
+            elevation: 0,
+            leading: Navigator.canPop(context)
+                ? IconButton(
+                    icon: Icon(
+                      Icons.arrow_back_ios_new,
+                      color: isDark ? Colors.white : AppColors.textPrimary,
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                  )
+                : null,
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Notifications",
+                  style: TextStyle(
+                    color: isDark ? Colors.white : AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+                Text(
+                  "Sri Lanka National Health Alerts",
+                  style: TextStyle(
+                    color: isDark ? AppColors.seniorHighContrastAccent : AppColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              IconButton(
+                icon: Icon(
+                  Icons.settings_outlined,
+                  color: isDark ? Colors.white : Colors.black87,
                 ),
                 onPressed: () {
-                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const NotificationSettingsScreen(),
+                    ),
+                  );
                 },
-              )
-            : null,
-        title: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Notifications",
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
               ),
-            ),
-            Text(
-              "Sri Lanka National Health Alerts",
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.settings_outlined,
-              color: Colors.black87,
-            ),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const NotificationSettingsScreen(),
-                ),
-              );
-            },
+            ],
           ),
-        ],
-      ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: FirebaseFirestore.instance
             .collection('notifications')
@@ -203,16 +209,18 @@ class NotificationCentreScreen extends StatelessWidget {
                     ),
                   );
                 },
-                child: notificationCard(notification),
+                child: notificationCard(notification, isDark: isDark),
               );
             },
           );
         },
       ),
     );
+      },
+    );
   }
 
-  Widget notificationCard(NotificationModel notification) {
+  Widget notificationCard(NotificationModel notification, {bool isDark = false}) {
     Color color;
     IconData icon;
     switch (notification.type) {
@@ -250,8 +258,11 @@ class NotificationCentreScreen extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppColors.seniorHighContrastSurface : Colors.white,
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isDark ? AppColors.seniorHighContrastBorder : AppColors.border,
+        ),
       ),
       child: Row(
         children: [
@@ -270,8 +281,10 @@ class NotificationCentreScreen extends StatelessWidget {
                     Expanded(
                       child: Text(
                         notification.title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : AppColors.textDark,
+                          fontSize: 14,
                         ),
                       ),
                     ),
@@ -280,9 +293,10 @@ class NotificationCentreScreen extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: notification.status == "NEW"
-                              ? Colors.red.shade50
-                              : Colors.grey.shade100,
+                              ? (isDark ? Colors.red.withValues(alpha: 0.25) : Colors.red.shade50)
+                              : (isDark ? Colors.grey.withValues(alpha: 0.25) : Colors.grey.shade100),
                           borderRadius: BorderRadius.circular(4),
+                          border: isDark ? Border.all(color: notification.status == "NEW" ? Colors.redAccent : Colors.grey) : null,
                         ),
                         child: Text(
                           notification.status,
@@ -290,8 +304,8 @@ class NotificationCentreScreen extends StatelessWidget {
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                             color: notification.status == "NEW"
-                                ? Colors.red
-                                : Colors.grey,
+                                ? (isDark ? Colors.redAccent : Colors.red)
+                                : (isDark ? Colors.grey.shade300 : Colors.grey),
                           ),
                         ),
                       ),
@@ -300,9 +314,9 @@ class NotificationCentreScreen extends StatelessWidget {
                 const SizedBox(height: 5),
                 Text(
                   notification.message,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: AppColors.textSecondary,
+                    color: isDark ? const Color(0xFFCBD5E1) : AppColors.textSecondary,
                   ),
                 ),
               ],

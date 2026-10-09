@@ -40,55 +40,7 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
   ];
 
   List<String> _hospitalNames = [];
-  late String _selectedHospitalFilter;
-
-  final List<DepartmentItem> _defaultDepartments = [
-    DepartmentItem(
-      id: 'dept_gen_med',
-      name: 'General Medicine OPD',
-      hospitalName: 'National Hospital of Sri Lanka (NHSL)',
-      roomNumber: 'OPD Room 01',
-      operatingHours: '8:00 AM - 12:00 PM',
-      defaultCapacity: 25,
-      isActive: true,
-    ),
-    DepartmentItem(
-      id: 'dept_ent',
-      name: 'ENT (Ear, Nose, Throat) Clinic',
-      hospitalName: 'National Hospital of Sri Lanka (NHSL)',
-      roomNumber: 'OPD Room 02',
-      operatingHours: '8:00 AM - 12:00 PM',
-      defaultCapacity: 25,
-      isActive: true,
-    ),
-    DepartmentItem(
-      id: 'dept_ortho',
-      name: 'Orthopedics & Fracture Clinic',
-      hospitalName: 'National Hospital of Sri Lanka (NHSL)',
-      roomNumber: 'OPD Room 03',
-      operatingHours: '8:30 AM - 01:00 PM',
-      defaultCapacity: 25,
-      isActive: true,
-    ),
-    DepartmentItem(
-      id: 'dept_pedia',
-      name: 'Pediatrics Clinic',
-      hospitalName: 'Lady Ridgeway Hospital for Children (LRH)',
-      roomNumber: 'OPD Room 04',
-      operatingHours: '8:00 AM - 12:00 PM',
-      defaultCapacity: 25,
-      isActive: true,
-    ),
-    DepartmentItem(
-      id: 'dept_cardio',
-      name: 'Cardiology Clinic',
-      hospitalName: 'National Hospital of Sri Lanka (NHSL)',
-      roomNumber: 'OPD Room 05',
-      operatingHours: '9:00 AM - 01:00 PM',
-      defaultCapacity: 25,
-      isActive: true,
-    ),
-  ];
+  String _selectedHospitalFilter = '';
 
   List<DepartmentItem> _departments = [];
   StreamSubscription<QuerySnapshot>? _hospitalsSub;
@@ -99,7 +51,7 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
     super.initState();
     _hospitalNames = List.from(_defaultHospitalNames);
     _selectedHospitalFilter = _hospitalNames.first;
-    _departments = List.from(_defaultDepartments);
+    _departments = [];
     _startRealtimeListeners();
   }
 
@@ -111,23 +63,28 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
   }
 
   void _startRealtimeListeners() {
-    // 1. Listen to dynamic hospitals
+    // 1. Listen to dynamic hospitals in real-time
     _hospitalsSub = FirebaseFirestore.instance
         .collection('hospitals')
         .snapshots()
         .listen((snapshot) {
-      final Set<String> names = Set.from(_defaultHospitalNames);
+      final List<String> names = [];
       for (var doc in snapshot.docs) {
         final data = doc.data();
         final name = (data['name'] ?? '').toString().trim();
-        if (name.isNotEmpty) {
+        if (name.isNotEmpty && !names.contains(name)) {
           names.add(name);
         }
       }
 
+      // If no hospitals yet in Firestore, use default names
+      if (names.isEmpty) {
+        names.addAll(_defaultHospitalNames);
+      }
+
       if (mounted) {
         setState(() {
-          _hospitalNames = names.toList();
+          _hospitalNames = names;
           if (!_hospitalNames.contains(_selectedHospitalFilter) && _hospitalNames.isNotEmpty) {
             _selectedHospitalFilter = _hospitalNames.first;
           }
@@ -135,14 +92,12 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
       }
     });
 
-    // 2. Listen to dynamic departments
+    // 2. Listen to dynamic departments in real-time
     _departmentsSub = FirebaseFirestore.instance
         .collection('departments')
         .snapshots()
         .listen((snapshot) {
-      final Map<String, DepartmentItem> map = {
-        for (var d in _defaultDepartments) d.id: d,
-      };
+      final List<DepartmentItem> list = [];
 
       for (var doc in snapshot.docs) {
         final data = doc.data();
@@ -156,7 +111,7 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
         final cap = (data['capacityLimit'] is num) ? (data['capacityLimit'] as num).toInt() : 25;
         final isActive = data['isActive'] != false;
 
-        map[id] = DepartmentItem(
+        list.add(DepartmentItem(
           id: id,
           name: name,
           hospitalName: hospName,
@@ -164,12 +119,12 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
           operatingHours: hours,
           defaultCapacity: cap,
           isActive: isActive,
-        );
+        ));
       }
 
       if (mounted) {
         setState(() {
-          _departments = map.values.toList();
+          _departments = list;
         });
       }
     });

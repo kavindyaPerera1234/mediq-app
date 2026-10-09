@@ -1056,7 +1056,8 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
               ),
             ],
           ),
-          body: Center(
+          body: Align(
+            alignment: Alignment.topCenter,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 520),
               child: SingleChildScrollView(

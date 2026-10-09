@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -35,7 +36,7 @@ class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScr
   DateTime _selectedDate = DateTime.now();
   String _selectedClinic = 'General Medicine OPD (Room 01)';
 
-  final List<String> _clinicOptions = [
+  List<String> _clinicOptions = [
     'General Medicine OPD (Room 01)',
     'ENT Clinic (Room 02)',
     'Orthopedics Clinic (Room 03)',
@@ -88,10 +89,46 @@ class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScr
     ),
   ];
 
+  StreamSubscription<QuerySnapshot>? _deptSub;
+
   @override
   void initState() {
     super.initState();
+    _startDeptListener();
     _loadSlotData();
+  }
+
+  @override
+  void dispose() {
+    _deptSub?.cancel();
+    super.dispose();
+  }
+
+  void _startDeptListener() {
+    _deptSub = FirebaseFirestore.instance
+        .collection('departments')
+        .snapshots()
+        .listen((snap) {
+      final Set<String> clinics = {};
+      for (final doc in snap.docs) {
+        final data = doc.data();
+        if (data['isActive'] == false) continue;
+        final name = (data['name'] ?? '').toString().trim();
+        final room = (data['roomNumber'] ?? '').toString().trim();
+        if (name.isNotEmpty) {
+          clinics.add(room.isNotEmpty ? '$name ($room)' : name);
+        }
+      }
+      if (clinics.isNotEmpty && mounted) {
+        setState(() {
+          _clinicOptions = clinics.toList();
+          if (!_clinicOptions.contains(_selectedClinic) && _clinicOptions.isNotEmpty) {
+            _selectedClinic = _clinicOptions.first;
+          }
+        });
+        _loadSlotData();
+      }
+    });
   }
 
   bool _timesMatch(String a, String b) {

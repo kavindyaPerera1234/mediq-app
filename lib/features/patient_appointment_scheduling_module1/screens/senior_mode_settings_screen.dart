@@ -287,6 +287,103 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                     ],
                   ),
                 ),
+                const SizedBox(height: 16),
+
+                // 7. Interactive Voice Guidance Audio Tester
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1C2541) : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isVoice ? (isDark ? const Color(0xFF38BDF8) : AppColors.primary) : (isDark ? const Color(0xFF3A506B) : AppColors.border),
+                      width: isVoice ? 1.5 : 1,
+                    ),
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 2)),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.record_voice_over_rounded, size: 20, color: isDark ? const Color(0xFF38BDF8) : AppColors.primary),
+                          const SizedBox(width: 8),
+                          Text(
+                            'VOICE GUIDANCE LIVE DEMO',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? const Color(0xFF38BDF8) : AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Tap buttons below to test real-time speech synthesis for elderly patients & visually impaired:',
+                        style: GoogleFonts.inter(fontSize: 12, color: isDark ? const Color(0xFF94A3B8) : AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            icon: const Icon(Icons.volume_up_rounded, size: 16),
+                            label: const Text('🔊 Call Token A-024', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            onPressed: () {
+                              VoiceGuidanceService.speak(
+                                'Token Number A-024, please proceed to OPD Room 01 for consultation.',
+                                context: context,
+                              );
+                            },
+                          ),
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: isDark ? Colors.white : AppColors.textDark,
+                              side: BorderSide(color: isDark ? const Color(0xFF38BDF8) : AppColors.border),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            icon: const Icon(Icons.record_voice_over_outlined, size: 16),
+                            label: const Text('🔊 සිංහල නිවේදනය', style: TextStyle(fontSize: 12)),
+                            onPressed: () {
+                              VoiceGuidanceService.speak(
+                                'ටෝකන් අංක ඒ බිංදුවයි විසි හතර, කරුණාකර අංක එක කාමරයට පැමිණෙන්න.',
+                                context: context,
+                              );
+                            },
+                          ),
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: isDark ? Colors.white : AppColors.textDark,
+                              side: BorderSide(color: isDark ? const Color(0xFF38BDF8) : AppColors.border),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            icon: const Icon(Icons.record_voice_over_outlined, size: 16),
+                            label: const Text('🔊 தமிழ் அறிவிப்பு', style: TextStyle(fontSize: 12)),
+                            onPressed: () {
+                              VoiceGuidanceService.speak(
+                                'டோக்கன் எண் ஏ இருபத்தி நான்கு, தயவுசெய்து அறை ஒன்றுக்கு செல்லவும்.',
+                                context: context,
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 24),
               ],
             ),
