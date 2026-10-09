@@ -101,9 +101,26 @@ class PatientHomeScreen extends StatelessWidget {
                       builder: (context, snapshot) {
                         final appointments = snapshot.data ?? [];
                         final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-                        final activeAppointments = appointments
-                            .where((a) => (a.status == 'confirmed' || a.status == 'rescheduled' || a.status == 'waiting') && a.appointmentDate.compareTo(todayStr) >= 0)
-                            .toList();
+                        final activeAppointments = appointments.where((a) {
+                          final st = a.status.toLowerCase().trim();
+                          if (st == 'completed' || st == 'cancelled' || st == 'missed') {
+                            return false;
+                          }
+                          if (st == 'called' || st == 'serving' || st == 'in_consultation') {
+                            return true;
+                          }
+                          return a.appointmentDate.compareTo(todayStr) >= 0;
+                        }).toList();
+
+                        // Prioritize appointments that are actively called/serving today
+                        activeAppointments.sort((a, b) {
+                          final aSt = a.status.toLowerCase().trim();
+                          final bSt = b.status.toLowerCase().trim();
+                          final aCalled = (aSt == 'called' || aSt == 'serving' || aSt == 'in_consultation') ? 0 : 1;
+                          final bCalled = (bSt == 'called' || bSt == 'serving' || bSt == 'in_consultation') ? 0 : 1;
+                          if (aCalled != bCalled) return aCalled.compareTo(bCalled);
+                          return a.appointmentDate.compareTo(b.appointmentDate);
+                        });
 
                         if (activeAppointments.isNotEmpty) {
                           return _buildActiveTokenCard(context, activeAppointments.first);
@@ -290,121 +307,265 @@ class PatientHomeScreen extends StatelessWidget {
   }
 
   Widget _buildActiveTokenCard(BuildContext context, AppointmentModel appointment) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.primaryDark,
-            AppColors.primary,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+    final st = appointment.status.toLowerCase().trim();
+    final isCalled = st == 'called' || st == 'serving' || st == 'in_consultation';
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text(
-                  '● YOUR NEXT OPD TOKEN',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5),
+        onTap: () {
+          if (isCalled) {
+            onNavigateTab(2);
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => DigitalTokenDetailsScreen(
+                  appointmentId: appointment.id.isNotEmpty
+                      ? appointment.id
+                      : appointment.tokenCode,
                 ),
               ),
-              Text(
-                appointment.appointmentDate,
-                style: const TextStyle(fontSize: 12, color: Colors.white70, fontWeight: FontWeight.w600),
+            );
+          }
+        },
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: isCalled
+                  ? [const Color(0xFF0F5132), const Color(0xFF15803D)]
+                  : [AppColors.primaryDark, AppColors.primary],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(18),
+            border: isCalled ? Border.all(color: const Color(0xFF86EFAC), width: 1.5) : null,
+            boxShadow: [
+              BoxShadow(
+                color: isCalled
+                    ? const Color(0xFF15803D).withValues(alpha: 0.45)
+                    : AppColors.primary.withValues(alpha: 0.3),
+                blurRadius: isCalled ? 16 : 12,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.end,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      appointment.tokenCode,
-                      style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w900, color: Colors.white),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      appointment.departmentName,
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${appointment.hospitalName} • ${appointment.roomNumber}',
-                      style: const TextStyle(fontSize: 11, color: Colors.white70),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  if (isCalled)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.12),
+                            blurRadius: 4,
+                          ),
+                        ],
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.record_voice_over_rounded, size: 14, color: Color(0xFF0F5132)),
+                          SizedBox(width: 5),
+                          Text(
+                            'YOUR TURN IS CALLED NOW!',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF0F5132),
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        '● YOUR NEXT OPD TOKEN',
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5),
+                      ),
+                    ),
+                  if (isCalled)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFD700),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: Text(
-                        appointment.isCaregiverBooking
-                            ? '👨‍👩‍👧 For: ${appointment.patientName} (${appointment.relationship})'
-                            : '👤 For: ${appointment.patientName} (Self)',
-                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      child: const Text(
+                        'CALLED',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF1A1A1A),
+                          letterSpacing: 0.5,
+                        ),
                       ),
+                    )
+                  else
+                    Text(
+                      appointment.appointmentDate,
+                      style: const TextStyle(fontSize: 12, color: Colors.white70, fontWeight: FontWeight.w600),
                     ),
-                  ],
-                ),
+                ],
               ),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => DigitalTokenDetailsScreen(
-                        appointmentId: appointment.id.isNotEmpty
-                            ? appointment.id
-                            : appointment.tokenCode,
-                      ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          appointment.tokenCode,
+                          style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w900, color: Colors.white),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          appointment.departmentName,
+                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${appointment.hospitalName} • ${appointment.roomNumber}',
+                          style: const TextStyle(fontSize: 11, color: Colors.white70),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            appointment.isCaregiverBooking
+                                ? '👨‍👩‍👧 For: ${appointment.patientName} (${appointment.relationship})'
+                                : '👤 For: ${appointment.patientName} (Self)',
+                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: AppColors.primaryDark,
-                  elevation: 0,
+                  ),
+                  const SizedBox(width: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      if (isCalled) ...[
+                        ElevatedButton.icon(
+                          onPressed: () => onNavigateTab(2),
+                          icon: const Icon(Icons.arrow_forward_rounded, size: 14),
+                          label: const Text('Live Queue', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFF0F5132),
+                            elevation: 1,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        OutlinedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => DigitalTokenDetailsScreen(
+                                  appointmentId: appointment.id.isNotEmpty
+                                      ? appointment.id
+                                      : appointment.tokenCode,
+                                ),
+                              ),
+                            );
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            side: const BorderSide(color: Colors.white70),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          child: const Text('View Pass', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                        ),
+                      ] else ...[
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => DigitalTokenDetailsScreen(
+                                  appointmentId: appointment.id.isNotEmpty
+                                      ? appointment.id
+                                      : appointment.tokenCode,
+                                ),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: AppColors.primaryDark,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          child: Text(AppTranslations.tr('viewTokenPass'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+              if (isCalled) ...[
+                const SizedBox(height: 12),
+                Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.20),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.white24),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.meeting_room_rounded, color: Colors.white, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Please enter ${appointment.roomNumber} immediately. Doctor is waiting!',
+                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right_rounded, color: Colors.white, size: 18),
+                    ],
+                  ),
                 ),
-                child: Text(AppTranslations.tr('viewTokenPass'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-              ),
+              ],
             ],
           ),
-        ],
+        ),
       ),
     );
   }

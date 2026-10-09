@@ -141,7 +141,7 @@ class FirestoreService {
             }
             final token = aptData['tokenNumber'] ?? aptData['tokenCode'] ?? 'A-${entries.length + 10}';
             entries.add(QueueEntry(
-              queueEntryId: 'QE-$aptId',
+              queueEntryId: aptId,
               queueSessionId: sessionId,
               appointmentId: aptId,
               patientId: aptData['patientId'] ?? '',
@@ -214,19 +214,68 @@ class FirestoreService {
   Future<QueueEntry?> getPatientDetails(String queueEntryId) async {
     try {
       final doc = await _db.collection(AppConstants.queueEntriesCollection).doc(queueEntryId).get();
-      if (!doc.exists) return _getMockQueueEntry(queueEntryId);
-
-      final data = doc.data() ?? {};
-      String patientName = data['patientName'] ?? '';
-      if (patientName.isEmpty && data['patientId'] != null) {
-        try {
-          final userDoc = await _db.collection(AppConstants.usersCollection).doc(data['patientId']).get();
-          if (userDoc.exists && userDoc.data() != null) {
-            patientName = userDoc.data()!['fullName'] ?? 'Patient';
-          }
-        } catch (_) {}
+      if (doc.exists) {
+        final data = doc.data() ?? {};
+        String patientName = data['patientName'] ?? '';
+        if (patientName.isEmpty && data['patientId'] != null) {
+          try {
+            final userDoc = await _db.collection(AppConstants.usersCollection).doc(data['patientId']).get();
+            if (userDoc.exists && userDoc.data() != null) {
+              patientName = userDoc.data()!['fullName'] ?? 'Patient';
+            }
+          } catch (_) {}
+        }
+        return QueueEntry.fromFirestore(doc, patientName: patientName);
       }
-      return QueueEntry.fromFirestore(doc, patientName: patientName);
+
+      final rawId = queueEntryId.startsWith('QE-') ? queueEntryId.substring(3) : queueEntryId;
+      if (rawId != queueEntryId) {
+        final rawDoc = await _db.collection(AppConstants.queueEntriesCollection).doc(rawId).get();
+        if (rawDoc.exists) {
+          final data = rawDoc.data() ?? {};
+          String patientName = data['patientName'] ?? '';
+          if (patientName.isEmpty && data['patientId'] != null) {
+            try {
+              final userDoc = await _db.collection(AppConstants.usersCollection).doc(data['patientId']).get();
+              if (userDoc.exists && userDoc.data() != null) {
+                patientName = userDoc.data()!['fullName'] ?? 'Patient';
+              }
+            } catch (_) {}
+          }
+          return QueueEntry.fromFirestore(rawDoc, patientName: patientName);
+        }
+      }
+
+      // Check appointments collection
+      final aptDoc = await _db.collection(AppConstants.appointmentsCollection).doc(rawId).get();
+      if (aptDoc.exists) {
+        final data = aptDoc.data() ?? {};
+        final token = (data['tokenNumber'] ?? data['tokenCode'] ?? 'A-001').toString();
+        String patientName = (data['patientName'] ?? '').toString();
+        if (patientName.isEmpty && data['patientId'] != null) {
+          try {
+            final userDoc = await _db.collection(AppConstants.usersCollection).doc(data['patientId']).get();
+            if (userDoc.exists && userDoc.data() != null) {
+              patientName = userDoc.data()!['fullName'] ?? 'Patient';
+            }
+          } catch (_) {}
+        }
+        return QueueEntry(
+          queueEntryId: rawId,
+          queueSessionId: (data['queueSessionId'] ?? AppConstants.defaultQueueSessionId()).toString(),
+          appointmentId: rawId,
+          patientId: (data['patientId'] ?? '').toString(),
+          tokenNumber: token,
+          tokenCode: token,
+          status: (data['status'] ?? 'waiting').toString(),
+          queuePosition: 1,
+          estimatedWaitMinutes: 5,
+          priority: (data['priority'] ?? 'normal').toString(),
+          patientName: patientName.isNotEmpty ? patientName : 'Patient',
+        );
+      }
+
+      return _getMockQueueEntry(queueEntryId);
     } catch (_) {
       return _getMockQueueEntry(queueEntryId);
     }

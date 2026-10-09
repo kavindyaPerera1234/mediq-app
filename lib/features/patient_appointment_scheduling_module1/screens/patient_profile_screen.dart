@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
@@ -225,6 +226,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     _buildFieldLabel('Full Name'),
                     TextField(
                       controller: nameController,
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r"[a-zA-Z\s\.\-']"))],
                       style: TextStyle(color: AppColors.headingText),
                       decoration: _inputDecoration('Enter full name'),
                     ),
@@ -234,6 +236,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     TextField(
                       controller: phoneController,
                       keyboardType: TextInputType.phone,
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9+]'))],
                       style: TextStyle(color: AppColors.headingText),
                       decoration: _inputDecoration('+94 77 123 4567'),
                     ),
@@ -243,6 +246,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     TextField(
                       controller: emailController,
                       keyboardType: TextInputType.emailAddress,
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9@\.\+\-_]'))],
                       style: TextStyle(color: AppColors.headingText),
                       decoration: _inputDecoration('example@gmail.com'),
                     ),
@@ -2260,14 +2264,17 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
               final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
               final upcomingList = list.where((app) {
+                final st = app.status.toLowerCase().trim();
+                final isLiveActive = st == 'called' || st == 'serving' || st == 'in_consultation' || st == 'arrived' || st == 'on_hold';
                 final isFutureOrToday = app.appointmentDate.compareTo(todayStr) >= 0;
-                final isActiveStatus = app.status == 'confirmed' || app.status == 'rescheduled' || app.status == 'waiting';
-                return isFutureOrToday && isActiveStatus;
+                final isActiveStatus = st == 'confirmed' || st == 'rescheduled' || st == 'waiting' || isLiveActive;
+                return (isFutureOrToday && isActiveStatus) || isLiveActive;
               }).toList();
 
               final pastList = list.where((app) {
+                final st = app.status.toLowerCase().trim();
                 final isPastDate = app.appointmentDate.compareTo(todayStr) < 0;
-                final isClosedStatus = app.status == 'completed' || app.status == 'cancelled' || app.status == 'missed' || app.status == 'called';
+                final isClosedStatus = st == 'completed' || st == 'cancelled' || st == 'missed';
                 return isPastDate || isClosedStatus;
               }).toList();
 
@@ -2361,8 +2368,9 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     )
                   else
                     ...displayedList.map((app) {
-                      final isUpcoming = (app.status == 'confirmed' || app.status == 'rescheduled' || app.status == 'waiting') &&
-                          app.appointmentDate.compareTo(todayStr) >= 0;
+                      final appSt = app.status.toLowerCase().trim();
+                      final isUpcoming = (appSt != 'completed' && appSt != 'cancelled' && appSt != 'missed') &&
+                          (app.appointmentDate.compareTo(todayStr) >= 0 || appSt == 'called' || appSt == 'serving' || appSt == 'in_consultation');
 
                       return Container(
                         margin: const EdgeInsets.only(bottom: 10),

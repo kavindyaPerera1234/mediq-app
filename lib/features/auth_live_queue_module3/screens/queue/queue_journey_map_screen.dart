@@ -329,15 +329,21 @@ class QueueJourneyMapScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.place_outlined, size: 14, color: AppColors.textSecondary),
+                        const Padding(
+                          padding: EdgeInsets.only(top: 2),
+                          child: Icon(Icons.place_outlined, size: 14, color: AppColors.textSecondary),
+                        ),
                         const SizedBox(width: 4),
-                        Text(
-                          location,
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textSecondary,
+                        Expanded(
+                          child: Text(
+                            location,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textSecondary,
+                            ),
                           ),
                         ),
                       ],

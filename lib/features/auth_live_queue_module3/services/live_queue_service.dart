@@ -55,8 +55,11 @@ class LiveQueueService extends ChangeNotifier {
   PatientQueueStatus? _lastStatus;
   bool _lastDelayed = false;
   String? _trackedApptId;
+  bool _completedScreenDismissed = false;
 
   // ── Public getters ────────────────────────────────────────────────────────
+
+  bool get isCompletedScreenDismissed => _completedScreenDismissed;
 
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -68,6 +71,7 @@ class LiveQueueService extends ChangeNotifier {
 
   /// Switch the active queue view to a specific booking
   void selectAppointment(String apptId) {
+    _completedScreenDismissed = false;
     _selectedApptId = apptId;
     final match = _myAppointmentsList.where((a) => a['id'] == apptId).toList();
     if (match.isNotEmpty) {
@@ -944,6 +948,13 @@ class LiveQueueService extends ChangeNotifier {
       _myAppt!['status'] = 'completed';
     }
     _statusController.add(PatientQueueStatus.completed);
+    notifyListeners();
+  }
+
+  /// Call when the patient exits the completed consultation screen to return to the home dashboard.
+  void dismissCompletedConsultation() {
+    _completedScreenDismissed = true;
+    _entry = null;
     notifyListeners();
   }
 

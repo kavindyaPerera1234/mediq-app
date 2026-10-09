@@ -54,6 +54,8 @@ class NotificationDetailScreen extends StatelessWidget {
         case "near_turn":
             return nearTurn();
         case "delay":
+        case "delay_broadcast":
+        case "queue_delayed":
             return delay();
         case "missed_token":
             return missedToken();
@@ -149,9 +151,9 @@ class NotificationDetailScreen extends StatelessWidget {
               color:Colors.orange.shade50,
               borderRadius:BorderRadius.circular(10),
             ),
-            child:const Text(
-              "⚠ OPD Delayed - General Medicine",
-              style:TextStyle(
+            child: Text(
+              "⚠ OPD Delayed - ${notification.affectedOPD ?? notification.clinicName ?? 'General Medicine'}",
+              style: const TextStyle(
                 fontWeight:FontWeight.bold,
               ),
             ),
@@ -163,17 +165,17 @@ class NotificationDetailScreen extends StatelessWidget {
           infoRow(
               Icons.local_hospital,
               "Affected OPD",
-              "General Medicine (Room 3)"
+              notification.affectedOPD ?? notification.clinicName ?? "General Medicine"
           ),
           infoRow(
-              Icons.calendar_month,
-              "Date & Time",
-              "Sep 15, 2026 - 9:41 AM"
+              Icons.timer_outlined,
+              "Estimated Delay",
+              notification.delayTime ?? "30 mins"
           ),
           infoRow(
               Icons.confirmation_number,
               "Your Token",
-              "A-024"
+              notification.tokenNumber ?? "Active Queue"
           ),
         ]),
 

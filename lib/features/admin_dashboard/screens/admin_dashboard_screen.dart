@@ -2,38 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_constants.dart';
-import '../../../services/auth_service.dart';
+import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_constants.dart';
+import '../../../../core/localization/app_strings.dart';
 import '../../patient_appointment_scheduling_module1/admin/screens/hospital_admin_dashboard.dart';
+import '../../token_lifecycle_notification_module2/screens/notification_settings_screen.dart';
 import 'admin_user_management_screen.dart';
 import 'admin_live_queue_console_screen.dart';
+import '../../../../screens/staff_dashboard_screen.dart';
+import '../../../../services/auth_service.dart' as m4_auth;
 import '../../auth_live_queue_module3/screens/auth/welcome_entry_screen.dart';
 import '../../auth_live_queue_module3/services/auth_service.dart' as mod3_auth;
 
-class AdminDashboardScreen extends StatefulWidget {
-  final AuthService? authService;
+class AdminDashboardScreen extends StatelessWidget {
+  final dynamic authService;
 
-  const AdminDashboardScreen({
-    super.key,
-    this.authService,
-  });
+  const AdminDashboardScreen({super.key, this.authService});
 
-  @override
-  State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
-}
-
-class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
-  late final AuthService _authService;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-  @override
-  void initState() {
-    super.initState();
-    _authService = widget.authService ?? AuthService();
-  }
-
-  void _handleLogout() {
+  void _handleLogout(BuildContext context) {
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
@@ -48,9 +34,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
             onPressed: () async {
               Navigator.pop(dialogCtx);
-              await _authService.signOut();
-              await mod3_auth.AuthService().logout();
-              if (mounted) {
+              try {
+                await m4_auth.AuthService().signOut();
+                await mod3_auth.AuthService().logout();
+              } catch (_) {}
+              if (context.mounted) {
                 Navigator.pushAndRemoveUntil(
                   context,
                   MaterialPageRoute(builder: (_) => const WelcomeEntryScreen()),
@@ -58,7 +46,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 );
               }
             },
-            child: const Text('Logout', style: TextStyle(color: Colors.white)),
+            child: const Text('Log Out', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -67,271 +55,263 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = _authService.currentUserModel;
+    final firestore = FirebaseFirestore.instance;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: const Text(
-          'MediQ Admin Console',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        backgroundColor: const Color(0xFF1E293B),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        title: Text(
+          S.adminDashboardTitle,
+          style: GoogleFonts.inter(
+            fontWeight: FontWeight.w700,
+          ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout_rounded, color: AppColors.error),
-            tooltip: 'Logout',
-            onPressed: _handleLogout,
+            icon: const Icon(Icons.manage_accounts_rounded),
+            tooltip: 'User Access Control',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AdminUserManagementScreen()),
+              );
+            },
           ),
-          const SizedBox(width: 4),
+          IconButton(
+            icon: const Icon(Icons.logout_rounded),
+            tooltip: 'Logout',
+            onPressed: () => _handleLogout(context),
+          ),
         ],
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Admin Profile Banner
-              Card(
-                elevation: 1,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: const BorderSide(color: AppColors.border),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Welcome, Admin',
+              style: GoogleFonts.inter(
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Ministry of Health Sri Lanka • OPD Master Control',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Live Real-Time Dashboard Cards
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisSpacing: 14,
+              mainAxisSpacing: 14,
+              childAspectRatio: 1.35,
+              children: [
+                // 1. Registered Users Count
+                StreamBuilder<QuerySnapshot>(
+                  stream: firestore.collection(AppConstants.usersCollection).snapshots(),
+                  builder: (context, snap) {
+                    final count = snap.hasData ? snap.data!.docs.length.toString() : '...';
+                    return _dashboardCard(
+                      icon: Icons.people_outline_rounded,
+                      title: 'Registered Users',
+                      value: count,
+                    );
+                  },
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(18.0),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 28,
-                        backgroundColor: AppColors.primaryLight,
-                        child: const Icon(Icons.admin_panel_settings_rounded, size: 32, color: AppColors.primary),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'HOSPITAL SYSTEM ADMIN',
-                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              currentUser?.fullName ?? 'Administrator',
-                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              currentUser?.email ?? 'admin@mediq.lk',
-                              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+
+                // 2. Today's Appointments Count
+                StreamBuilder<QuerySnapshot>(
+                  stream: firestore.collection(AppConstants.appointmentsCollection).snapshots(),
+                  builder: (context, snap) {
+                    final count = snap.hasData ? snap.data!.docs.length.toString() : '...';
+                    return _dashboardCard(
+                      icon: Icons.calendar_today_outlined,
+                      title: "Appointments",
+                      value: count,
+                    );
+                  },
                 ),
+
+                // 3. Active OPD Queues
+                StreamBuilder<QuerySnapshot>(
+                  stream: firestore.collection(AppConstants.queueSessionsCollection).snapshots(),
+                  builder: (context, snap) {
+                    final count = snap.hasData
+                        ? snap.data!.docs.where((d) {
+                            final data = d.data() as Map<String, dynamic>?;
+                            return data?['status'] == 'active';
+                          }).length.toString()
+                        : '...';
+                    return _dashboardCard(
+                      icon: Icons.queue_outlined,
+                      title: 'Active OPD Queues',
+                      value: count,
+                    );
+                  },
+                ),
+
+                // 4. Active Queue Tokens
+                StreamBuilder<QuerySnapshot>(
+                  stream: firestore.collection(AppConstants.queueEntriesCollection).snapshots(),
+                  builder: (context, snap) {
+                    final count = snap.hasData
+                        ? snap.data!.docs.where((d) {
+                            final data = d.data() as Map<String, dynamic>?;
+                            final st = data?['status'];
+                            return st == 'waiting' || st == 'called' || st == 'serving';
+                          }).length.toString()
+                        : '...';
+                    return _dashboardCard(
+                      icon: Icons.check_circle_outline_rounded,
+                      title: 'Active Tokens',
+                      value: count,
+                    );
+                  },
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 28),
+
+            Text(
+              'Hospital Services Management',
+              style: GoogleFonts.inter(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
               ),
-              const SizedBox(height: 24),
+            ),
+            const SizedBox(height: 14),
 
-              const Text(
-                'LIVE SYSTEM ANALYTICS & OVERVIEW',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 0.8),
-              ),
-              const SizedBox(height: 12),
+            // Card 1: Hospital & OPD Scheduling
+            _managementCard(
+              icon: Icons.local_hospital_outlined,
+              title: S.adminAppointmentsTitle,
+              subtitle: 'Manage hospitals, OPD rooms, and slot allocations',
+              color: AppColors.primary,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const HospitalAdminDashboard()),
+                );
+              },
+            ),
 
-              // Live Real-Time Dashboard Statistics
-              GridView.count(
-                crossAxisCount: 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 1.3,
-                children: [
-                  // 1. Registered Users Count
-                  StreamBuilder<QuerySnapshot>(
-                    stream: _firestore.collection(AppConstants.usersCollection).snapshots(),
-                    builder: (context, snap) {
-                      final count = snap.hasData ? snap.data!.docs.length.toString() : '...';
-                      return _dashboardStatCard(
-                        icon: Icons.people_outline_rounded,
-                        title: 'Registered Users',
-                        value: count,
-                        color: AppColors.info,
-                      );
-                    },
-                  ),
+            // Card 2: Notifications & SMS
+            _managementCard(
+              icon: Icons.notifications_none_rounded,
+              title: S.adminTokensTitle,
+              subtitle: 'Configure delay alerts, SMS gateways, and reminder rules',
+              color: Colors.amber.shade800,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const NotificationSettingsScreen()),
+                );
+              },
+            ),
 
-                  // 2. Today's Appointments Count
-                  StreamBuilder<QuerySnapshot>(
-                    stream: _firestore.collection(AppConstants.appointmentsCollection).snapshots(),
-                    builder: (context, snap) {
-                      final count = snap.hasData ? snap.data!.docs.length.toString() : '...';
-                      return _dashboardStatCard(
-                        icon: Icons.calendar_today_outlined,
-                        title: 'Appointments',
-                        value: count,
-                        color: AppColors.primary,
-                      );
-                    },
-                  ),
+            // Card 3: User Access & Accounts
+            _managementCard(
+              icon: Icons.manage_accounts_outlined,
+              title: S.adminUsersTitle,
+              subtitle: 'Manage user profiles, patient accounts, and role permissions',
+              color: Colors.purple,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AdminUserManagementScreen()),
+                );
+              },
+            ),
 
-                  // 3. Active OPD Queues
-                  StreamBuilder<QuerySnapshot>(
-                    stream: _firestore.collection(AppConstants.queueSessionsCollection).snapshots(),
-                    builder: (context, snap) {
-                      final count = snap.hasData
-                          ? snap.data!.docs.where((d) {
-                              final data = d.data() as Map<String, dynamic>?;
-                              return data?['status'] == 'active';
-                            }).length.toString()
-                          : '...';
-                      return _dashboardStatCard(
-                        icon: Icons.queue_outlined,
-                        title: 'Active OPD Queues',
-                        value: count,
-                        color: AppColors.success,
-                      );
-                    },
-                  ),
+            // Card 4: Live Queue Master Control
+            _managementCard(
+              icon: Icons.queue_play_next_rounded,
+              title: S.adminStaffQueuesTitle,
+              subtitle: 'Advance tokens, broadcast OPD clinic delays, and pause/resume queues',
+              color: const Color(0xFF0284C7),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AdminLiveQueueConsoleScreen()),
+                );
+              },
+            ),
 
-                  // 4. Active Queue Tokens
-                  StreamBuilder<QuerySnapshot>(
-                    stream: _firestore.collection(AppConstants.queueEntriesCollection).snapshots(),
-                    builder: (context, snap) {
-                      final count = snap.hasData
-                          ? snap.data!.docs.where((d) {
-                              final data = d.data() as Map<String, dynamic>?;
-                              final st = data?['status'];
-                              return st == 'waiting' || st == 'called' || st == 'serving';
-                            }).length.toString()
-                          : '...';
-                      return _dashboardStatCard(
-                        icon: Icons.check_circle_outline_rounded,
-                        title: 'Active Tokens',
-                        value: count,
-                        color: Colors.amber.shade800,
-                      );
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
+            // Card 5: Doctor Consultation & Clinical Portal
+            _managementCard(
+              icon: Icons.medical_services_outlined,
+              title: 'Doctor Consultation & Clinical Operations',
+              subtitle: 'Clinical console, consultation notes, and examination rooms',
+              color: Colors.teal,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => StaffDashboardScreen(authService: m4_auth.AuthService())),
+                );
+              },
+            ),
 
-              const Text(
-                'ADMINISTRATION CONTROL PANELS',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 0.8),
-              ),
-              const SizedBox(height: 12),
-
-              // Control Cards
-              // Card 1: Hospital & OPD Clinic Console
-              _managementCard(
-                icon: Icons.local_hospital_rounded,
-                title: 'Hospital & OPD Clinic Console',
-                subtitle: 'Configure hospitals, clinic rooms & daily 25-patient appointment slot caps',
-                color: AppColors.primary,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const HospitalAdminDashboard()),
-                  );
-                },
-              ),
-
-              // Card 2: User Registry & Role Management
-              _managementCard(
-                icon: Icons.manage_accounts_rounded,
-                title: 'User Registry & Role Management',
-                subtitle: 'Manage doctors, nurses, receptionists, patient accounts & deactivations',
-                color: Colors.purple,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => AdminUserManagementScreen(authService: _authService),
-                    ),
-                  );
-                },
-              ),
-
-              // Card 3: Master Live Queue Console
-              _managementCard(
-                icon: Icons.monitor_heart_rounded,
-                title: 'Master Live Queue Console',
-                subtitle: 'Real-time token control, queue pause/resume, triage & delay broadcasts',
-                color: const Color(0xFF0284C7),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => AdminLiveQueueConsoleScreen(authService: _authService),
-                    ),
-                  );
-                },
-              ),
-
-              const SizedBox(height: 24),
-            ],
-          ),
+            const SizedBox(height: 24),
+          ],
         ),
       ),
     );
   }
 
-  Widget _dashboardStatCard({
+  Widget _dashboardCard({
     required IconData icon,
     required String title,
     required String value,
-    required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(
+          color: AppColors.border,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Icon(icon, color: color, size: 24),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  value,
-                  style: GoogleFonts.inter(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                title,
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+          Icon(
+            icon,
+            color: AppColors.primary,
+            size: 28,
+          ),
+          const Spacer(),
+          Text(
+            value,
+            style: GoogleFonts.inter(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            title,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
           ),
         ],
       ),
@@ -354,7 +334,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(
+            color: AppColors.border,
+          ),
         ),
         child: Row(
           children: [
@@ -364,7 +346,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 color: color.withValues(alpha: 0.10),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: color, size: 24),
+              child: Icon(
+                icon,
+                color: color,
+                size: 25,
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -374,7 +360,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   Text(
                     title,
                     style: GoogleFonts.inter(
-                      fontSize: 14,
+                      fontSize: 15,
                       fontWeight: FontWeight.w700,
                       color: AppColors.textPrimary,
                     ),
@@ -395,7 +381,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             Icon(
               Icons.arrow_forward_ios_rounded,
               color: AppColors.textSecondary.withValues(alpha: 0.5),
-              size: 14,
+              size: 16,
             ),
           ],
         ),

@@ -23,6 +23,19 @@ class NotificationCentreScreen extends StatelessWidget {
     return '200164801234';
   }
 
+  Set<String> get _validUserIds {
+    final ids = <String>{_currentUserId, 'all', 'broadcast'};
+    try {
+      final user = AuthService().currentUser;
+      if (user != null) {
+        if (user.userId.isNotEmpty) ids.add(user.userId);
+        if (user.nic != null && user.nic!.isNotEmpty) ids.add(user.nic!);
+        if (user.phoneNumber.isNotEmpty) ids.add(user.phoneNumber);
+      }
+    } catch (_) {}
+    return ids;
+  }
+
   List<NotificationModel> _fallbackNotifications() {
     return [
       NotificationModel(
@@ -131,15 +144,46 @@ class NotificationCentreScreen extends StatelessWidget {
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: FirebaseFirestore.instance
             .collection('notifications')
-            .where('userId', isEqualTo: _currentUserId)
             .snapshots(),
         builder: (context, snapshot) {
           List<NotificationModel> displayList = [];
           if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
-            displayList = snapshot.data!.docs.map((doc) {
-              return NotificationModel.fromFirestore(doc.id, doc.data());
+            final validIds = _validUserIds;
+            final matchedDocs = snapshot.data!.docs.where((doc) {
+              final data = doc.data();
+              final uId = (data['userId'] ?? '').toString().trim();
+              final pId = (data['patientId'] ?? '').toString().trim();
+              final pNic = (data['patientNic'] ?? '').toString().trim();
+              final pPhone = (data['phone'] ?? data['phoneNumber'] ?? '').toString().trim();
+              final isBcast = data['isBroadcast'] == true ||
+                  data['broadcast'] == true ||
+                  uId == 'all' ||
+                  uId == 'broadcast';
+
+              return isBcast ||
+                  validIds.contains(uId) ||
+                  validIds.contains(pId) ||
+                  validIds.contains(pNic) ||
+                  validIds.contains(pPhone);
             }).toList();
-          } else {
+
+            if (matchedDocs.isNotEmpty) {
+              matchedDocs.sort((a, b) {
+                final ta = a.data()['createdAt'];
+                final tb = b.data()['createdAt'];
+                if (ta is Timestamp && tb is Timestamp) {
+                  return tb.compareTo(ta);
+                }
+                return 0;
+              });
+
+              displayList = matchedDocs.map((doc) {
+                return NotificationModel.fromFirestore(doc.id, doc.data());
+              }).toList();
+            }
+          }
+          
+          if (displayList.isEmpty) {
             displayList = _fallbackNotifications();
           }
 
@@ -180,6 +224,7 @@ class NotificationCentreScreen extends StatelessWidget {
         break;
       case "delay":
       case "delay_broadcast":
+      case "queue_delayed":
         color = Colors.orange;
         icon = Icons.warning_amber_rounded;
         break;

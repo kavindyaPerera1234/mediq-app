@@ -59,11 +59,19 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
         ? widget.patientNic
         : (userNic.isNotEmpty ? userNic : 'N/A');
 
+    String resolvedPatientName = widget.patientName;
+    if ((resolvedPatientName.isEmpty || resolvedPatientName == 'Patient') && !widget.isCaregiverBooking) {
+      final authName = AuthService().currentUser?.fullName;
+      if (authName != null && authName.isNotEmpty) {
+        resolvedPatientName = authName;
+      }
+    }
+
     final appointment = AppointmentModel(
       id: '',
       patientId: currentUserId,
       userId: currentUserId,
-      patientName: widget.patientName,
+      patientName: resolvedPatientName,
       patientNic: patientNic,
       isCaregiverBooking: widget.isCaregiverBooking,
       relationship: widget.relationship,

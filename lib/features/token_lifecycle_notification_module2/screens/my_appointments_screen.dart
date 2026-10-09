@@ -8,7 +8,6 @@ import '../../patient_appointment_scheduling_module1/screens/caregiver_setup_scr
 import '../services/appointment_service.dart';
 import '../models/appointment_model.dart';
 import 'digital_token_details_screen.dart';
-import 'qr_scanner_screen.dart';
 
 class MyAppointmentsScreen extends StatefulWidget {
     const MyAppointmentsScreen({
@@ -132,20 +131,6 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                             ),
                         ],
                     ),
-                    actions: [
-                        IconButton(
-                            icon: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white),
-                            tooltip: 'Scan Hospital Check-in QR Code',
-                            onPressed: () {
-                                Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) => const QrScannerScreen(),
-                                    ),
-                                );
-                            },
-                        ),
-                    ],
                 ),
 
                 body: Column(
@@ -208,17 +193,23 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                                                     }
                                                     final list = snapshot.data ?? appointments;
                                                     final filtered = list.where((appointment) {
+                                                        final st = appointment.status.toLowerCase().trim();
                                                         if (selectedTab == 0) {
-                                                            return appointment.status == "confirmed" ||
-                                                                appointment.status == "rescheduled" ||
-                                                                appointment.status == "waiting" ||
-                                                                appointment.status == "scheduled";
+                                                            return st == "confirmed" ||
+                                                                st == "rescheduled" ||
+                                                                st == "waiting" ||
+                                                                st == "scheduled" ||
+                                                                st == "called" ||
+                                                                st == "serving" ||
+                                                                st == "in_consultation" ||
+                                                                st == "arrived" ||
+                                                                st == "on_hold";
                                                         }
                                                         if (selectedTab == 1) {
-                                                            return appointment.status == "completed";
+                                                            return st == "completed";
                                                         }
                                                         if (selectedTab == 2) {
-                                                            return appointment.status == "cancelled";
+                                                            return st == "cancelled";
                                                         }
                                                         return false;
                                                     }).toList();
@@ -299,7 +290,9 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                                                                 status: appointment.status,
                                                                 patientName: appointment.patientName,
                                                                 appointmentId: appointment.id,
-                                                                color: appointment.status == "confirmed"
+                                                                color: (appointment.status.toLowerCase() == "called" ||
+                                                                        appointment.status.toLowerCase() == "serving" ||
+                                                                        appointment.status.toLowerCase() == "confirmed")
                                                                     ? AppColors.statusGreen
                                                                     : AppColors.statusOrange,
                                                             );

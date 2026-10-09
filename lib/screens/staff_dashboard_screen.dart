@@ -358,17 +358,20 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Row(
+                              Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    "Today's OPD Summary",
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.textPrimary,
+                                children: const [
+                                  Expanded(
+                                    child: Text(
+                                      "Today's OPD Summary",
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.textPrimary,
+                                      ),
                                     ),
                                   ),
+                                  SizedBox(width: 8),
                                   Text(
                                     'General Medicine OPD',
                                     style: TextStyle(

@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/appointment_model.dart';
+import '../../../auth_live_queue_module3/services/auth_service.dart';
+import 'profile_service.dart';
 
 class AppointmentService {
   final FirebaseFirestore _firestore;
@@ -174,14 +176,41 @@ class AppointmentService {
   /// Real-time stream of patient's booked appointments
   Stream<List<AppointmentModel>> streamPatientAppointments(String patientNic) {
     try {
+      final lookupIds = <String>{};
+      if (patientNic.trim().isNotEmpty) lookupIds.add(patientNic.trim().toLowerCase());
+      final currentAuth = AuthService().currentUser;
+      if (currentAuth != null) {
+        if (currentAuth.nic != null && currentAuth.nic!.trim().isNotEmpty) {
+          lookupIds.add(currentAuth.nic!.trim().toLowerCase());
+        }
+        if (currentAuth.phoneNumber.trim().isNotEmpty) {
+          lookupIds.add(currentAuth.phoneNumber.trim().toLowerCase());
+        }
+        if (currentAuth.userId.trim().isNotEmpty) {
+          lookupIds.add(currentAuth.userId.trim().toLowerCase());
+        }
+      }
+      final activeProfile = ProfileService.activeProfileNotifier.value;
+      if (activeProfile.nic.trim().isNotEmpty) {
+        lookupIds.add(activeProfile.nic.trim().toLowerCase());
+      }
+      if (activeProfile.phone.trim().isNotEmpty) {
+        lookupIds.add(activeProfile.phone.trim().toLowerCase());
+      }
+
       return _appointmentsRef
           .snapshots()
           .map((snapshot) {
         final list = snapshot.docs
             .map((doc) => AppointmentModel.fromFirestore(doc))
             .where((app) {
-              if (app.patientNic.isEmpty && app.patientId.isEmpty) return false;
-              if (app.patientNic == patientNic || app.patientId == patientNic) return true;
+              final aNic = app.patientNic.trim().toLowerCase();
+              final aId = app.patientId.trim().toLowerCase();
+              final aUid = (app.userId ?? '').trim().toLowerCase();
+
+              if (lookupIds.contains(aNic) || lookupIds.contains(aId) || lookupIds.contains(aUid)) {
+                return true;
+              }
               if (app.isCaregiverBooking) {
                 return app.patientName.toLowerCase().contains('perera') ||
                        app.patientNic.startsWith('19') ||

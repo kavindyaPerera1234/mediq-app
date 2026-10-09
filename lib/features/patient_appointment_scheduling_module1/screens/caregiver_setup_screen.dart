@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_accessibility.dart';
 import '../../../../core/constants/app_translations.dart';
+import '../../auth_live_queue_module3/services/auth_service.dart';
 import 'hospital_selection_screen.dart';
 import '../backend/backend.dart';
 
@@ -30,6 +31,12 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
   String get _currentPatientNic => ProfileService.activeProfileNotifier.value.nic;
 
   @override
+  void initState() {
+    super.initState();
+    ProfileService().syncWithCurrentUser();
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _nicController.dispose();
@@ -55,8 +62,13 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
     }
 
     final activeProfile = ProfileService.activeProfileNotifier.value;
-    final selfName = activeProfile.fullName.isNotEmpty ? activeProfile.fullName : 'Patient';
-    final selfNic = (activeProfile.nic.isNotEmpty && activeProfile.nic != 'N/A') ? activeProfile.nic : '';
+    final authUser = AuthService().currentUser;
+    final selfName = activeProfile.fullName.isNotEmpty
+        ? activeProfile.fullName
+        : ((authUser != null && authUser.fullName.isNotEmpty) ? authUser.fullName : 'Patient');
+    final selfNic = (activeProfile.nic.isNotEmpty && activeProfile.nic != 'N/A')
+        ? activeProfile.nic
+        : ((authUser != null && authUser.nic != null && authUser.nic!.isNotEmpty) ? authUser.nic! : '');
 
     Navigator.push(
       context,
@@ -680,7 +692,15 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
               controller: _nameController,
               style: TextStyle(fontSize: 14, color: AppColors.headingText),
               decoration: _inputDecoration('e.g., Sunil Perera', Icons.person_outline),
-              validator: (val) => val == null || val.trim().isEmpty ? 'Please enter patient name' : null,
+              validator: (val) {
+                if (val == null || val.trim().isEmpty) return 'Please enter patient name';
+                final clean = val.trim();
+                if (clean.length < 2) return 'Name must be at least 2 characters';
+                if (!RegExp(r"^[a-zA-Z\s\.\-']+$").hasMatch(clean)) {
+                  return 'Name cannot contain special characters or numbers';
+                }
+                return null;
+              },
             ),
             const SizedBox(height: 14),
 
@@ -690,7 +710,14 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
               controller: _nicController,
               style: TextStyle(fontSize: 14, color: AppColors.headingText),
               decoration: _inputDecoration('e.g., 195812345678', Icons.badge_outlined),
-              validator: (val) => val == null || val.trim().isEmpty ? 'Please enter NIC or Birth Cert No' : null,
+              validator: (val) {
+                if (val == null || val.trim().isEmpty) return 'Please enter NIC or Birth Cert No';
+                final clean = val.trim();
+                if (!RegExp(r'^[a-zA-Z0-9]{5,15}$').hasMatch(clean)) {
+                  return 'Only letters and numbers allowed (no special characters)';
+                }
+                return null;
+              },
             ),
             const SizedBox(height: 14),
 

@@ -59,7 +59,7 @@ class _SkipPatientConfirmationScreenState extends State<SkipPatientConfirmationS
         borderRadius: BorderRadius.circular(20),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -145,18 +145,20 @@ class _SkipPatientConfirmationScreenState extends State<SkipPatientConfirmationS
                   child: OutlinedButton(
                     onPressed: _isLoading ? null : () => Navigator.pop(context),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
-                    child: const Text('Cancel'),
+                    child: const Text('Cancel', maxLines: 1, overflow: TextOverflow.ellipsis),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(
                   child: PrimaryButton(
                     label: 'Confirm Skip',
                     type: ButtonType.destructive,
                     height: 44,
+                    fontSize: 14,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                     onPressed: _isLoading ? null : _handleConfirmSkip,
                     isLoading: _isLoading,
                   ),
