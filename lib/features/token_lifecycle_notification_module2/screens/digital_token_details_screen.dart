@@ -10,7 +10,6 @@ import '../../../core/constants/app_colors.dart';
 import '../../auth_live_queue_module3/services/auth_service.dart';
 import '../../auth_live_queue_module3/screens/queue/live_queue_main_screen.dart';
 import 'appointment_details_screen.dart';
-import 'my_appointments_screen.dart';
 
 class DigitalTokenDetailsScreen extends StatefulWidget {
   final String appointmentId;
