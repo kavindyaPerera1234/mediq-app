@@ -10,6 +10,7 @@ import 'patient_profile_screen.dart';
 import '../../auth_live_queue_module3/screens/auth/welcome_entry_screen.dart';
 import '../../auth_live_queue_module3/services/auth_service.dart';
 import '../../token_lifecycle_notification_module2/screens/digital_token_details_screen.dart';
+import '../../../core/services/voice_guidance_service.dart';
 
 class PatientHomeScreen extends StatefulWidget {
   final ValueChanged<int> onNavigateTab;
@@ -402,28 +403,51 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                         style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5),
                       ),
                     ),
-                  if (isCalled)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFD700),
-                        borderRadius: BorderRadius.circular(6),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        icon: const Icon(Icons.volume_up_rounded, color: Colors.white, size: 20),
+                        tooltip: 'Listen to Token Announcement',
+                        onPressed: () {
+                          final lang = AppAccessibility.currentLanguage.value;
+                          final msg = isCalled
+                              ? (lang == 'si'
+                                  ? 'ඔබගේ වාරය පැමිණ ඇත! ටෝකන් අංකය ${appointment.tokenCode}, කරුණාකර ${appointment.departmentName}, කාමර අංක ${appointment.roomNumber} වෙත වහාම ඇතුල්වන්න.'
+                                  : 'Your turn is called now! Token number ${appointment.tokenCode}. Please proceed to ${appointment.departmentName}, room ${appointment.roomNumber}.')
+                              : (lang == 'si'
+                                  ? 'ඔබගේ ටෝකන් අංකය ${appointment.tokenCode}. ${appointment.departmentName}, ${appointment.hospitalName}, කාමර අංක ${appointment.roomNumber}. දිනය ${appointment.appointmentDate}, වේලාව ${appointment.timeSlot}.'
+                                  : 'Your next token code is ${appointment.tokenCode} for ${appointment.departmentName} at ${appointment.hospitalName}, room ${appointment.roomNumber}. Date: ${appointment.appointmentDate}, time: ${appointment.timeSlot}.');
+                          VoiceGuidanceService.speak(msg, context: context, force: true);
+                        },
                       ),
-                      child: const Text(
-                        'CALLED',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFF1A1A1A),
-                          letterSpacing: 0.5,
+                      const SizedBox(width: 8),
+                      if (isCalled)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFD700),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'CALLED',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF1A1A1A),
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        )
+                      else
+                        Text(
+                          appointment.appointmentDate,
+                          style: const TextStyle(fontSize: 12, color: Colors.white70, fontWeight: FontWeight.w600),
                         ),
-                      ),
-                    )
-                  else
-                    Text(
-                      appointment.appointmentDate,
-                      style: const TextStyle(fontSize: 12, color: Colors.white70, fontWeight: FontWeight.w600),
-                    ),
+                    ],
+                  ),
                 ],
               ),
               const SizedBox(height: 12),

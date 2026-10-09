@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_accessibility.dart';
+import '../../../core/services/voice_guidance_service.dart';
 import '../../auth_live_queue_module3/services/auth_service.dart';
 import '../../auth_live_queue_module3/screens/queue/live_queue_main_screen.dart';
 import 'appointment_details_screen.dart';
@@ -393,6 +395,31 @@ Time: $timeSlot
                             fontWeight:
                                 FontWeight.bold,
                           ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          final lang = AppAccessibility.currentLanguage.value;
+                          final msg = lang == 'si'
+                              ? 'ඩිජිටල් ටෝකන් අංකය $tokenCode. $clinicName, $hospitalName. දිනය $appointmentDate, වේලාව $timeSlot. රෝගියා: $patientName.'
+                              : (lang == 'ta'
+                                  ? 'டிஜிட்டல் டோக்கன் எண் $tokenCode, $clinicName, $hospitalName.'
+                                  : 'Digital token number $tokenCode for $clinicName at $hospitalName. Date: $appointmentDate, time slot: $timeSlot for patient $patientName.');
+                          VoiceGuidanceService.speak(msg, context: context, force: true);
+                        },
+                        icon: const Icon(Icons.volume_up_rounded, size: 16),
+                        label: Text(
+                          AppAccessibility.currentLanguage.value == 'si' ? '🔊 ටෝකන් විස්තර අසන්න' : '🔊 Listen to Token Pass',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          side: const BorderSide(color: AppColors.primary),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
                       ),
                     ],
