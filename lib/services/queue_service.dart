@@ -47,12 +47,16 @@ class QueueService {
       }
 
       if (!sessionDoc.exists) {
-        // Fallback session doc creation
+        // Fallback session doc creation with dynamic hospitalId and departmentId derived from queueSessionId
         final nowStr = DateTime.now().toString().split(' ')[0];
+        final parts = queueSessionId.split('_');
+        final dynHosp = (parts.isNotEmpty && parts[0].isNotEmpty) ? parts[0] : 'nhsl';
+        final dynDept = (parts.length >= 2 && parts[1].isNotEmpty) ? parts[1] : 'gen_med';
+
         await _db.collection(AppConstants.queueSessionsCollection).doc(queueSessionId).set({
           'queueSessionId': queueSessionId,
-          'hospitalId': 'nhsl',
-          'departmentId': 'gen_med',
+          'hospitalId': dynHosp,
+          'departmentId': dynDept,
           'date': nowStr,
           'status': 'active',
           'currentToken': 'A-018',
@@ -697,11 +701,28 @@ class QueueService {
     required String appointmentId,
     required String patientId,
     required String doctorId,
-    String hospitalId = 'nhsl',
-    String departmentId = 'gen_med',
+    String? hospitalId,
+    String? departmentId,
   }) async {
     try {
       final now = FieldValue.serverTimestamp();
+      String effectiveHosp = hospitalId ?? '';
+      String effectiveDept = departmentId ?? '';
+
+      if (effectiveHosp.isEmpty || effectiveDept.isEmpty) {
+        final entryDoc = await _db.collection(AppConstants.queueEntriesCollection).doc(queueEntryId).get();
+        if (entryDoc.exists && entryDoc.data() != null) {
+          final qId = entryDoc.data()!['queueSessionId'] as String? ?? '';
+          if (qId.contains('_')) {
+            final parts = qId.split('_');
+            if (parts.length >= 2) {
+              if (effectiveHosp.isEmpty) effectiveHosp = parts[0];
+              if (effectiveDept.isEmpty) effectiveDept = parts[1];
+            }
+          }
+        }
+      }
+
       final consultationRef = _db.collection(AppConstants.consultationsCollection).doc();
       final consultationId = consultationRef.id;
 
@@ -712,8 +733,8 @@ class QueueService {
         'patientId': patientId,
         'staffId': doctorId,
         'doctorId': doctorId,
-        'hospitalId': hospitalId,
-        'departmentId': departmentId,
+        'hospitalId': effectiveHosp.isNotEmpty ? effectiveHosp : 'nhsl',
+        'departmentId': effectiveDept.isNotEmpty ? effectiveDept : 'gen_med',
         'status': AppConstants.statusInConsultation,
         'notes': '',
         'startedAt': now,
@@ -774,8 +795,8 @@ class QueueService {
     required String doctorId,
     required String notes,
     required String staffUserId,
-    String hospitalId = 'nhsl',
-    String departmentId = 'gen_med',
+    String? hospitalId,
+    String? departmentId,
   }) async {
     try {
       final now = FieldValue.serverTimestamp();
@@ -784,6 +805,17 @@ class QueueService {
       final queueSessionId = (entryDoc.exists && entryDoc.data() != null)
           ? (entryDoc.data()!['queueSessionId'] as String? ?? '')
           : '';
+
+      String effectiveHosp = hospitalId ?? '';
+      String effectiveDept = departmentId ?? '';
+
+      if ((effectiveHosp.isEmpty || effectiveDept.isEmpty) && queueSessionId.contains('_')) {
+        final parts = queueSessionId.split('_');
+        if (parts.length >= 2) {
+          if (effectiveHosp.isEmpty) effectiveHosp = parts[0];
+          if (effectiveDept.isEmpty) effectiveDept = parts[1];
+        }
+      }
 
       // 2. Create/Update consultation document with full fields from PDF page 32
       final consultationRef = _db.collection(AppConstants.consultationsCollection).doc();
@@ -796,8 +828,8 @@ class QueueService {
         'patientId': patientId,
         'staffId': doctorId,
         'doctorId': doctorId,
-        'hospitalId': hospitalId,
-        'departmentId': departmentId,
+        'hospitalId': effectiveHosp.isNotEmpty ? effectiveHosp : 'nhsl',
+        'departmentId': effectiveDept.isNotEmpty ? effectiveDept : 'gen_med',
         'status': AppConstants.statusCompleted,
         'notes': notes,
         'startedAt': now,

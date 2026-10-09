@@ -28,7 +28,10 @@ class _AdminLiveQueueConsoleScreenState extends State<AdminLiveQueueConsoleScree
   final QueueService _queueService = QueueService();
   bool _isLoading = false;
 
-  String get _currentSessionId => AppConstants.defaultQueueSessionId('nhsl', 'gen_med');
+  String get _currentSessionId {
+    final profile = widget.authService.currentStaffProfile;
+    return AppConstants.defaultQueueSessionId(profile?.hospitalId, profile?.departmentId);
+  }
 
   Future<void> _handleCallSpecific(QueueEntry entry) async {
     setState(() => _isLoading = true);
