@@ -1,5 +1,4 @@
 class NotificationModel {
-
   final String id;
   final String type;
   final String title;
@@ -7,107 +6,207 @@ class NotificationModel {
   final String status;
   final bool isRead;
 
+  final String? userId;
+  final String? patientId;
+  final String? patientName;
+  final String? appointmentId;
+
   final String? tokenNumber;
   final String? hospitalName;
   final String? clinicName;
+  final String? roomNumber;
+
+  final String? appointmentDate;
+  final String? timeSlot;
   final String? dateTime;
 
-  // Near turn details
+  // Near Turn
   final String? nowServing;
   final String? peopleAhead;
   final String? estimatedWait;
 
-  // Delay details
+  // Delay
   final String? affectedOPD;
   final String? delayTime;
 
-
   NotificationModel({
-
     required this.id,
     required this.type,
     required this.title,
     required this.message,
     required this.status,
     required this.isRead,
-
+    this.userId,
+    this.patientId,
+    this.patientName,
+    this.appointmentId,
     this.tokenNumber,
     this.hospitalName,
     this.clinicName,
+    this.roomNumber,
+    this.appointmentDate,
+    this.timeSlot,
     this.dateTime,
-
     this.nowServing,
     this.peopleAhead,
     this.estimatedWait,
-
     this.affectedOPD,
     this.delayTime,
-
   });
 
-
-
   factory NotificationModel.fromJson(
-      Map<String, dynamic> json
-      ){
-
+    Map<String, dynamic> json,
+  ) {
     return NotificationModel(
+      id: (json['id'] ?? '').toString(),
+      type: (json['type'] ?? '').toString(),
+      title: (json['title'] ?? '').toString(),
+      message: (json['message'] ?? '').toString(),
 
-      id: json['id'] ?? '',
+      status: (json['status'] ??
+              (json['isRead'] == true ? 'READ' : 'NEW'))
+          .toString(),
 
-      type: json['type'] ?? '',
+      isRead: json['isRead'] == true,
 
-      title: json['title'] ?? '',
+      userId: json['userId']?.toString(),
 
-      message: json['message'] ?? '',
+      patientId: json['patientId']?.toString(),
 
-      status: json['status'] ?? '',
+      patientName: json['patientName']?.toString(),
 
-      isRead: json['isRead'] ?? false,
+      appointmentId:
+          json['appointmentId']?.toString(),
 
+      tokenNumber:
+          (json['tokenNumber'] ??
+                  json['tokenCode'])
+              ?.toString(),
 
-      tokenNumber: json['tokenNumber'],
+      hospitalName:
+          json['hospitalName']?.toString(),
 
-      hospitalName: json['hospitalName'],
+      clinicName:
+          (json['clinicName'] ??
+                  json['departmentName'])
+              ?.toString(),
 
-      clinicName: json['clinicName'],
+      roomNumber:
+          json['roomNumber']?.toString(),
 
-      dateTime: json['dateTime'],
+      appointmentDate:
+          json['appointmentDate']?.toString(),
 
+      timeSlot:
+          json['timeSlot']?.toString(),
 
-      nowServing: json['nowServing'],
+      dateTime:
+          (json['dateTime'] ??
+                  json['createdAt'])
+              ?.toString(),
 
-      peopleAhead: json['peopleAhead'],
+      nowServing:
+          json['nowServing']?.toString(),
 
-      estimatedWait: json['estimatedWait'],
+      peopleAhead:
+          (json['patientsAhead'] ??
+                  json['peopleAhead'])
+              ?.toString(),
 
+      estimatedWait:
+          json['estimatedWait']?.toString(),
 
-      affectedOPD: json['affectedOPD'],
+      affectedOPD:
+          (json['affectedOPD'] ??
+                  json['clinicName'] ??
+                  json['departmentName'])
+              ?.toString(),
 
-      delayTime: json['delayTime'],
-
+      delayTime:
+          json['delayTime']?.toString(),
     );
-
   }
 
-  factory NotificationModel.fromFirestore(String id, Map<String, dynamic> data) {
+  factory NotificationModel.fromFirestore(
+    String id,
+    Map<String, dynamic> data,
+  ) {
     return NotificationModel(
       id: id,
-      type: data['type'] ?? '',
-      title: data['title'] ?? '',
-      message: data['message'] ?? '',
-      status: data['status'] ?? (data['isRead'] == true ? 'READ' : 'NEW'),
-      isRead: data['isRead'] ?? false,
-      tokenNumber: data['tokenNumber'] ?? data['tokenCode'],
-      hospitalName: data['hospitalName'],
-      clinicName: data['clinicName'] ?? data['departmentName'],
-      dateTime: data['createdAt'] != null ? data['createdAt'].toString() : null,
-      nowServing: data['nowServing'],
-      peopleAhead: data['patientsAhead'] != null ? data['patientsAhead'].toString() : data['peopleAhead'],
-      estimatedWait: data['estimatedWait'],
-      affectedOPD: data['affectedOPD'],
-      delayTime: data['delayTime'],
+
+      type: (data['type'] ?? '').toString(),
+
+      title: (data['title'] ?? '').toString(),
+
+      message:
+          (data['message'] ?? '').toString(),
+
+      status: (data['status'] ??
+              (data['isRead'] == true
+                  ? 'READ'
+                  : 'NEW'))
+          .toString(),
+
+      isRead: data['isRead'] == true,
+
+      userId:
+          data['userId']?.toString(),
+
+      patientId:
+          data['patientId']?.toString(),
+
+      patientName:
+          data['patientName']?.toString(),
+
+      appointmentId:
+          data['appointmentId']?.toString(),
+
+      tokenNumber:
+          (data['tokenNumber'] ??
+                  data['tokenCode'])
+              ?.toString(),
+
+      hospitalName:
+          data['hospitalName']?.toString(),
+
+      clinicName:
+          (data['clinicName'] ??
+                  data['departmentName'])
+              ?.toString(),
+
+      roomNumber:
+          data['roomNumber']?.toString(),
+
+      appointmentDate:
+          data['appointmentDate']?.toString(),
+
+      timeSlot:
+          data['timeSlot']?.toString(),
+
+      dateTime:
+          (data['dateTime'] ??
+                  data['createdAt'])
+              ?.toString(),
+
+      nowServing:
+          data['nowServing']?.toString(),
+
+      peopleAhead:
+          (data['patientsAhead'] ??
+                  data['peopleAhead'])
+              ?.toString(),
+
+      estimatedWait:
+          data['estimatedWait']?.toString(),
+
+      affectedOPD:
+          (data['affectedOPD'] ??
+                  data['clinicName'] ??
+                  data['departmentName'])
+              ?.toString(),
+
+      delayTime:
+          data['delayTime']?.toString(),
     );
   }
-
 }
