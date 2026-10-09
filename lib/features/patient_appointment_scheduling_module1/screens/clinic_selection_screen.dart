@@ -84,15 +84,38 @@ class ClinicSelectionScreen extends StatelessWidget {
 
                           // Clinics List
                           Expanded(
-                            child: ListView.separated(
-                              padding: const EdgeInsets.only(bottom: 24),
-                              itemCount: hospital.clinics.length,
-                              separatorBuilder: (context, index) => const SizedBox(height: 12),
-                              itemBuilder: (context, index) {
-                                final clinic = hospital.clinics[index];
-                                return _buildClinicCard(context, clinic, index);
-                              },
-                            ),
+                            child: hospital.clinics.isEmpty
+                                ? Center(
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(24.0),
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.local_hospital_outlined, size: 56, color: AppColors.bodyText.withValues(alpha: 0.5)),
+                                          const SizedBox(height: 14),
+                                          Text(
+                                            'No OPD Clinics Registered',
+                                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.headingText),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            'No clinics have been added for this hospital in Firestore yet.',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(fontSize: 13, color: AppColors.bodyText),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  )
+                                : ListView.separated(
+                                    padding: const EdgeInsets.only(bottom: 24),
+                                    itemCount: hospital.clinics.length,
+                                    separatorBuilder: (context, index) => const SizedBox(height: 12),
+                                    itemBuilder: (context, index) {
+                                      final clinic = hospital.clinics[index];
+                                      return _buildClinicCard(context, clinic, index);
+                                    },
+                                  ),
                           ),
                         ],
                       ),

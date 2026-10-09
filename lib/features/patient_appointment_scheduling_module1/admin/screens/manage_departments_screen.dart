@@ -105,7 +105,19 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
         final name = (data['name'] ?? '').toString().trim();
         if (name.isEmpty) continue;
 
-        final hospName = (data['hospitalName'] ?? _selectedHospitalFilter).toString();
+        String hospName = (data['hospitalName'] ?? '').toString().trim();
+        final hospId = (data['hospitalId'] ?? '').toString().trim();
+        if (hospName.isEmpty && hospId.isNotEmpty) {
+          for (var hName in _hospitalNames) {
+            final cleanH = hName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+            final cleanId = hospId.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+            if (cleanH.contains(cleanId) || cleanId.contains(cleanH)) {
+              hospName = hName;
+              break;
+            }
+          }
+        }
+
         final room = (data['roomNumber'] ?? 'OPD Room 01').toString();
         final hours = (data['operatingHours'] ?? '8:00 AM - 12:00 PM').toString();
         final cap = (data['capacityLimit'] is num) ? (data['capacityLimit'] as num).toInt() : 25;
@@ -133,12 +145,42 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
   void _showAddEditDepartmentDialog([DepartmentItem? existing]) {
     final formKey = GlobalKey<FormState>();
     final isEditing = existing != null;
-    final nameController = TextEditingController(text: existing?.name ?? '');
+
+    const standardClinics = [
+      'General Medicine OPD',
+      'Pediatric Clinic',
+      'Cardiology Clinic',
+      'Ophthalmology (Eye Clinic)',
+      'ENT & Audiology Clinic',
+      'Dental & Maxillofacial OPD',
+      'Orthopedic Clinic',
+      'Dermatology Clinic',
+      'Obstetrics & Gynecology Clinic',
+      'Psychiatric Clinic',
+      'Rheumatology Clinic',
+      'Surgical OPD / Clinic',
+      'Other / Custom Clinic',
+    ];
+
+    String selectedClinicType = 'General Medicine OPD';
+    if (existing != null && existing.name.isNotEmpty) {
+      if (standardClinics.contains(existing.name)) {
+        selectedClinicType = existing.name;
+      } else {
+        selectedClinicType = 'Other / Custom Clinic';
+      }
+    }
+
+    final nameController = TextEditingController(
+      text: existing?.name ?? (selectedClinicType == 'Other / Custom Clinic' ? '' : selectedClinicType),
+    );
     String selectedHosp = (existing != null && _hospitalNames.contains(existing.hospitalName))
         ? existing.hospitalName
         : _selectedHospitalFilter;
-    final roomController = TextEditingController(text: existing?.roomNumber ?? 'OPD Room 06');
-    final hoursController = TextEditingController(text: existing?.operatingHours ?? '8:00 AM - 12:00 PM');
+    final roomController = TextEditingController(
+      text: existing?.roomNumber ?? 'OPD Room 01',
+    );
+    final hoursController = TextEditingController(text: existing?.operatingHours ?? '8:00 AM - 02:00 PM');
     int capacity = existing?.defaultCapacity ?? 25;
     bool isActive = existing?.isActive ?? true;
     bool isSubmitting = false;
@@ -217,32 +259,109 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                       ),
                       const SizedBox(height: 14),
 
-                      // Department Name
+                      // Department / Clinic Selection Dropdown
                       const Text('Department / Clinic Name *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
                       const SizedBox(height: 6),
-                      TextFormField(
-                        controller: nameController,
-                        style: const TextStyle(fontSize: 14, color: AppColors.textDark),
-                        decoration: InputDecoration(
-                          hintText: 'e.g. Ophthalmology (Eye Clinic)',
-                          filled: true,
-                          fillColor: AppColors.background,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
-                          errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.error)),
-                          focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.error, width: 1.5)),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.border),
                         ),
-                        validator: (val) {
-                          if (val == null || val.trim().isEmpty) {
-                            return 'Please enter department / clinic name';
-                          }
-                          if (val.trim().length < 3) {
-                            return 'Department name must be at least 3 characters';
-                          }
-                          return null;
-                        },
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: standardClinics.contains(selectedClinicType) ? selectedClinicType : standardClinics.first,
+                            isExpanded: true,
+                            icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primary),
+                            items: standardClinics.map((clinicName) {
+                              final isCustom = clinicName == 'Other / Custom Clinic';
+                              return DropdownMenuItem<String>(
+                                value: clinicName,
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      isCustom ? Icons.edit_note_rounded : Icons.local_hospital_rounded,
+                                      size: 18,
+                                      color: isCustom ? AppColors.accentColor : AppColors.primary,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        clinicName,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: isCustom ? FontWeight.bold : FontWeight.w500,
+                                          color: isCustom ? AppColors.accentColor : AppColors.textDark,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setModalState(() {
+                                  selectedClinicType = val;
+                                  if (val != 'Other / Custom Clinic') {
+                                    nameController.text = val;
+                                    if (!isEditing) {
+                                      if (val.contains('Dental')) {
+                                        roomController.text = 'Dental Unit 01';
+                                      } else if (val.contains('Pediatric')) {
+                                        roomController.text = 'OPD Room 02';
+                                      } else if (val.contains('Cardiology')) {
+                                        roomController.text = 'OPD Room 03';
+                                      } else if (val.contains('Ophthalmology') || val.contains('Eye')) {
+                                        roomController.text = 'OPD Room 04';
+                                      } else if (val.contains('ENT')) {
+                                        roomController.text = 'OPD Room 05';
+                                      } else if (val.contains('Orthopedic')) {
+                                        roomController.text = 'OPD Room 07';
+                                      } else {
+                                        roomController.text = 'OPD Room 01';
+                                      }
+                                    }
+                                  } else {
+                                    if (!isEditing) nameController.clear();
+                                  }
+                                });
+                              }
+                            },
+                          ),
+                        ),
                       ),
+
+                      // If "Other / Custom Clinic" is chosen, show text input
+                      if (selectedClinicType == 'Other / Custom Clinic') ...[
+                        const SizedBox(height: 10),
+                        TextFormField(
+                          controller: nameController,
+                          style: const TextStyle(fontSize: 14, color: AppColors.textDark),
+                          decoration: InputDecoration(
+                            labelText: 'Custom Clinic / Department Name *',
+                            hintText: 'e.g. Diabetic Clinic / Oncology Clinic',
+                            filled: true,
+                            fillColor: AppColors.background,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
+                            errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.error)),
+                            focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.error, width: 1.5)),
+                          ),
+                          validator: (val) {
+                            if (val == null || val.trim().isEmpty) {
+                              return 'Please enter custom clinic name';
+                            }
+                            if (val.trim().length < 3) {
+                              return 'Clinic name must be at least 3 characters';
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
                       const SizedBox(height: 14),
 
                       // Room Number
@@ -252,7 +371,7 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                         controller: roomController,
                         style: const TextStyle(fontSize: 14, color: AppColors.textDark),
                         decoration: InputDecoration(
-                          hintText: 'e.g. OPD Room 08',
+                          hintText: 'e.g. OPD Room 01',
                           filled: true,
                           fillColor: AppColors.background,
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -298,10 +417,10 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                         spacing: 6,
                         runSpacing: 6,
                         children: [
-                          '8:00 AM - 12:00 PM',
-                          '8:00 AM - 01:00 PM',
                           '8:00 AM - 02:00 PM',
-                          '12:00 PM - 04:00 PM',
+                          '8:00 AM - 12:00 PM',
+                          '12:00 PM - 02:00 PM',
+                          '8:00 AM - 01:00 PM',
                         ].map((preset) {
                           return InkWell(
                             onTap: () {
@@ -580,11 +699,60 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
     );
   }
 
+  void _confirmPopulateStandardClinics() {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          title: const Row(
+            children: [
+              Icon(Icons.medical_services_rounded, color: AppColors.primary),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text('Auto-Populate Clinics', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          content: Text('This will generate all standard OPD clinics (General Medicine, Pediatrics, Cardiology, Ophthalmology, ENT, Dental, Orthopedics) for "$_selectedHospitalFilter". Continue?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                Navigator.pop(ctx);
+                final count = await HospitalAdminService().populateStandardClinics(
+                  hospitalName: _selectedHospitalFilter,
+                );
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(count > 0 ? '$count standard OPD clinics added successfully!' : 'Failed to populate clinics.'),
+                    backgroundColor: AppColors.statusGreen,
+                  ),
+                );
+              },
+              child: const Text('Populate Clinics'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final filtered = _departments.where((d) {
+      if (d.hospitalName.trim().isEmpty) return false;
       final hospA = d.hospitalName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
       final hospB = _selectedHospitalFilter.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+      if (hospA.isEmpty || hospB.isEmpty) return false;
       return hospA.contains(hospB) || hospB.contains(hospA);
     }).toList();
 
@@ -605,6 +773,11 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.playlist_add_check_rounded, color: Colors.white),
+            tooltip: 'Auto-Populate Standard Clinics',
+            onPressed: _confirmPopulateStandardClinics,
+          ),
           IconButton(
             icon: const Icon(Icons.cleaning_services_rounded, color: Colors.white),
             tooltip: 'Clean Duplicate Clinics',
@@ -679,10 +852,24 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                             const SizedBox(height: 10),
                             const Text('No clinics configured for this hospital', style: TextStyle(color: AppColors.textSecondary)),
                             const SizedBox(height: 12),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
-                              onPressed: () => _showAddEditDepartmentDialog(),
-                              child: const Text('Add First Clinic'),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              alignment: WrapAlignment.center,
+                              children: [
+                                ElevatedButton.icon(
+                                  icon: const Icon(Icons.playlist_add_check_rounded, size: 18),
+                                  label: const Text('Populate Standard Clinics'),
+                                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+                                  onPressed: _confirmPopulateStandardClinics,
+                                ),
+                                OutlinedButton.icon(
+                                  icon: const Icon(Icons.add_rounded, size: 18),
+                                  label: const Text('Add Custom Clinic'),
+                                  style: OutlinedButton.styleFrom(foregroundColor: AppColors.primary),
+                                  onPressed: () => _showAddEditDepartmentDialog(),
+                                ),
+                              ],
                             ),
                           ],
                         ),

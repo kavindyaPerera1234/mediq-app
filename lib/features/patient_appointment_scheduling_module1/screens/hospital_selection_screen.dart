@@ -64,16 +64,24 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
 
         IconData icon = Icons.medical_services_outlined;
         final lowerName = name.toLowerCase();
-        if (lowerName.contains('pediatric') || lowerName.contains('child')) {
+        if (lowerName.contains('pediatric') || lowerName.contains('child') || lowerName.contains('baby')) {
           icon = Icons.child_care_outlined;
-        } else if (lowerName.contains('ortho') || lowerName.contains('bone')) {
+        } else if (lowerName.contains('ortho') || lowerName.contains('bone') || lowerName.contains('fracture')) {
           icon = Icons.accessibility_new_outlined;
-        } else if (lowerName.contains('ent') || lowerName.contains('ear')) {
+        } else if (lowerName.contains('ent') || lowerName.contains('ear') || lowerName.contains('audio') || lowerName.contains('throat')) {
           icon = Icons.hearing_outlined;
         } else if (lowerName.contains('derma') || lowerName.contains('skin')) {
           icon = Icons.healing_outlined;
         } else if (lowerName.contains('cardio') || lowerName.contains('heart')) {
           icon = Icons.favorite_outline_rounded;
+        } else if (lowerName.contains('dental') || lowerName.contains('teeth') || lowerName.contains('tooth') || lowerName.contains('oral')) {
+          icon = Icons.clean_hands_outlined;
+        } else if (lowerName.contains('eye') || lowerName.contains('ophthal') || lowerName.contains('vision')) {
+          icon = Icons.visibility_outlined;
+        } else if (lowerName.contains('gyn') || lowerName.contains('antenatal') || lowerName.contains('maternity') || lowerName.contains('women')) {
+          icon = Icons.pregnant_woman_rounded;
+        } else if (lowerName.contains('neuro') || lowerName.contains('brain') || lowerName.contains('psych')) {
+          icon = Icons.psychology_outlined;
         }
 
         final clinic = OpdClinic(
@@ -85,11 +93,20 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
           roomNumber: room,
         );
 
+        final cleanHospName = hospName.replaceAll(RegExp(r'[^a-z0-9]'), '');
+        final cleanHospId = hospId.replaceAll(RegExp(r'[^a-z0-9]'), '');
+
         if (hospName.isNotEmpty) {
           clinicMap.putIfAbsent(hospName, () => []).add(clinic);
         }
+        if (cleanHospName.isNotEmpty) {
+          clinicMap.putIfAbsent(cleanHospName, () => []).add(clinic);
+        }
         if (hospId.isNotEmpty) {
           clinicMap.putIfAbsent(hospId, () => []).add(clinic);
+        }
+        if (cleanHospId.isNotEmpty) {
+          clinicMap.putIfAbsent(cleanHospId, () => []).add(clinic);
         }
       }
 
@@ -131,6 +148,10 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
       if (name.isEmpty) continue;
 
       final cleanName = name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+      final cleanId = id.replaceAll(RegExp(r'[^a-z0-9]'), '');
+      final rawHospId = (data['hospitalId'] ?? '').toString().toLowerCase().trim();
+      final cleanRawHospId = rawHospId.replaceAll(RegExp(r'[^a-z0-9]'), '');
+
       final bool isActive;
       if (data['isActive'] is bool) {
         isActive = data['isActive'] as bool;
@@ -146,10 +167,23 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
         continue;
       }
 
-      // Check for attached custom clinics
-      final customClinics = _hospitalClinics[name.toLowerCase()] ??
+      // Check for attached custom clinics with fuzzy/clean lookups
+      List<OpdClinic>? customClinics = _hospitalClinics[name.toLowerCase()] ??
+          _hospitalClinics[cleanName] ??
           _hospitalClinics[id] ??
-          _hospitalClinics[(data['hospitalId'] ?? '').toString().toLowerCase()];
+          _hospitalClinics[cleanId] ??
+          (rawHospId.isNotEmpty ? _hospitalClinics[rawHospId] : null) ??
+          (cleanRawHospId.isNotEmpty ? _hospitalClinics[cleanRawHospId] : null);
+
+      if (customClinics == null) {
+        for (final entry in _hospitalClinics.entries) {
+          final k = entry.key;
+          if (cleanName.isNotEmpty && (k.contains(cleanName) || cleanName.contains(k))) {
+            customClinics = entry.value;
+            break;
+          }
+        }
+      }
 
       map[id] = GovernmentHospital.fromMap(
         data,

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 class AppointmentModel {
   final String id;
@@ -47,6 +48,66 @@ class AppointmentModel {
     this.endTime,
     this.slotId,
   });
+
+  bool get isExpiredOrPassed {
+    final st = status.toLowerCase().trim();
+    if (st == 'called' || st == 'serving' || st == 'in_consultation' || st == 'arrived' || st == 'on_hold') {
+      return false;
+    }
+    if (st == 'completed' || st == 'cancelled' || st == 'missed' || st == 'expired') {
+      return true;
+    }
+
+    final now = DateTime.now();
+    final todayStr = DateFormat('yyyy-MM-dd').format(now);
+
+    // If date is before today -> Expired / Past
+    if (appointmentDate.compareTo(todayStr) < 0) {
+      return true;
+    }
+
+    // If date is in the future -> Upcoming
+    if (appointmentDate.compareTo(todayStr) > 0) {
+      return false;
+    }
+
+    // If appointment is TODAY: Check if the slot end time has passed
+    try {
+      String endTimeStr = endTime ?? '';
+      if (endTimeStr.isEmpty && timeSlot.contains('-')) {
+        endTimeStr = timeSlot.split('-').last.trim();
+      } else if (endTimeStr.isEmpty) {
+        endTimeStr = timeSlot.trim();
+      }
+
+      final cleanTime = endTimeStr.toUpperCase();
+      if (cleanTime.contains('AM') || cleanTime.contains('PM')) {
+        DateTime? slotEnd;
+        try {
+          final parsed = DateFormat('h:mm a').parse(endTimeStr.trim());
+          slotEnd = DateTime(now.year, now.month, now.day, parsed.hour, parsed.minute);
+        } catch (_) {
+          try {
+            final parsed = DateFormat('hh:mm a').parse(endTimeStr.trim());
+            slotEnd = DateTime(now.year, now.month, now.day, parsed.hour, parsed.minute);
+          } catch (_) {}
+        }
+        if (slotEnd != null && now.isAfter(slotEnd)) {
+          return true;
+        }
+      } else if (endTimeStr.contains(':')) {
+        final parts = endTimeStr.split(':');
+        final h = int.tryParse(parts[0].trim()) ?? 0;
+        final m = int.tryParse(parts[1].trim()) ?? 0;
+        final slotEnd = DateTime(now.year, now.month, now.day, h, m);
+        if (now.isAfter(slotEnd)) {
+          return true;
+        }
+      }
+    } catch (_) {}
+
+    return false;
+  }
 
   static String _extractStartTime(String slot) {
     if (slot.contains('-')) {

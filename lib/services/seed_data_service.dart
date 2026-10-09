@@ -9,39 +9,68 @@ class SeedDataService {
     try {
       final now = DateTime.now();
       final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
-      const hospitalId = 'nhsl';
-      const departmentId = 'gen_med';
-      final dynamicSessionId = '${hospitalId}_${departmentId}_$dateStr';
 
-      // 1. Hospitals & Departments
-      await _db.collection(AppConstants.hospitalsCollection).doc(hospitalId).set({
-        'hospitalId': hospitalId,
-        'name': 'National Hospital of Sri Lanka',
-        'location': 'Colombo',
-        'isActive': true,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+      // 1. Hospitals & Departments (Multi-Hospital & Multi-OPD linkage)
+      final hospitals = [
+        {'id': 'nhsl', 'name': 'National Hospital of Sri Lanka', 'location': 'Colombo'},
+        {'id': 'hosp_kandy', 'name': 'Kandy General Hospital', 'location': 'Kandy'},
+        {'id': 'hosp_karapitiya', 'name': 'Karapitiya Teaching Hospital', 'location': 'Galle'},
+      ];
 
-      await _db.collection(AppConstants.departmentsCollection).doc(departmentId).set({
-        'departmentId': departmentId,
-        'hospitalId': hospitalId,
-        'name': 'General Medicine OPD',
-        'code': 'GEN-MED',
-        'isActive': true,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+      for (var h in hospitals) {
+        await _db.collection(AppConstants.hospitalsCollection).doc(h['id']!).set({
+          'hospitalId': h['id'],
+          'name': h['name'],
+          'location': h['location'],
+          'isActive': true,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
 
-      // 2. Staff Users & Profiles
+      final departments = [
+        {'id': 'gen_med', 'hospId': 'nhsl', 'name': 'General Medicine OPD', 'code': 'GEN-MED'},
+        {'id': 'dept_pediatrics', 'hospId': 'nhsl', 'name': 'Pediatrics OPD', 'code': 'PED-OPD'},
+        {'id': 'dept_cardiology', 'hospId': 'nhsl', 'name': 'Cardiology OPD', 'code': 'CARD-OPD'},
+        {'id': 'dept_pediatrics', 'hospId': 'hosp_kandy', 'name': 'Pediatrics OPD (Kandy)', 'code': 'KANDY-PED'},
+        {'id': 'gen_med', 'hospId': 'hosp_kandy', 'name': 'General Medicine OPD (Kandy)', 'code': 'KANDY-GEN'},
+      ];
+
+      for (var d in departments) {
+        await _db.collection(AppConstants.departmentsCollection).doc('${d['hospId']}_${d['id']}').set({
+          'departmentId': d['id'],
+          'hospitalId': d['hospId'],
+          'name': d['name'],
+          'code': d['code'],
+          'isActive': true,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      // 2. Staff Users & Profiles (Storing specific hospitalId and departmentId)
       final staffUsers = [
         {
           'uid': 'doc-silva-uid',
           'email': 'doctor@mediq.lk',
-          'fullName': 'Dr. Silva',
+          'fullName': 'Dr. S. Perera',
           'phone': '0771234567',
           'nic': '198512345678',
           'role': 'doctor',
           'staffId': 'DOC-001',
+          'hospitalId': 'nhsl',
+          'departmentId': 'gen_med',
           'employeeNumber': 'EMP-101',
+        },
+        {
+          'uid': 'doc-perera-uid',
+          'email': 'dr.perera@mediq.lk',
+          'fullName': 'Dr. Perera',
+          'phone': '0779998887',
+          'nic': '198299988877',
+          'role': 'doctor',
+          'staffId': 'DOC-002',
+          'hospitalId': 'hosp_kandy',
+          'departmentId': 'dept_pediatrics',
+          'employeeNumber': 'EMP-104',
         },
         {
           'uid': 'nurse-fernando-uid',
@@ -51,16 +80,20 @@ class SeedDataService {
           'nic': '199023456789',
           'role': 'nurse',
           'staffId': 'NUR-001',
+          'hospitalId': 'nhsl',
+          'departmentId': 'gen_med',
           'employeeNumber': 'EMP-102',
         },
         {
           'uid': 'rec-silva-uid',
           'email': 'receptionist@mediq.lk',
-          'fullName': 'Receptionist Silva',
+          'fullName': 'Receptionist Nimali',
           'phone': '0773456789',
           'nic': '199234567890',
           'role': 'receptionist',
           'staffId': 'REC-001',
+          'hospitalId': 'nhsl',
+          'departmentId': 'gen_med',
           'employeeNumber': 'EMP-103',
         },
       ];
@@ -83,16 +116,17 @@ class SeedDataService {
           'userId': staff['uid'],
           'staffId': staff['staffId'],
           'role': staff['role'],
-          'hospitalId': hospitalId,
-          'departmentId': departmentId,
+          'hospitalId': staff['hospitalId'],
+          'departmentId': staff['departmentId'],
           'employeeNumber': staff['employeeNumber'],
           'isActive': true,
           'createdAt': FieldValue.serverTimestamp(),
         });
       }
 
-      // 3. Patient Users & Appointments
-      final patients = [
+      // 3. NHSL General Medicine OPD Queue
+      final nhslSessionId = 'nhsl_gen_med_$dateStr';
+      final nhslPatients = [
         {'id': 'pat-018', 'name': 'Nimal Perera', 'phone': '0711111111', 'token': 'A-018', 'status': 'completed', 'priority': 'normal', 'pos': 1},
         {'id': 'pat-019', 'name': 'Nimali Wijesekera', 'phone': '0712222222', 'token': 'A-019', 'status': 'called', 'priority': 'normal', 'pos': 2},
         {'id': 'pat-020', 'name': 'Suresh Kumar', 'phone': '0713333333', 'token': 'A-020', 'status': 'on_hold', 'priority': 'normal', 'pos': 3},
@@ -101,7 +135,37 @@ class SeedDataService {
         {'id': 'pat-025', 'name': 'Amal R.', 'phone': '0716666666', 'token': 'A-025', 'status': 'waiting', 'priority': 'emergency', 'pos': 6},
       ];
 
-      for (var p in patients) {
+      await _db.collection(AppConstants.queueSessionsCollection).doc(nhslSessionId).set({
+        'queueSessionId': nhslSessionId,
+        'hospitalId': 'nhsl',
+        'departmentId': 'gen_med',
+        'date': dateStr,
+        'status': 'active',
+        'currentToken': 'A-019',
+        'currentTokenNumber': 'A-019',
+        'lastIssuedToken': 'A-025',
+        'lastIssuedTokenNumber': 'A-025',
+        'estimatedMinutesPerPatient': 10,
+        'delayMinutes': 0,
+        'delayReason': '',
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      await _db.collection(AppConstants.queueSessionsCollection).doc('QS-001').set({
+        'queueSessionId': 'QS-001',
+        'hospitalId': 'nhsl',
+        'departmentId': 'gen_med',
+        'date': dateStr,
+        'status': 'active',
+        'currentToken': 'A-019',
+        'currentTokenNumber': 'A-019',
+        'lastIssuedToken': 'A-025',
+        'lastIssuedTokenNumber': 'A-025',
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      for (var p in nhslPatients) {
         await _db.collection(AppConstants.usersCollection).doc(p['id'] as String).set({
           'uid': p['id'],
           'email': '${p['id']}@patient.mediq.lk',
@@ -115,14 +179,13 @@ class SeedDataService {
           'updatedAt': FieldValue.serverTimestamp(),
         });
 
-        // Create appointment doc (shared with Module 1)
         await _db.collection(AppConstants.appointmentsCollection).doc('APT-${p['id']}').set({
           'appointmentId': 'APT-${p['id']}',
           'patientId': p['id'],
           'caregiverId': '',
           'caregiverPatientId': '',
-          'hospitalId': hospitalId,
-          'departmentId': departmentId,
+          'hospitalId': 'nhsl',
+          'departmentId': 'gen_med',
           'slotId': 'SLOT-001',
           'appointmentDate': dateStr,
           'startTime': '08:30 AM',
@@ -131,33 +194,9 @@ class SeedDataService {
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         });
-      }
 
-      // 4. Queue Session (Write both dynamic ID and QS-001 doc for compatibility)
-      final sessionMap = {
-        'queueSessionId': dynamicSessionId,
-        'hospitalId': hospitalId,
-        'departmentId': departmentId,
-        'date': dateStr,
-        'status': 'active',
-        'currentToken': 'A-019',
-        'currentTokenNumber': 'A-019',
-        'lastIssuedToken': 'A-025',
-        'lastIssuedTokenNumber': 'A-025',
-        'estimatedMinutesPerPatient': 10,
-        'delayMinutes': 0,
-        'delayReason': '',
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      };
-
-      await _db.collection(AppConstants.queueSessionsCollection).doc(dynamicSessionId).set(sessionMap);
-      await _db.collection(AppConstants.queueSessionsCollection).doc('QS-001').set({...sessionMap, 'queueSessionId': 'QS-001'});
-
-      // 5. Queue Entries
-      for (var p in patients) {
-        final entryMap = {
-          'queueSessionId': dynamicSessionId,
+        await _db.collection(AppConstants.queueEntriesCollection).doc('QE-${p['id']}').set({
+          'queueSessionId': nhslSessionId,
           'appointmentId': 'APT-${p['id']}',
           'patientId': p['id'],
           'patientName': p['name'],
@@ -171,15 +210,77 @@ class SeedDataService {
           'completedAt': p['status'] == 'completed' ? FieldValue.serverTimestamp() : null,
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
-        };
-
-        await _db.collection(AppConstants.queueEntriesCollection).doc('QE-${p['id']}').set(entryMap);
+        });
       }
 
-      // 6. Initial Sample Queue Event (so queue_events collection appears in Firestore)
+      // 4. Kandy Pediatrics OPD Queue (Dr. Perera's Clinic)
+      final kandySessionId = 'hosp_kandy_dept_pediatrics_$dateStr';
+      final kandyPatients = [
+        {'id': 'pat-kandy-001', 'name': 'Sanduni Perera', 'phone': '0778881111', 'token': 'P-001', 'status': 'waiting', 'priority': 'normal', 'pos': 1},
+        {'id': 'pat-kandy-002', 'name': 'Kavindu Fernando', 'phone': '0778882222', 'token': 'P-002', 'status': 'waiting', 'priority': 'emergency', 'pos': 2},
+      ];
+
+      await _db.collection(AppConstants.queueSessionsCollection).doc(kandySessionId).set({
+        'queueSessionId': kandySessionId,
+        'hospitalId': 'hosp_kandy',
+        'departmentId': 'dept_pediatrics',
+        'date': dateStr,
+        'status': 'active',
+        'currentToken': 'P-001',
+        'currentTokenNumber': 'P-001',
+        'lastIssuedToken': 'P-002',
+        'lastIssuedTokenNumber': 'P-002',
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      for (var p in kandyPatients) {
+        await _db.collection(AppConstants.usersCollection).doc(p['id'] as String).set({
+          'uid': p['id'],
+          'email': '${p['id']}@patient.mediq.lk',
+          'fullName': p['name'],
+          'phone': p['phone'],
+          'nic': '2001${p['id']}',
+          'role': 'patient',
+          'preferredLanguage': 'en',
+          'isActive': true,
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+
+        await _db.collection(AppConstants.appointmentsCollection).doc('APT-${p['id']}').set({
+          'appointmentId': 'APT-${p['id']}',
+          'patientId': p['id'],
+          'hospitalId': 'hosp_kandy',
+          'departmentId': 'dept_pediatrics',
+          'appointmentDate': dateStr,
+          'startTime': '09:00 AM',
+          'endTime': '01:00 PM',
+          'status': 'booked',
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+
+        await _db.collection(AppConstants.queueEntriesCollection).doc('QE-${p['id']}').set({
+          'queueSessionId': kandySessionId,
+          'appointmentId': 'APT-${p['id']}',
+          'patientId': p['id'],
+          'patientName': p['name'],
+          'tokenCode': p['token'],
+          'tokenNumber': p['token'],
+          'status': p['status'],
+          'queuePosition': p['pos'],
+          'estimatedWaitMinutes': ((p['pos'] as int) - 1) * 10,
+          'priority': p['priority'],
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      // Initial Events & Consultations
       await _db.collection(AppConstants.queueEventsCollection).doc('EVT-pat-018').set({
         'eventId': 'EVT-pat-018',
-        'queueSessionId': dynamicSessionId,
+        'queueSessionId': nhslSessionId,
         'queueEntryId': 'QE-pat-018',
         'appointmentId': 'APT-pat-018',
         'performedBy': 'doc-silva-uid',
@@ -191,7 +292,6 @@ class SeedDataService {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      // 7. Initial Sample Consultation (so consultations collection appears in Firestore)
       await _db.collection(AppConstants.consultationsCollection).doc('CNS-pat-018').set({
         'consultationId': 'CNS-pat-018',
         'appointmentId': 'APT-pat-018',
@@ -199,36 +299,18 @@ class SeedDataService {
         'patientId': 'pat-018',
         'staffId': 'doc-silva-uid',
         'doctorId': 'doc-silva-uid',
-        'hospitalId': hospitalId,
-        'departmentId': departmentId,
-        'notes': 'Routine OPD Examination completed. Patient prescribed standard regimen.',
+        'hospitalId': 'nhsl',
+        'departmentId': 'gen_med',
         'status': 'completed',
-        'startedAt': FieldValue.serverTimestamp(),
+        'notes': 'Patient prescribed routine paracetamol and rest.',
+        'createdAt': FieldValue.serverTimestamp(),
         'completedAt': FieldValue.serverTimestamp(),
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      // 8. Initial Sample Delay Update (so delay_updates collection appears in Firestore)
-      await _db.collection(AppConstants.delayUpdatesCollection).doc('DLY-001').set({
-        'delayUpdateId': 'DLY-001',
-        'queueSessionId': dynamicSessionId,
-        'hospitalId': hospitalId,
-        'departmentId': departmentId,
-        'reason': 'OPD Morning Setup',
-        'delayReason': 'OPD Morning Setup',
-        'delayMinutes': 0,
-        'additionalMinutes': 0,
-        'createdBy': 'doc-silva-uid',
-        'performedBy': 'doc-silva-uid',
-        'isActive': false,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      debugPrint('Cloud Firestore: All 8 MediQ Module 4 collections successfully created and populated.');
+      debugPrint('Cloud Firestore multi-hospital demo data populated successfully!');
       return true;
     } catch (e) {
-      debugPrint('Cloud Firestore Seeding Error: $e');
+      debugPrint('Error populating demo data: $e');
       return false;
     }
   }

@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_accessibility.dart';
 import '../../../core/constants/app_translations.dart';
@@ -100,16 +99,8 @@ class PatientHomeScreen extends StatelessWidget {
                       stream: appointmentService.streamPatientAppointments(patientNic),
                       builder: (context, snapshot) {
                         final appointments = snapshot.data ?? [];
-                        final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
                         final activeAppointments = appointments.where((a) {
-                          final st = a.status.toLowerCase().trim();
-                          if (st == 'completed' || st == 'cancelled' || st == 'missed') {
-                            return false;
-                          }
-                          if (st == 'called' || st == 'serving' || st == 'in_consultation') {
-                            return true;
-                          }
-                          return a.appointmentDate.compareTo(todayStr) >= 0;
+                          return !a.isExpiredOrPassed;
                         }).toList();
 
                         // Prioritize appointments that are actively called/serving today

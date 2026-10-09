@@ -79,6 +79,77 @@ class AppointmentService {
     }
   }
 
+  /// Check if the patient already has an existing active booking for the same hospital, clinic, date and time slot
+  Future<AppointmentModel?> findDuplicateAppointment({
+    required String patientNic,
+    required String patientName,
+    required String hospitalId,
+    required String hospitalName,
+    required String departmentName,
+    required String appointmentDate,
+    required String timeSlot,
+    bool isCaregiverBooking = false,
+  }) async {
+    try {
+      final snap = await _appointmentsRef
+          .where('appointmentDate', isEqualTo: appointmentDate)
+          .get();
+
+      for (var doc in snap.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final st = (data['status'] ?? '').toString().toLowerCase().trim();
+        // Ignore cancelled, completed, or missed
+        if (st == 'cancelled' || st == 'completed' || st == 'missed') continue;
+
+        final hosp = (data['hospitalName'] ?? data['hospitalId'] ?? '').toString().toLowerCase().trim();
+        final dept = (data['departmentName'] ?? data['clinicName'] ?? data['departmentId'] ?? '').toString().toLowerCase().trim();
+        final slot = (data['timeSlot'] ?? '').toString().trim();
+        final isCg = data['isCaregiverBooking'] == true;
+
+        final targetHosp = hospitalName.toLowerCase().trim();
+        final targetDept = departmentName.toLowerCase().trim();
+
+        // Check if hospital and department match (with clean alphanumeric comparison)
+        final cleanHosp1 = hosp.replaceAll(RegExp(r'[^a-z0-9]'), '');
+        final cleanHosp2 = targetHosp.replaceAll(RegExp(r'[^a-z0-9]'), '');
+        final cleanDept1 = dept.replaceAll(RegExp(r'[^a-z0-9]'), '');
+        final cleanDept2 = targetDept.replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+        final hospMatch = cleanHosp1 == cleanHosp2 || cleanHosp1.contains(cleanHosp2) || cleanHosp2.contains(cleanHosp1);
+        final deptMatch = cleanDept1 == cleanDept2 || cleanDept1.contains(cleanDept2) || cleanDept2.contains(cleanDept1);
+
+        if (hospMatch && deptMatch) {
+          // Check slot matching
+          final slotClean1 = slot.replaceAll(' ', '').toLowerCase();
+          final slotClean2 = timeSlot.replaceAll(' ', '').toLowerCase();
+          final slotMatches = slotClean1 == slotClean2 || slotClean1.contains(slotClean2) || slotClean2.contains(slotClean1);
+
+          if (slotMatches) {
+            // Check patient identity match
+            final pNic = (data['patientNic'] ?? '').toString().trim().toLowerCase();
+            final pName = (data['patientName'] ?? '').toString().trim().toLowerCase();
+            final targetNic = patientNic.trim().toLowerCase();
+            final targetName = patientName.trim().toLowerCase();
+
+            bool patientMatch = false;
+            if (targetNic.isNotEmpty && targetNic != 'n/a' && pNic.isNotEmpty && pNic != 'n/a') {
+              patientMatch = (pNic == targetNic);
+            } else {
+              patientMatch = (pName == targetName && isCg == isCaregiverBooking);
+            }
+
+            if (patientMatch) {
+              return AppointmentModel.fromFirestore(doc);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('AppointmentService: findDuplicateAppointment error: $e');
+    }
+    return null;
+  }
+
   /// Book an appointment atomically into Firestore
   Future<String> bookAppointment(AppointmentModel appointment) async {
     try {

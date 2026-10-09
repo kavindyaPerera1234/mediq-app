@@ -67,6 +67,77 @@ class _AppointmentReviewScreenState extends State<AppointmentReviewScreen> {
       }
     }
 
+    // Check for existing duplicate booking for the exact same patient, hospital, clinic, date & slot
+    final existingBooking = await _appointmentService.findDuplicateAppointment(
+      patientNic: patientNic,
+      patientName: resolvedPatientName,
+      hospitalId: widget.hospital.id,
+      hospitalName: widget.hospital.name,
+      departmentName: widget.clinic.name,
+      appointmentDate: appDate,
+      timeSlot: widget.selectedTimeSlot,
+      isCaregiverBooking: widget.isCaregiverBooking,
+    );
+
+    if (existingBooking != null) {
+      if (!mounted) return;
+      setState(() {
+        _isSubmitting = false;
+      });
+
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: AppColors.statusOrange, size: 28),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text('Appointment Already Exists', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          content: Text(
+            '${widget.isCaregiverBooking ? "Patient ${widget.patientName}" : "You"} already have an active appointment (Token ${existingBooking.tokenCode}) booked for ${widget.clinic.name} on $appDate (${widget.selectedTimeSlot}). Duplicate bookings for the same time slot are not permitted.',
+            style: const TextStyle(fontSize: 13, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('OK'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => BookingConfirmationScreen(
+                      hospital: widget.hospital,
+                      clinic: widget.clinic,
+                      selectedDate: widget.selectedDate,
+                      selectedTimeSlot: widget.selectedTimeSlot,
+                      tokenNumber: existingBooking.tokenCode,
+                      appointmentId: existingBooking.id,
+                      patientName: existingBooking.patientName,
+                      patientNic: existingBooking.patientNic,
+                      isCaregiverBooking: existingBooking.isCaregiverBooking,
+                      relationship: existingBooking.relationship,
+                      priority: existingBooking.priority,
+                    ),
+                  ),
+                );
+              },
+              child: const Text('View Existing Token'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     final appointment = AppointmentModel(
       id: '',
       patientId: currentUserId,

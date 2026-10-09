@@ -84,9 +84,20 @@ class FirestoreService {
   }
 
   // --- Dual-Collection Merged Queue Stream ---
-  Stream<List<QueueEntry>> streamPatientQueue(String sessionId, {String hospitalId = 'nhsl', String departmentId = 'gen_med'}) {
-    final normalizedHosp = (hospitalId == 'HOSP-001') ? 'nhsl' : hospitalId;
-    final normalizedDept = (departmentId == 'DEPT-001') ? 'gen_med' : departmentId;
+  Stream<List<QueueEntry>> streamPatientQueue(String sessionId, {String? hospitalId, String? departmentId}) {
+    String reqHosp = hospitalId ?? '';
+    String reqDept = departmentId ?? '';
+
+    if ((reqHosp.isEmpty || reqDept.isEmpty) && sessionId.contains('_')) {
+      final parts = sessionId.split('_');
+      if (parts.length >= 2) {
+        if (reqHosp.isEmpty) reqHosp = parts[0];
+        if (reqDept.isEmpty) reqDept = parts[1];
+      }
+    }
+
+    final normalizedHosp = (reqHosp == 'HOSP-001') ? 'nhsl' : reqHosp;
+    final normalizedDept = (reqDept == 'DEPT-001') ? 'gen_med' : reqDept;
 
     return _db
         .collection(AppConstants.queueEntriesCollection)

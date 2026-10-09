@@ -46,6 +46,18 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
   int _currentBottomNavIndex = 0;
   bool _isSeeding = false;
   DateTime _selectedDate = DateTime.now();
+  String? _selectedHospitalId;
+  String? _selectedDepartmentId;
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = widget.authService.currentStaffProfile;
+    if (profile != null) {
+      if (profile.hospitalId.isNotEmpty) _selectedHospitalId = profile.hospitalId;
+      if (profile.departmentId.isNotEmpty) _selectedDepartmentId = profile.departmentId;
+    }
+  }
 
   Future<void> _pickDashboardDate() async {
     final picked = await showDatePicker(
@@ -219,12 +231,14 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
     final staffUser = widget.authService.currentUserModel;
     final staffProfile = widget.authService.currentStaffProfile;
 
-    final hId = staffProfile?.hospitalId ?? 'nhsl';
-    final dId = staffProfile?.departmentId ?? 'gen_med';
+    final hId = _selectedHospitalId ?? staffProfile?.hospitalId ?? 'nhsl';
+    final dId = _selectedDepartmentId ?? staffProfile?.departmentId ?? 'gen_med';
     final dateStr = "${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}";
     final sessionId = '${hId.isNotEmpty ? hId : 'nhsl'}_${dId.isNotEmpty ? dId : 'gen_med'}_$dateStr';
 
-    final staffName = staffUser?.fullName ?? 'Dr. Silva';
+    final staffName = (staffUser?.fullName != null && staffUser!.fullName.isNotEmpty)
+        ? staffUser.fullName
+        : 'OPD Medical Officer';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -344,7 +358,90 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
                           StatusBadge(status: session.status, isLarge: true),
                         ],
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16),
+
+                      // Multi-Hospital & OPD Department Dropdown Switcher
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.3), width: 1.2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.03),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.local_hospital_rounded, size: 18, color: AppColors.primary),
+                                const SizedBox(width: 8),
+                                const Text('Hospital:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: DropdownButtonHideUnderline(
+                                    child: DropdownButton<String>(
+                                      value: ['nhsl', 'hosp_kandy', 'hosp_karapitiya'].contains(hId) ? hId : 'nhsl',
+                                      isDense: true,
+                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
+                                      items: const [
+                                        DropdownMenuItem(value: 'nhsl', child: Text('National Hospital of Sri Lanka (NHSL)')),
+                                        DropdownMenuItem(value: 'hosp_kandy', child: Text('Kandy General Hospital')),
+                                        DropdownMenuItem(value: 'hosp_karapitiya', child: Text('Karapitiya Teaching Hospital')),
+                                      ],
+                                      onChanged: (val) {
+                                        if (val != null) {
+                                          setState(() {
+                                            _selectedHospitalId = val;
+                                          });
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const Divider(height: 12),
+                            Row(
+                              children: [
+                                const Icon(Icons.meeting_room_rounded, size: 18, color: AppColors.primary),
+                                const SizedBox(width: 8),
+                                const Text('OPD Clinic:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: DropdownButtonHideUnderline(
+                                    child: DropdownButton<String>(
+                                      value: ['gen_med', 'dept_pediatrics', 'dept_cardiology', 'dept_ent'].contains(dId) ? dId : 'gen_med',
+                                      isDense: true,
+                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
+                                      items: const [
+                                        DropdownMenuItem(value: 'gen_med', child: Text('General Medicine OPD')),
+                                        DropdownMenuItem(value: 'dept_pediatrics', child: Text('Pediatrics OPD')),
+                                        DropdownMenuItem(value: 'dept_cardiology', child: Text('Cardiology OPD')),
+                                        DropdownMenuItem(value: 'dept_ent', child: Text('ENT Clinic')),
+                                      ],
+                                      onChanged: (val) {
+                                        if (val != null) {
+                                          setState(() {
+                                            _selectedDepartmentId = val;
+                                          });
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
 
                       // OPD Summary Title Card
                       Card(
