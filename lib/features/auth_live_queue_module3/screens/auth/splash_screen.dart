@@ -59,9 +59,8 @@ class _SplashScreenState extends State<SplashScreen>
 
     if (!mounted) return;
 
-    final authService = AuthService();
-
     try {
+      final authService = AuthService();
       final role = await authService.checkExistingSession();
 
       if (!mounted) return;

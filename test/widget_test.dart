@@ -7,6 +7,12 @@ void main() {
     await tester.pumpWidget(const MediQApp());
 
     // Verify that our title or welcome text appears
-    expect(find.text('Who are you booking for?'), findsOneWidget);
+    expect(find.text('MediQ'), findsOneWidget);
+    expect(find.text('OPD Queue Management'), findsOneWidget);
+
+    // Advance time past the splash delay (1800ms)
+    await tester.pump(const Duration(milliseconds: 2000));
+    // Let navigation transition complete (400ms)
+    await tester.pump(const Duration(milliseconds: 500));
   });
 }
