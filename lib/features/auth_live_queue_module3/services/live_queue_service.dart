@@ -328,34 +328,34 @@ class LiveQueueService extends ChangeNotifier {
       }
     }
 
-    // 3. Today's active appointment (prefer in-progress, avoid old missed)
+    // 3. Any active waiting / confirmed appointment (NOT completed, NOT cancelled, NOT expired)
+    // Sorted by newest booking first!
     if (pick == null) {
-      final todays = active.where((d) => d.data()['appointmentDate'] == today).toList();
-      if (todays.isNotEmpty) {
-        final inProgress = todays.where((d) => !_isFinished(_statusOf(d.data())) && _statusOf(d.data()) != 'missed').toList();
-        if (inProgress.isNotEmpty) {
-          inProgress.sort((a, b) => _orderOf(a.data()).compareTo(_orderOf(b.data())));
-          pick = inProgress.first;
-        } else {
-          pick = todays.first;
-        }
+      final validWaiting = active.where((d) {
+        final st = _statusOf(d.data());
+        return st == 'waiting' || st == 'confirmed' || st == 'approaching' || st == 'rejoined';
+      }).toList();
+
+      if (validWaiting.isNotEmpty) {
+        validWaiting.sort((a, b) {
+          final ta = _toDate(a.data()['createdAt']) ?? DateTime(2000);
+          final tb = _toDate(b.data()['createdAt']) ?? DateTime(2000);
+          return tb.compareTo(ta); // newest booking first!
+        });
+        pick = validWaiting.first;
       }
     }
 
-    // 4. Active upcoming bookings (CONFIRMED / WAITING) — SORT BY NEWEST (createdAt desc)!
+    // 4. Today's appointment if any
     if (pick == null) {
-      final validUpcoming = active.where((d) {
-        final st = _statusOf(d.data());
-        return st != 'completed' && st != 'done' && st != 'missed' && st != 'cancelled';
-      }).toList();
-
-      if (validUpcoming.isNotEmpty) {
-        validUpcoming.sort((a, b) {
+      final todays = active.where((d) => d.data()['appointmentDate'] == today).toList();
+      if (todays.isNotEmpty) {
+        todays.sort((a, b) {
           final ta = _toDate(a.data()['createdAt']) ?? DateTime(2000);
           final tb = _toDate(b.data()['createdAt']) ?? DateTime(2000);
-          return tb.compareTo(ta); // newest first!
+          return tb.compareTo(ta);
         });
-        pick = validUpcoming.first;
+        pick = todays.first;
       }
     }
 

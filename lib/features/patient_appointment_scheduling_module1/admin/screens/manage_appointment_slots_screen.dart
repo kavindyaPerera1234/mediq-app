@@ -34,14 +34,29 @@ class ManageAppointmentSlotsScreen extends StatefulWidget {
 
 class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScreen> {
   DateTime _selectedDate = DateTime.now();
-  String _selectedClinic = 'General Medicine OPD (Room 01)';
 
+  static const List<String> _defaultHospitalNames = [
+    'Colombo North Teaching Hospital (Ragama)',
+    'National Hospital of Sri Lanka',
+    'Colombo South Teaching Hospital (Kalubowila)',
+    'Lady Ridgeway Hospital for Children',
+    'Teaching Hospital Kandy',
+    'Teaching Hospital Anuradhapura',
+    'Teaching Hospital Karapitiya (Galle)',
+  ];
+
+  List<String> _hospitalNames = List.from(_defaultHospitalNames);
+  String _selectedHospital = 'Colombo North Teaching Hospital (Ragama)';
+
+  String _selectedClinic = 'General Medicine OPD';
   List<String> _clinicOptions = [
-    'General Medicine OPD (Room 01)',
-    'ENT Clinic (Room 02)',
-    'Orthopedics Clinic (Room 03)',
-    'Pediatrics Clinic (Room 04)',
-    'Cardiology Clinic (Room 05)',
+    'General Medicine OPD',
+    'Pediatric Clinic',
+    'Cardiology Clinic',
+    'Ophthalmology (Eye Clinic)',
+    'ENT & Audiology Clinic',
+    'Dental & Maxillofacial OPD',
+    'Orthopedic Clinic',
   ];
 
   final List<AdminTimeSlotConfig> _slots = [
@@ -90,45 +105,127 @@ class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScr
   ];
 
   StreamSubscription<QuerySnapshot>? _deptSub;
+  StreamSubscription<QuerySnapshot>? _hospSub;
+  StreamSubscription<QuerySnapshot>? _appointmentsSub;
+  StreamSubscription<QuerySnapshot>? _slotsSub;
+  final Map<String, List<String>> _hospitalToClinics = {};
+  Map<String, int> _realtimeCounts = {};
+  Map<String, Map<String, dynamic>> _realtimeConfigs = {};
 
   @override
   void initState() {
     super.initState();
-    _startDeptListener();
-    _loadSlotData();
+    _startFirestoreListeners();
+    _listenToSlotDataRealtime();
   }
 
   @override
   void dispose() {
     _deptSub?.cancel();
+    _hospSub?.cancel();
+    _appointmentsSub?.cancel();
+    _slotsSub?.cancel();
     super.dispose();
   }
 
-  void _startDeptListener() {
+  void _startFirestoreListeners() {
+    // 1. Listen to hospitals collection
+    _hospSub = FirebaseFirestore.instance
+        .collection('hospitals')
+        .snapshots()
+        .listen((snap) {
+      final List<String> names = [];
+      for (var doc in snap.docs) {
+        final data = doc.data();
+        final name = (data['name'] ?? '').toString().trim();
+        final isActive = data['isActive'] != false && data['isOpdAvailable'] != false;
+        if (name.isNotEmpty && isActive && !names.contains(name)) {
+          names.add(name);
+        }
+      }
+      // If no hospitals yet in Firestore, fallback to defaults
+      if (names.isEmpty) {
+        names.addAll(_defaultHospitalNames);
+      }
+
+      if (mounted) {
+        setState(() {
+          _hospitalNames = names;
+          if (!_hospitalNames.contains(_selectedHospital) && _hospitalNames.isNotEmpty) {
+            _selectedHospital = _hospitalNames.first;
+          }
+        });
+        _updateFilteredClinics();
+      }
+    });
+
+    // 2. Listen to departments collection
     _deptSub = FirebaseFirestore.instance
         .collection('departments')
         .snapshots()
         .listen((snap) {
-      final Set<String> clinics = {};
+      final Map<String, List<String>> map = {};
+
       for (final doc in snap.docs) {
         final data = doc.data();
         if (data['isActive'] == false) continue;
         final name = (data['name'] ?? '').toString().trim();
-        final room = (data['roomNumber'] ?? '').toString().trim();
-        if (name.isNotEmpty) {
-          clinics.add(room.isNotEmpty ? '$name ($room)' : name);
+        final hosp = (data['hospitalName'] ?? '').toString().trim();
+        if (name.isEmpty) continue;
+
+        if (hosp.isNotEmpty) {
+          map.putIfAbsent(hosp, () => []);
+          if (!map[hosp]!.contains(name)) {
+            map[hosp]!.add(name);
+          }
         }
       }
-      if (clinics.isNotEmpty && mounted) {
+
+      if (mounted) {
         setState(() {
-          _clinicOptions = clinics.toList();
-          if (!_clinicOptions.contains(_selectedClinic) && _clinicOptions.isNotEmpty) {
-            _selectedClinic = _clinicOptions.first;
-          }
+          _hospitalToClinics.clear();
+          _hospitalToClinics.addAll(map);
         });
-        _loadSlotData();
+        _updateFilteredClinics();
       }
     });
+  }
+
+  void _updateFilteredClinics() {
+    List<String> list = [];
+    if (_hospitalToClinics.containsKey(_selectedHospital) && _hospitalToClinics[_selectedHospital]!.isNotEmpty) {
+      list = List.from(_hospitalToClinics[_selectedHospital]!);
+    } else {
+      // Look for fuzzy matching
+      for (final entry in _hospitalToClinics.entries) {
+        final kA = entry.key.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+        final kB = _selectedHospital.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+        if (kA.contains(kB) || kB.contains(kA)) {
+          list = List.from(entry.value);
+          break;
+        }
+      }
+    }
+
+    if (list.isEmpty) {
+      list = [
+        'General Medicine OPD',
+        'Pediatric Clinic',
+        'Cardiology Clinic',
+        'Ophthalmology (Eye Clinic)',
+        'ENT & Audiology Clinic',
+        'Dental & Maxillofacial OPD',
+        'Orthopedic Clinic',
+      ];
+    }
+
+    setState(() {
+      _clinicOptions = list;
+      if (!_clinicOptions.contains(_selectedClinic)) {
+        _selectedClinic = _clinicOptions.first;
+      }
+    });
+    _listenToSlotDataRealtime();
   }
 
   bool _timesMatch(String a, String b) {
@@ -145,24 +242,38 @@ class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScr
            (cleanA.contains('ortho') && cleanB.contains('ortho')) ||
            (cleanA.contains('pedia') && cleanB.contains('pedia')) ||
            (cleanA.contains('cardio') && cleanB.contains('cardio')) ||
+           (cleanA.contains('eye') && cleanB.contains('eye')) ||
+           (cleanA.contains('dental') && cleanB.contains('dental')) ||
            cleanA == cleanB;
   }
 
-  Future<void> _loadSlotData() async {
-    try {
-      final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+  bool _hospitalMatches(String a, String b) {
+    final cleanA = a.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    final cleanB = b.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    if (cleanA.isEmpty || cleanB.isEmpty) return true;
+    return cleanA.contains(cleanB) || cleanB.contains(cleanA);
+  }
 
-      // 1. Fetch appointments for this date to calculate actual bookings
-      final appSnap = await FirebaseFirestore.instance
-          .collection('appointments')
-          .where('appointmentDate', isEqualTo: dateStr)
-          .get()
-          .timeout(const Duration(seconds: 4));
+  void _listenToSlotDataRealtime() {
+    _appointmentsSub?.cancel();
+    _slotsSub?.cancel();
 
+    final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+
+    // 1. Live stream of appointments for this date
+    _appointmentsSub = FirebaseFirestore.instance
+        .collection('appointments')
+        .where('appointmentDate', isEqualTo: dateStr)
+        .snapshots()
+        .listen((appSnap) {
       final Map<String, int> counts = {};
       for (final doc in appSnap.docs) {
         final data = doc.data();
         if (data['status'] == 'cancelled') continue;
+
+        final hosp = (data['hospitalName'] ?? data['hospitalId'] ?? '').toString();
+        if (hosp.isNotEmpty && !_hospitalMatches(hosp, _selectedHospital)) continue;
+
         final slotTime = (data['timeSlot'] as String? ?? '').trim();
         final clinic = (data['departmentName'] ?? data['clinicName'] ?? data['departmentId'] ?? '').toString();
 
@@ -172,14 +283,18 @@ class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScr
           counts[slotTime] = (counts[slotTime] ?? 0) + 1;
         }
       }
+      _realtimeCounts = counts;
+      _applySlotUpdates();
+    }, onError: (e) {
+      debugPrint('Error listening to live appointments: $e');
+    });
 
-      // 2. Fetch slot configs from appointment_slots
-      final slotSnap = await FirebaseFirestore.instance
-          .collection('appointment_slots')
-          .where('date', isEqualTo: dateStr)
-          .get()
-          .timeout(const Duration(seconds: 4));
-
+    // 2. Live stream of appointment_slots configs for this date
+    _slotsSub = FirebaseFirestore.instance
+        .collection('appointment_slots')
+        .where('date', isEqualTo: dateStr)
+        .snapshots()
+        .listen((slotSnap) {
       final Map<String, Map<String, dynamic>> configs = {};
       for (final doc in slotSnap.docs) {
         final data = doc.data();
@@ -191,42 +306,45 @@ class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScr
           }
         }
       }
+      _realtimeConfigs = configs;
+      _applySlotUpdates();
+    }, onError: (e) {
+      debugPrint('Error listening to live slot configs: $e');
+    });
+  }
 
-      if (mounted) {
-        setState(() {
-          for (final slot in _slots) {
-            int count = counts[slot.slotRange] ?? 0;
-            if (count == 0) {
-              for (final entry in counts.entries) {
-                if (_timesMatch(entry.key, slot.slotRange)) {
-                  count += entry.value;
-                }
-              }
-            }
-            slot.bookedCount = count;
-
-            if (configs.containsKey(slot.id)) {
-              final cfg = configs[slot.id]!;
-              if (cfg['capacity'] is num) {
-                slot.capacity = (cfg['capacity'] as num).toInt();
-              }
-              if (cfg['isClosed'] is bool) {
-                slot.isClosed = cfg['isClosed'] as bool;
-              }
-              if (cfg['closureReason'] is String) {
-                slot.reason = cfg['closureReason'] as String;
-              }
-            } else {
-              slot.capacity = 25;
-              slot.isClosed = false;
-              slot.reason = '';
+  void _applySlotUpdates() {
+    if (!mounted) return;
+    setState(() {
+      for (final slot in _slots) {
+        int count = _realtimeCounts[slot.slotRange] ?? 0;
+        if (count == 0) {
+          for (final entry in _realtimeCounts.entries) {
+            if (_timesMatch(entry.key, slot.slotRange)) {
+              count += entry.value;
             }
           }
-        });
+        }
+        slot.bookedCount = count;
+
+        if (_realtimeConfigs.containsKey(slot.id)) {
+          final cfg = _realtimeConfigs[slot.id]!;
+          if (cfg['capacity'] is num) {
+            slot.capacity = (cfg['capacity'] as num).toInt();
+          }
+          if (cfg['isClosed'] is bool) {
+            slot.isClosed = cfg['isClosed'] as bool;
+          }
+          if (cfg['closureReason'] is String) {
+            slot.reason = cfg['closureReason'] as String;
+          }
+        } else {
+          slot.capacity = 25;
+          slot.isClosed = false;
+          slot.reason = '';
+        }
       }
-    } catch (e) {
-      debugPrint('ManageAppointmentSlotsScreen: _loadSlotData notice: $e');
-    }
+    });
   }
 
   void _editSlotCapacity(AdminTimeSlotConfig slot) {
@@ -242,10 +360,16 @@ class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScr
               title: Text('Adjust Capacity • ${slot.slotRange}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Text(
+                    'Hospital: $_selectedHospital\nClinic: $_selectedClinic',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                  ),
+                  const SizedBox(height: 8),
                   const Text(
                     'MoH Guideline: Max slot capacity is capped at 25 to prevent waiting hall overcrowding.',
-                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
                   ),
                   const SizedBox(height: 16),
                   Container(
@@ -367,12 +491,12 @@ class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScr
             children: [
               Icon(Icons.warning_amber_rounded, color: AppColors.error),
               SizedBox(width: 8),
-              Text('Close All Slots Today?', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              Text('Emergency Close All Slots?', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ],
           ),
-          content: const Text(
-            'This will mark all 6 time slots as CLOSED (e.g. unexpected doctor absence or public holiday). Patients will not be able to book into this date.',
-            style: TextStyle(fontSize: 13, height: 1.4),
+          content: Text(
+            'This will mark all 6 time slots as CLOSED for "$_selectedClinic" at "$_selectedHospital" on ${DateFormat('yyyy-MM-dd').format(_selectedDate)}.\n\nPatients will not be able to book appointments for this date.',
+            style: const TextStyle(fontSize: 13, height: 1.4),
           ),
           actions: [
             TextButton(
@@ -409,7 +533,9 @@ class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScr
 
   @override
   Widget build(BuildContext context) {
-    final formattedDate = DateFormat('EEEE, d MMMM yyyy').format(_selectedDate);
+    final totalBooked = _slots.fold<int>(0, (acc, s) => acc + s.bookedCount);
+    final totalCapacity = _slots.fold<int>(0, (acc, s) => acc + (s.isClosed ? 0 : s.capacity));
+    final closedCount = _slots.where((s) => s.isClosed).length;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -437,55 +563,19 @@ class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScr
       ),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
+          constraints: const BoxConstraints(maxWidth: 540),
           child: Column(
             children: [
-              // Date & Clinic Selection Header
+              // Top Hospital, Clinic & Date Controls Header
               Container(
                 padding: const EdgeInsets.all(16),
                 color: AppColors.surface,
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Date Row
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Selected Clinic Date', style: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
-                            const SizedBox(height: 2),
-                            Text(formattedDate, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                          ],
-                        ),
-                        OutlinedButton.icon(
-                          icon: const Icon(Icons.calendar_month_outlined, size: 16),
-                          label: const Text('Change Date', style: TextStyle(fontSize: 12)),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFF1E293B),
-                            side: const BorderSide(color: Color(0xFF1E293B)),
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          ),
-                          onPressed: () async {
-                            final picked = await showDatePicker(
-                              context: context,
-                              initialDate: _selectedDate,
-                              firstDate: DateTime.now().subtract(const Duration(days: 1)),
-                              lastDate: DateTime.now().add(const Duration(days: 60)),
-                            );
-                            if (picked != null) {
-                              setState(() {
-                                _selectedDate = picked;
-                              });
-                              _loadSlotData();
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Clinic Dropdown
+                    // 1. Hospital Selector
+                    const Text('Government Hospital:', style: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 5),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       decoration: BoxDecoration(
@@ -495,20 +585,147 @@ class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScr
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
-                          value: _selectedClinic,
+                          value: _hospitalNames.contains(_selectedHospital) ? _selectedHospital : (_hospitalNames.isNotEmpty ? _hospitalNames.first : null),
                           isExpanded: true,
-                          items: _clinicOptions.map((c) {
-                            return DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)));
+                          icon: const Icon(Icons.local_hospital_rounded, color: AppColors.primary, size: 20),
+                          items: _hospitalNames.map((name) {
+                            return DropdownMenuItem(
+                              value: name,
+                              child: Text(name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
+                            );
                           }).toList(),
                           onChanged: (val) {
                             if (val != null) {
                               setState(() {
-                                _selectedClinic = val;
+                                _selectedHospital = val;
                               });
-                              _loadSlotData();
+                              _updateFilteredClinics();
                             }
                           },
                         ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // 2. Clinic and Date Row
+                    Row(
+                      children: [
+                        // Clinic Dropdown
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('OPD Clinic:', style: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 5),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10),
+                                decoration: BoxDecoration(
+                                  color: AppColors.background,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: AppColors.border),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<String>(
+                                    value: _clinicOptions.contains(_selectedClinic) ? _selectedClinic : (_clinicOptions.isNotEmpty ? _clinicOptions.first : null),
+                                    isExpanded: true,
+                                    icon: Icon(Icons.medical_services_rounded, color: AppColors.accentColor, size: 18),
+                                    items: _clinicOptions.map((c) {
+                                      return DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis));
+                                    }).toList(),
+                                    onChanged: (val) {
+                                      if (val != null) {
+                                        setState(() {
+                                          _selectedClinic = val;
+                                        });
+                                        _listenToSlotDataRealtime();
+                                      }
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+
+                        // Date Button
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Clinic Date:', style: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 5),
+                              InkWell(
+                                onTap: () async {
+                                  final picked = await showDatePicker(
+                                    context: context,
+                                    initialDate: _selectedDate,
+                                    firstDate: DateTime.now().subtract(const Duration(days: 1)),
+                                    lastDate: DateTime.now().add(const Duration(days: 60)),
+                                  );
+                                  if (picked != null) {
+                                    setState(() {
+                                      _selectedDate = picked;
+                                    });
+                                    _listenToSlotDataRealtime();
+                                  }
+                                },
+                                borderRadius: BorderRadius.circular(10),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.background,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: AppColors.border),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(DateFormat('MMM dd').format(_selectedDate), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                      const Icon(Icons.calendar_month_rounded, size: 16, color: AppColors.primary),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    // 3. User-friendly summary bar
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.people_alt_rounded, size: 16, color: AppColors.primary),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Booked: $totalBooked / $totalCapacity Patients',
+                                style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            closedCount > 0 ? '$closedCount Closed' : 'All 6 Slots Active',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: closedCount > 0 ? AppColors.error : AppColors.statusGreen,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -524,12 +741,13 @@ class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScr
                   itemBuilder: (context, index) {
                     final slot = _slots[index];
                     final fillRatio = (slot.bookedCount / slot.capacity).clamp(0.0, 1.0);
+                    final available = (slot.capacity - slot.bookedCount).clamp(0, slot.capacity);
 
                     return Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: slot.isClosed ? const Color(0xFFF1F5F9) : AppColors.surface,
+                        color: slot.isClosed ? const Color(0xFFF8FAFC) : AppColors.surface,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
                           color: slot.isClosed
@@ -538,6 +756,13 @@ class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScr
                                   ? AppColors.statusOrange.withValues(alpha: 0.4)
                                   : AppColors.border,
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.02),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -548,7 +773,7 @@ class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScr
                               Row(
                                 children: [
                                   Icon(
-                                    Icons.access_time_rounded,
+                                    Icons.access_time_filled_rounded,
                                     size: 18,
                                     color: slot.isClosed ? AppColors.textMuted : AppColors.primary,
                                   ),
@@ -570,23 +795,23 @@ class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScr
                                   color: slot.isClosed
                                       ? AppColors.error.withValues(alpha: 0.12)
                                       : slot.isFull
-                                          ? AppColors.errorLight
-                                          : AppColors.successLight,
+                                          ? AppColors.statusOrangeLight
+                                          : AppColors.statusGreenLight,
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
                                   slot.isClosed
-                                      ? 'CLOSED'
+                                      ? 'CLOSED (Booking Paused)'
                                       : slot.isFull
                                           ? 'FULL (${slot.capacity}/${slot.capacity})'
-                                          : 'ACTIVE',
+                                          : 'ACTIVE ($available Available)',
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
                                     color: slot.isClosed
                                         ? AppColors.error
                                         : slot.isFull
-                                            ? AppColors.error
+                                            ? AppColors.statusOrange
                                             : AppColors.statusGreen,
                                   ),
                                 ),
@@ -601,43 +826,47 @@ class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScr
                             child: LinearProgressIndicator(
                               value: slot.isClosed ? 0 : fillRatio,
                               minHeight: 6,
-                              backgroundColor: AppColors.border,
+                              backgroundColor: AppColors.border.withValues(alpha: 0.5),
                               valueColor: AlwaysStoppedAnimation<Color>(
                                 slot.isClosed
                                     ? AppColors.textMuted
                                     : slot.isFull
-                                        ? AppColors.error
+                                        ? AppColors.statusOrange
                                         : AppColors.statusGreen,
                               ),
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 10),
 
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                '${slot.bookedCount} / ${slot.capacity} Patients Booked',
+                                '${slot.bookedCount} of ${slot.capacity} Patients Booked',
                                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
                               ),
                               Row(
                                 children: [
                                   // Edit capacity button
-                                  TextButton.icon(
-                                    icon: const Icon(Icons.tune_rounded, size: 14),
-                                    label: const Text('Cap Limit', style: TextStyle(fontSize: 12)),
+                                  OutlinedButton.icon(
+                                    icon: const Icon(Icons.tune_rounded, size: 13),
+                                    label: const Text('Cap Limit', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppColors.primary,
+                                      side: const BorderSide(color: AppColors.primary),
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    ),
                                     onPressed: () => _editSlotCapacity(slot),
                                   ),
-                                  const SizedBox(width: 4),
+                                  const SizedBox(width: 6),
 
                                   // Close / Open toggle button
-                                  OutlinedButton(
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: slot.isClosed ? AppColors.statusGreen : AppColors.error,
-                                      side: BorderSide(
-                                        color: slot.isClosed ? AppColors.statusGreen : AppColors.error,
-                                      ),
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: slot.isClosed ? AppColors.statusGreen : AppColors.error,
+                                      foregroundColor: Colors.white,
                                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      elevation: 0,
                                     ),
                                     onPressed: () => _toggleSlotClosure(slot),
                                     child: Text(

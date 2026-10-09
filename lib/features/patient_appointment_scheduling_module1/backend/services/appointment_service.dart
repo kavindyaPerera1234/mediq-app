@@ -473,6 +473,14 @@ class AppointmentService {
               .toLowerCase(),
         );
       }
+      if (activeProfile.patientId.trim().isNotEmpty && activeProfile.patientId.trim() != 'patient_default') {
+        lookupIds.add(activeProfile.patientId.trim().toLowerCase());
+      }
+
+      // If no valid patient identity is available, do not return other people's appointments
+      if (lookupIds.isEmpty) {
+        return Stream.value([]);
+      }
 
       return _appointmentsRef
           .snapshots()

@@ -37,6 +37,26 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
   final Map<String, List<OpdClinic>> _hospitalClinics = {};
   List<QueryDocumentSnapshot<Map<String, dynamic>>> _lastHospitalDocs = [];
   bool _isLoading = true;
+  String? _selectedHospitalId;
+  GovernmentHospital? _selectedHospital;
+
+  void _proceedToClinicSelection() {
+    if (_selectedHospital == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        settings: const RouteSettings(name: 'ClinicSelection'),
+        builder: (context) => ClinicSelectionScreen(
+          hospital: _selectedHospital!,
+          isCaregiverBooking: widget.isCaregiverBooking,
+          patientName: widget.patientName,
+          patientNic: widget.patientNic,
+          relationship: widget.relationship,
+          priority: widget.priority,
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -318,6 +338,7 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
               ),
             ),
           ),
+          bottomNavigationBar: _buildBottomContinueBar(),
         );
       },
     );
@@ -550,52 +571,53 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
 
   // Polished Hospital Card
   Widget _buildHospitalCard(GovernmentHospital hospital) {
+    final isSelected = _selectedHospitalId == hospital.id;
+
     return InkWell(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            settings: const RouteSettings(name: 'ClinicSelection'),
-            builder: (context) => ClinicSelectionScreen(
-              hospital: hospital,
-              isCaregiverBooking: widget.isCaregiverBooking,
-              patientName: widget.patientName,
-              patientNic: widget.patientNic,
-              relationship: widget.relationship,
-              priority: widget.priority,
-            ),
-          ),
-        );
+        setState(() {
+          _selectedHospitalId = hospital.id;
+          _selectedHospital = hospital;
+        });
       },
       borderRadius: BorderRadius.circular(16),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.cardSurface,
+          color: isSelected
+              ? const Color(0xFFF4F8FC)
+              : AppColors.cardSurface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.cardBorder),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.cardBorder,
+            width: isSelected ? 1.8 : 1.0,
+          ),
           boxShadow: [
             BoxShadow(
-              color: AppColors.isDark ? Colors.black26 : AppColors.textDark.withValues(alpha: 0.03),
-              blurRadius: 6,
+              color: isSelected
+                  ? AppColors.primary.withValues(alpha: 0.08)
+                  : (AppColors.isDark ? Colors.black26 : AppColors.textDark.withValues(alpha: 0.02)),
+              blurRadius: isSelected ? 6 : 4,
               offset: const Offset(0, 2),
             ),
           ],
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Medical Icon Badge
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.chipBg,
+                color: isSelected
+                    ? AppColors.primary.withValues(alpha: 0.1)
+                    : AppColors.chipBg,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 Icons.local_hospital_rounded,
-                color: AppColors.accentColor,
+                color: AppColors.primary,
                 size: 24,
               ),
             ),
@@ -611,7 +633,7 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.headingText,
+                      color: isSelected ? AppColors.primary : AppColors.headingText,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -680,13 +702,116 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
             ),
 
             const SizedBox(width: 10),
-            // Forward Chevron Arrow
-            Padding(
-              padding: const EdgeInsets.only(top: 8.0),
-              child: Icon(
-                Icons.arrow_forward_ios_rounded,
-                color: AppColors.bodyText,
-                size: 15,
+
+            // Subtle & Clean Selection Indicator Badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppColors.statusGreenLight
+                    : AppColors.background,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: isSelected
+                      ? AppColors.statusGreen.withValues(alpha: 0.5)
+                      : AppColors.cardBorder,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                    size: 14,
+                    color: isSelected ? AppColors.statusGreen : AppColors.bodyText,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    isSelected ? 'Selected' : 'Select',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      color: isSelected ? AppColors.statusGreen : AppColors.bodyText,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Sticky Bottom Navigation Bar for deliberate user-controlled step navigation
+  Widget _buildBottomContinueBar() {
+    final hasSelection = _selectedHospital != null;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.cardSurface,
+        border: Border(top: BorderSide(color: AppColors.cardBorder, width: 1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, -3),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (hasSelection)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle_rounded, size: 14, color: AppColors.statusGreen),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Selected: ${_selectedHospital!.name}',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.headingText),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: hasSelection ? _proceedToClinicSelection : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: hasSelection ? AppColors.accentColor : AppColors.cardBorder,
+                  foregroundColor: hasSelection ? Colors.white : AppColors.bodyText,
+                  disabledBackgroundColor: AppColors.cardBorder.withValues(alpha: 0.5),
+                  disabledForegroundColor: AppColors.bodyText.withValues(alpha: 0.6),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      hasSelection ? 'Continue to OPD Clinic' : 'Select a Hospital to Continue',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: hasSelection ? Colors.white : AppColors.bodyText,
+                      ),
+                    ),
+                    if (hasSelection) ...[
+                      const SizedBox(width: 8),
+                      const Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white),
+                    ],
+                  ],
+                ),
               ),
             ),
           ],

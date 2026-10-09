@@ -845,33 +845,37 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
               Expanded(
                 child: filtered.isEmpty
                     ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.medical_services_outlined, size: 48, color: AppColors.textMuted),
-                            const SizedBox(height: 10),
-                            const Text('No clinics configured for this hospital', style: TextStyle(color: AppColors.textSecondary)),
-                            const SizedBox(height: 12),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              alignment: WrapAlignment.center,
-                              children: [
-                                ElevatedButton.icon(
-                                  icon: const Icon(Icons.playlist_add_check_rounded, size: 18),
-                                  label: const Text('Populate Standard Clinics'),
-                                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
-                                  onPressed: _confirmPopulateStandardClinics,
+                        child: Padding(
+                          padding: const EdgeInsets.all(32.0),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.local_hospital_outlined,
+                                size: 56,
+                                color: AppColors.textMuted.withValues(alpha: 0.5),
+                              ),
+                              const SizedBox(height: 14),
+                              const Text(
+                                'No OPD Clinics Configured',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textDark,
                                 ),
-                                OutlinedButton.icon(
-                                  icon: const Icon(Icons.add_rounded, size: 18),
-                                  label: const Text('Add Custom Clinic'),
-                                  style: OutlinedButton.styleFrom(foregroundColor: AppColors.primary),
-                                  onPressed: () => _showAddEditDepartmentDialog(),
+                              ),
+                              const SizedBox(height: 6),
+                              const Text(
+                                'No clinics have been added for this hospital yet.\nTap "+ Add Clinic" below to add one.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.textSecondary,
+                                  height: 1.4,
                                 ),
-                              ],
-                            ),
-                          ],
+                              ),
+                            ],
+                          ),
                         ),
                       )
                     : ListView.builder(

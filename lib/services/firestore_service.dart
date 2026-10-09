@@ -83,7 +83,7 @@ class FirestoreService {
     return doc.exists ? QueueSession.fromFirestore(doc) : null;
   }
 
-  // --- Dual-Collection Merged Queue Stream ---
+  // --- Dual-Collection Merged Queue Stream with Zero Date Restrictions ---
   Stream<List<QueueEntry>> streamPatientQueue(String sessionId, {String? hospitalId, String? departmentId}) {
     String reqHosp = hospitalId ?? '';
     String reqDept = departmentId ?? '';
@@ -99,74 +99,142 @@ class FirestoreService {
     final normalizedHosp = (reqHosp == 'HOSP-001') ? 'nhsl' : reqHosp;
     final normalizedDept = (reqDept == 'DEPT-001') ? 'gen_med' : reqDept;
 
-    return _db
-        .collection(AppConstants.queueEntriesCollection)
-        .where('queueSessionId', isEqualTo: sessionId)
-        .snapshots()
-        .asyncMap((snapshot) async {
-      List<QueueEntry> entries = [];
-      Set<String> existingAptIds = {};
+    final targetH = normalizedHosp.toLowerCase();
+    final targetD = normalizedDept.toLowerCase();
 
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-        String patientName = data['patientName'] ?? 'Unknown Patient';
-        if ((patientName.isEmpty || patientName == 'Unknown Patient') && data['patientId'] != null) {
-          final userDoc = await _db.collection(AppConstants.usersCollection).doc(data['patientId']).get();
-          if (userDoc.exists && userDoc.data() != null) {
-            patientName = userDoc.data()!['fullName'] ?? patientName;
-          }
-        }
-        final entry = QueueEntry.fromFirestore(doc, patientName: patientName);
-        entries.add(entry);
-        if (entry.appointmentId.isNotEmpty) {
-          existingAptIds.add(entry.appointmentId);
+    // Stream both queue_entries and appointments in real-time without date restrictions!
+    return _db.collection(AppConstants.appointmentsCollection).snapshots().asyncMap((aptSnapshot) async {
+      List<QueueEntry> entries = [];
+      Set<String> processedAptIds = {};
+
+      // 1. Fetch queue_entries to get latest status if any
+      final qeSnapshot = await _db.collection(AppConstants.queueEntriesCollection).get();
+      final Map<String, DocumentSnapshot<Map<String, dynamic>>> qeByAptId = {};
+      final Map<String, DocumentSnapshot<Map<String, dynamic>>> qeById = {};
+
+      for (var qeDoc in qeSnapshot.docs) {
+        final data = qeDoc.data();
+        qeById[qeDoc.id] = qeDoc;
+        final aptId = (data['appointmentId'] ?? '').toString();
+        if (aptId.isNotEmpty) {
+          qeByAptId[aptId] = qeDoc;
         }
       }
 
-      // Merge booked appointments from Module 1 if not already in queue_entries
-      try {
-        final dateStr = sessionId.contains('_') ? sessionId.split('_').last : '';
-        final aptQuery = _db.collection(AppConstants.appointmentsCollection);
-        QuerySnapshot<Map<String, dynamic>> aptSnap;
-        if (dateStr.isNotEmpty) {
-          aptSnap = await aptQuery.where('appointmentDate', isEqualTo: dateStr).get();
+      // 2. Process all appointments matching hospital & clinic (NO DATE RULES)
+      for (var aptDoc in aptSnapshot.docs) {
+        final aptData = aptDoc.data();
+        final aptId = aptDoc.id;
+
+        final rawAptH = (aptData['hospitalId'] ?? '').toString().toLowerCase();
+        final rawAptD = (aptData['departmentId'] ?? aptData['clinicId'] ?? '').toString().toLowerCase();
+        final aptH = (rawAptH == 'hosp-001' || rawAptH.isEmpty) ? 'nhsl' : rawAptH;
+
+        String aptD = rawAptD;
+        if (aptD == 'dept-001' || aptD.contains('gen_med')) aptD = 'gen_med';
+        else if (aptD.contains('ortho')) aptD = 'ortho';
+        else if (aptD.contains('ent')) aptD = 'ent';
+        else if (aptD.contains('derma')) aptD = 'derma';
+        else if (aptD.contains('pedia')) aptD = 'pedia';
+
+        final hospMatches = targetH.isEmpty || targetH == 'all' || aptH.isEmpty || aptH == targetH || targetH.contains(aptH) || aptH.contains(targetH);
+
+        bool deptMatches = false;
+        if (targetD.isEmpty || targetD == 'all') {
+          deptMatches = true; // Show EVERY clinic when All OPD Clinics is selected!
+        } else if (targetD == 'gen_med') {
+          deptMatches = aptD == 'gen_med' || aptD.contains('gen');
+        } else if (targetD == 'ortho') {
+          deptMatches = aptD == 'ortho';
+        } else if (targetD == 'ent' || targetD == 'dept_ent') {
+          deptMatches = aptD == 'ent' || aptD == 'dept_ent';
+        } else if (targetD == 'derma') {
+          deptMatches = aptD == 'derma';
+        } else if (targetD == 'pedia' || targetD == 'dept_pediatrics') {
+          deptMatches = aptD == 'pedia' || aptD == 'dept_pediatrics';
         } else {
-          aptSnap = await aptQuery.get();
+          deptMatches = aptD == targetD;
         }
 
-        for (var aptDoc in aptSnap.docs) {
-          final aptData = aptDoc.data();
-          final aptId = aptDoc.id;
-          final aptH = (aptData['hospitalId'] ?? '') == 'HOSP-001' ? 'nhsl' : (aptData['hospitalId'] ?? '');
-          final aptD = (aptData['departmentId'] ?? '') == 'DEPT-001' ? 'gen_med' : (aptData['departmentId'] ?? '');
+        // When staff is viewing "All OPD Clinics", show ALL appointments across hospitals & clinics!
+        final shouldInclude = (targetD == 'all') ? true : (hospMatches && deptMatches);
 
-          if ((aptH == normalizedHosp || aptH.isEmpty || normalizedHosp.isEmpty) &&
-              (aptD == normalizedDept || aptD.isEmpty || normalizedDept.isEmpty) &&
-              !existingAptIds.contains(aptId)) {
-            String patientName = aptData['patientName'] ?? 'Patient';
-            if (patientName.isEmpty && aptData['patientId'] != null) {
-              final userDoc = await _db.collection(AppConstants.usersCollection).doc(aptData['patientId']).get();
-              if (userDoc.exists && userDoc.data() != null) {
-                patientName = userDoc.data()!['fullName'] ?? 'Patient';
-              }
+        if (shouldInclude) {
+          processedAptIds.add(aptId);
+
+          // Check if queue_entry has an updated status (e.g., called, on_hold, completed)
+          final qeDoc = qeByAptId[aptId] ?? qeById[aptId];
+          final qeData = qeDoc?.data();
+
+          final statusStr = (qeData?['status'] ?? aptData['status'] ?? 'waiting').toString().toLowerCase();
+          final effectiveStatus = statusStr == 'called'
+              ? 'called'
+              : (statusStr == 'completed'
+                  ? 'completed'
+                  : (statusStr == 'on_hold'
+                      ? 'on_hold'
+                      : (statusStr == 'missed' ? 'missed' : 'waiting')));
+
+          String patientName = (qeData?['patientName'] ?? aptData['patientName'] ?? '').toString();
+          final patientId = (qeData?['patientId'] ?? aptData['patientId'] ?? '').toString();
+
+          if (patientName.isEmpty || patientName == 'Patient' || patientName == 'Unknown Patient') {
+            if (patientId.isNotEmpty) {
+              try {
+                final userDoc = await _db.collection(AppConstants.usersCollection).doc(patientId).get();
+                if (userDoc.exists && userDoc.data() != null) {
+                  patientName = userDoc.data()!['fullName'] ?? 'Patient';
+                }
+              } catch (_) {}
             }
-            final token = aptData['tokenNumber'] ?? aptData['tokenCode'] ?? 'A-${entries.length + 10}';
-            entries.add(QueueEntry(
-              queueEntryId: aptId,
-              queueSessionId: sessionId,
-              appointmentId: aptId,
-              patientId: aptData['patientId'] ?? '',
-              tokenNumber: token,
-              tokenCode: token,
-              status: aptData['status'] == 'called' ? 'called' : (aptData['status'] == 'completed' ? 'completed' : 'waiting'),
-              queuePosition: entries.length + 1,
-              estimatedWaitMinutes: entries.length * 10,
-              priority: aptData['priority'] ?? 'normal',
-              patientName: patientName,
-            ));
           }
+          if (patientName.isEmpty) patientName = 'Patient';
+
+          final token = (qeData?['tokenNumber'] ?? qeData?['tokenCode'] ?? aptData['tokenNumber'] ?? aptData['tokenCode'] ?? 'A-${entries.length + 1}').toString();
+
+          entries.add(QueueEntry(
+            queueEntryId: qeDoc?.id ?? aptId,
+            queueSessionId: sessionId,
+            appointmentId: aptId,
+            patientId: patientId,
+            tokenNumber: token,
+            tokenCode: token,
+            status: effectiveStatus,
+            queuePosition: entries.length + 1,
+            estimatedWaitMinutes: entries.length * 10,
+            priority: (qeData?['priority'] ?? aptData['priority'] ?? 'normal').toString(),
+            patientName: patientName,
+          ));
         }
-      } catch (_) {}
+      }
+
+      // 3. Also include any loose queue_entries not matched in appointments
+      for (var qeDoc in qeSnapshot.docs) {
+        final qeData = qeDoc.data();
+        final aptId = (qeData['appointmentId'] ?? '').toString();
+        if (processedAptIds.contains(aptId) || processedAptIds.contains(qeDoc.id)) {
+          continue;
+        }
+
+        final rawH = (qeData['hospitalId'] ?? '').toString().toLowerCase();
+        final rawD = (qeData['departmentId'] ?? '').toString().toLowerCase();
+        final qeH = (rawH == 'hosp-001' || rawH.isEmpty) ? 'nhsl' : rawH;
+
+        String qeD = rawD;
+        if (qeD == 'dept-001' || qeD.contains('gen_med')) qeD = 'gen_med';
+        else if (qeD.contains('ortho')) qeD = 'ortho';
+        else if (qeD.contains('ent')) qeD = 'ent';
+        else if (qeD.contains('derma')) qeD = 'derma';
+        else if (qeD.contains('pedia')) qeD = 'pedia';
+
+        final hospMatches = qeH.isEmpty || targetH.isEmpty || qeH == targetH || targetH.contains(qeH) || qeH.contains(targetH);
+        final deptMatches = targetD.isEmpty || targetD == 'all' || qeD == targetD;
+
+        if (hospMatches && deptMatches) {
+          final entry = QueueEntry.fromFirestore(qeDoc);
+          entries.add(entry);
+        }
+      }
 
       // Accurate Queue Sorting: Emergency Priority -> Queue Position -> Numerical Token Number
       entries.sort((a, b) {

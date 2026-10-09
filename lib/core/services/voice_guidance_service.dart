@@ -7,14 +7,14 @@ import 'voice_speaker_stub.dart'
     if (dart.library.js) 'voice_speaker_web.dart' as speaker;
 
 class VoiceGuidanceService {
-  /// Speaks the given text aloud if Voice Guidance is enabled
-  static void speak(String text, {BuildContext? context}) {
-    if (!AppAccessibility.isVoiceGuidance.value) return;
+  /// Speaks the given text aloud if Voice Guidance is enabled (or forced during tests)
+  static void speak(String text, {BuildContext? context, bool force = false}) {
+    if (!force && !AppAccessibility.isVoiceGuidance.value) return;
 
     // 1. Native Flutter Semantics announcement for TalkBack / VoiceOver / Narrator
     SemanticsService.announce(text, TextDirection.ltr);
 
-    // 2. Audible speech via Web Speech API (when running on Chrome/Edge Web)
+    // 2. Audible speech via Web Speech API & Hospital Chime
     try {
       speaker.speakAloud(text);
     } catch (e) {
@@ -33,7 +33,7 @@ class VoiceGuidanceService {
               Expanded(
                 child: Text(
                   text,
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.white),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -42,7 +42,7 @@ class VoiceGuidanceService {
           ),
           backgroundColor: const Color(0xFF0F172A),
           behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 3),
+          duration: const Duration(seconds: 4),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );

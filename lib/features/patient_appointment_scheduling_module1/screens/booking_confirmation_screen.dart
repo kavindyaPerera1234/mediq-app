@@ -6,8 +6,9 @@ import '../../../core/constants/app_translations.dart';
 import '../backend/backend.dart';
 import 'patient_main_screen.dart';
 import '../../token_lifecycle_notification_module2/screens/digital_token_details_screen.dart';
+import '../../../core/services/voice_guidance_service.dart';
 
-class BookingConfirmationScreen extends StatelessWidget {
+class BookingConfirmationScreen extends StatefulWidget {
   final GovernmentHospital hospital;
   final OpdClinic clinic;
   final DateTime selectedDate;
@@ -36,8 +37,29 @@ class BookingConfirmationScreen extends StatelessWidget {
   });
 
   @override
+  State<BookingConfirmationScreen> createState() => _BookingConfirmationScreenState();
+}
+
+class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (AppAccessibility.isVoiceGuidance.value) {
+        _speakConfirmation();
+      }
+    });
+  }
+
+  void _speakConfirmation() {
+    final formattedDate = DateFormat('EEEE, d MMMM').format(widget.selectedDate);
+    final msg = 'Your OPD appointment is successfully confirmed! Token number ${widget.tokenNumber} for ${widget.clinic.name}, room ${widget.clinic.roomNumber} at ${widget.hospital.name}. Date: $formattedDate, allocated slot: ${widget.selectedTimeSlot}.';
+    VoiceGuidanceService.speak(msg, context: context, force: true);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final formattedDate = DateFormat('EEEE, d MMMM yyyy').format(selectedDate);
+    final formattedDate = DateFormat('EEEE, d MMMM yyyy').format(widget.selectedDate);
 
     return AnimatedBuilder(
       animation: Listenable.merge([AppAccessibility.isHighContrastMode, AppAccessibility.currentLanguage]),
@@ -55,6 +77,13 @@ class BookingConfirmationScreen extends StatelessWidget {
             centerTitle: true,
             elevation: isDark ? 1 : 0,
             automaticallyImplyLeading: false,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.volume_up_rounded, color: Colors.white),
+                tooltip: 'Listen to Details',
+                onPressed: _speakConfirmation,
+              ),
+            ],
           ),
           body: Center(
             child: ConstrainedBox(
@@ -159,7 +188,7 @@ class BookingConfirmationScreen extends StatelessWidget {
 
                                       // Big Token Code
                                       Text(
-                                        tokenNumber,
+                                        widget.tokenNumber,
                                         style: TextStyle(
                                           fontSize: 42,
                                           fontWeight: FontWeight.w800,
@@ -169,11 +198,30 @@ class BookingConfirmationScreen extends StatelessWidget {
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        '${clinic.name} • ${clinic.roomNumber}',
+                                        '${widget.clinic.name} • ${widget.clinic.roomNumber}',
                                         style: TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w600,
                                           color: AppColors.headingText,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 10),
+
+                                      // Audio Announcement Button
+                                      OutlinedButton.icon(
+                                        onPressed: _speakConfirmation,
+                                        icon: const Icon(Icons.volume_up_rounded, size: 16),
+                                        label: Text(
+                                          AppAccessibility.currentLanguage.value == 'si'
+                                              ? '🔊 විස්තර හඬින් අසන්න'
+                                              : (AppAccessibility.currentLanguage.value == 'ta' ? '🔊 விவரங்களை கேட்கவும்' : '🔊 Listen to Details'),
+                                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                        ),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: AppColors.accentColor,
+                                          side: BorderSide(color: AppColors.accentColor.withValues(alpha: 0.5)),
+                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                         ),
                                       ),
                                     ],
@@ -198,15 +246,15 @@ class BookingConfirmationScreen extends StatelessWidget {
                                   padding: const EdgeInsets.all(18),
                                   child: Column(
                                     children: [
-                                      _buildDetailRow(AppTranslations.tr('patientInfo'), patientName),
+                                      _buildDetailRow(AppTranslations.tr('patientInfo'), widget.patientName),
                                       const SizedBox(height: 10),
-                                      _buildDetailRow(AppTranslations.tr('nicOrBirthCert').replaceAll(' *', ''), patientNic),
+                                      _buildDetailRow(AppTranslations.tr('nicOrBirthCert').replaceAll(' *', ''), widget.patientNic),
                                       const SizedBox(height: 10),
-                                      _buildDetailRow(AppTranslations.tr('chooseHospital'), hospital.name),
+                                      _buildDetailRow(AppTranslations.tr('chooseHospital'), widget.hospital.name),
                                       const SizedBox(height: 10),
                                       _buildDetailRow(AppTranslations.tr('selectedDateHeader'), formattedDate),
                                       const SizedBox(height: 10),
-                                      _buildDetailRow(AppTranslations.tr('allocatedSlot'), selectedTimeSlot),
+                                      _buildDetailRow(AppTranslations.tr('allocatedSlot'), widget.selectedTimeSlot),
                                     ],
                                   ),
                                 ),
@@ -295,7 +343,7 @@ class BookingConfirmationScreen extends StatelessWidget {
                                         context,
                                         MaterialPageRoute(
                                           builder: (context) => DigitalTokenDetailsScreen(
-                                            appointmentId: appointmentId.isNotEmpty ? appointmentId : tokenNumber,
+                                            appointmentId: widget.appointmentId.isNotEmpty ? widget.appointmentId : widget.tokenNumber,
                                           ),
                                         ),
                                       );
