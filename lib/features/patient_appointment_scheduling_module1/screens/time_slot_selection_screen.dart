@@ -684,9 +684,9 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
                             style: TextStyle(
                               fontSize: 12.5,
                               fontWeight: FontWeight.bold,
-                              decoration: (isClosed || isPast) ? TextDecoration.lineThrough : null,
+                              decoration: null,
                               color: isDisabled
-                                  ? AppColors.bodyText
+                                  ? AppColors.bodyText.withValues(alpha: 0.7)
                                   : isSelected
                                       ? AppColors.accentColor
                                       : AppColors.headingText,
@@ -700,7 +700,7 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
                 if (isSelected)
                   Icon(Icons.check_circle_rounded, size: 16, color: AppColors.accentColor)
                 else if (isPast)
-                  Icon(Icons.history_toggle_off_rounded, size: 14, color: AppColors.bodyText)
+                  Icon(Icons.schedule_rounded, size: 14, color: AppColors.bodyText.withValues(alpha: 0.6))
                 else if (isClosed)
                   const Icon(Icons.block_rounded, size: 14, color: AppColors.error)
                 else if (isFull)
@@ -712,17 +712,17 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
             // Availability Badge
             if (isPast)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
                 decoration: BoxDecoration(
-                  color: AppColors.cardBorder.withValues(alpha: 0.5),
+                  color: AppColors.cardBorder.withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  'ENDED (Passed)',
+                  'ENDED (Time Passed)',
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.bodyText,
+                    color: AppColors.bodyText.withValues(alpha: 0.8),
                   ),
                 ),
               )
