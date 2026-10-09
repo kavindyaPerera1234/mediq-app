@@ -35,6 +35,7 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
   StreamSubscription<QuerySnapshot>? _hospitalsSub;
   StreamSubscription<QuerySnapshot>? _departmentsSub;
   final Map<String, List<OpdClinic>> _hospitalClinics = {};
+  List<QueryDocumentSnapshot<Map<String, dynamic>>> _lastHospitalDocs = [];
 
   @override
   void initState() {
@@ -109,50 +110,53 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
         .listen((snapshot) {
       if (mounted) {
         setState(() {
-          _mergeHospitals(snapshot.docs);
+          _lastHospitalDocs = snapshot.docs;
+          _mergeHospitals();
         });
       }
     });
   }
 
   void _mergeHospitals([List<QueryDocumentSnapshot<Map<String, dynamic>>>? firestoreDocs]) {
+    if (firestoreDocs != null) {
+      _lastHospitalDocs = firestoreDocs;
+    }
+
     final Map<String, GovernmentHospital> map = {};
     final Set<String> disabledHospitalKeys = {};
 
-    if (firestoreDocs != null) {
-      for (var doc in firestoreDocs) {
-        final data = doc.data();
-        final id = doc.id.toLowerCase();
-        final name = (data['name'] ?? '').toString().trim();
-        if (name.isEmpty) continue;
+    for (var doc in _lastHospitalDocs) {
+      final data = doc.data();
+      final id = doc.id.toLowerCase();
+      final name = (data['name'] ?? '').toString().trim();
+      if (name.isEmpty) continue;
 
-        final cleanName = name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-        final bool isActive;
-        if (data['isActive'] is bool) {
-          isActive = data['isActive'] as bool;
-        } else if (data['isOpdAvailable'] is bool) {
-          isActive = data['isOpdAvailable'] as bool;
-        } else {
-          isActive = true;
-        }
-
-        if (!isActive) {
-          disabledHospitalKeys.add(id);
-          disabledHospitalKeys.add(cleanName);
-          continue;
-        }
-
-        // Check for attached custom clinics
-        final customClinics = _hospitalClinics[name.toLowerCase()] ??
-            _hospitalClinics[id] ??
-            _hospitalClinics[(data['hospitalId'] ?? '').toString().toLowerCase()];
-
-        map[id] = GovernmentHospital.fromMap(
-          data,
-          doc.id,
-          customClinics: customClinics,
-        );
+      final cleanName = name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+      final bool isActive;
+      if (data['isActive'] is bool) {
+        isActive = data['isActive'] as bool;
+      } else if (data['isOpdAvailable'] is bool) {
+        isActive = data['isOpdAvailable'] as bool;
+      } else {
+        isActive = true;
       }
+
+      if (!isActive) {
+        disabledHospitalKeys.add(id);
+        disabledHospitalKeys.add(cleanName);
+        continue;
+      }
+
+      // Check for attached custom clinics
+      final customClinics = _hospitalClinics[name.toLowerCase()] ??
+          _hospitalClinics[id] ??
+          _hospitalClinics[(data['hospitalId'] ?? '').toString().toLowerCase()];
+
+      map[id] = GovernmentHospital.fromMap(
+        data,
+        doc.id,
+        customClinics: customClinics,
+      );
     }
 
     // Add default hospitals only if they were NOT explicitly disabled in Firestore
