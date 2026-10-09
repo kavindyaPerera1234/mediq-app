@@ -37,6 +37,7 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
   final Map<String, List<OpdClinic>> _hospitalClinics = {};
   List<QueryDocumentSnapshot<Map<String, dynamic>>> _lastHospitalDocs = [];
   bool _isLoading = true;
+  String? _selectedHospitalId;
 
   @override
   void initState() {
@@ -550,8 +551,13 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
 
   // Polished Hospital Card
   Widget _buildHospitalCard(GovernmentHospital hospital) {
+    final isSelected = _selectedHospitalId == hospital.id;
+
     return InkWell(
       onTap: () {
+        setState(() {
+          _selectedHospitalId = hospital.id;
+        });
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -572,30 +578,39 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.cardSurface,
+          color: isSelected
+              ? AppColors.accentColor.withValues(alpha: 0.07)
+              : AppColors.cardSurface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.cardBorder),
+          border: Border.all(
+            color: isSelected ? AppColors.accentColor : AppColors.cardBorder,
+            width: isSelected ? 2.0 : 1.0,
+          ),
           boxShadow: [
             BoxShadow(
-              color: AppColors.isDark ? Colors.black26 : AppColors.textDark.withValues(alpha: 0.03),
-              blurRadius: 6,
+              color: isSelected
+                  ? AppColors.accentColor.withValues(alpha: 0.18)
+                  : (AppColors.isDark ? Colors.black26 : AppColors.textDark.withValues(alpha: 0.03)),
+              blurRadius: isSelected ? 10 : 6,
               offset: const Offset(0, 2),
             ),
           ],
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Medical Icon Badge
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.chipBg,
+                color: isSelected
+                    ? AppColors.accentColor
+                    : AppColors.chipBg,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 Icons.local_hospital_rounded,
-                color: AppColors.accentColor,
+                color: isSelected ? Colors.white : AppColors.accentColor,
                 size: 24,
               ),
             ),
@@ -611,7 +626,7 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.headingText,
+                      color: isSelected ? AppColors.accentColor : AppColors.headingText,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -680,13 +695,39 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
             ),
 
             const SizedBox(width: 10),
-            // Forward Chevron Arrow
-            Padding(
-              padding: const EdgeInsets.only(top: 8.0),
-              child: Icon(
-                Icons.arrow_forward_ios_rounded,
-                color: AppColors.bodyText,
-                size: 15,
+
+            // Prominent Action Button
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppColors.accentColor
+                    : AppColors.accentColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isSelected
+                      ? AppColors.accentColor
+                      : AppColors.accentColor.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    isSelected ? 'Selected' : 'Select',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: isSelected ? Colors.white : AppColors.accentColor,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    isSelected ? Icons.check_circle_rounded : Icons.arrow_forward_rounded,
+                    size: 14,
+                    color: isSelected ? Colors.white : AppColors.accentColor,
+                  ),
+                ],
               ),
             ),
           ],
