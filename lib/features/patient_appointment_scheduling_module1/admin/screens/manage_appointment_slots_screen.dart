@@ -137,8 +137,9 @@ class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScr
           names.add(name);
         }
       }
-      for (var def in _defaultHospitalNames) {
-        if (!names.contains(def)) names.add(def);
+      // If no hospitals yet in Firestore, fallback to defaults
+      if (names.isEmpty) {
+        names.addAll(_defaultHospitalNames);
       }
 
       if (mounted) {
