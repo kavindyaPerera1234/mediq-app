@@ -147,6 +147,50 @@ class HospitalAdminService {
     }
   }
 
+  /// Delete a department / clinic by ID
+  Future<bool> deleteDepartment(String id) async {
+    try {
+      await _firestore.collection('departments').doc(id).delete();
+      return true;
+    } catch (e) {
+      debugPrint('HospitalAdminService: deleteDepartment error $e');
+      return false;
+    }
+  }
+
+  /// Delete duplicate or test departments
+  Future<int> cleanupDuplicateDepartments({String? hospitalName}) async {
+    try {
+      Query query = _firestore.collection('departments');
+      if (hospitalName != null && hospitalName.isNotEmpty) {
+        query = query.where('hospitalName', isEqualTo: hospitalName);
+      }
+      final snapshot = await query.get();
+      final seenKeys = <String>{};
+      int deletedCount = 0;
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final hosp = (data['hospitalName'] ?? '').toString().trim().toLowerCase();
+        final name = (data['name'] ?? '').toString().trim().toLowerCase();
+        final key = '$hosp-$name';
+
+        final isTest = name.contains('test') || doc.id.toLowerCase().contains('test');
+
+        if (isTest || seenKeys.contains(key)) {
+          await doc.reference.delete();
+          deletedCount++;
+        } else {
+          seenKeys.add(key);
+        }
+      }
+      return deletedCount;
+    } catch (e) {
+      debugPrint('HospitalAdminService: cleanupDuplicateDepartments error $e');
+      return 0;
+    }
+  }
+
   /// Delete all test hospitals created during testing (e.g. named 'test')
   Future<int> cleanupTestHospitals() async {
     try {

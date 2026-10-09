@@ -348,20 +348,70 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
     });
   }
 
+  bool _isSlotWithinOperatingHours(OpdTimeSlot slot, String operatingHours) {
+    final clean = operatingHours.toLowerCase().replaceAll(' ', '');
+    if (clean.isEmpty) return true;
+
+    int clinicStartHour = 8;
+    int clinicEndHour = 14; // Default to 2:00 PM (14:00)
+
+    if (clean.contains('12:00pm') || clean.contains('12pm') || clean.contains('-12:00') || clean.contains('-12pm') || clean.contains('-12')) {
+      clinicEndHour = 12;
+    } else if (clean.contains('1:00pm') || clean.contains('01:00pm') || clean.contains('1pm') || clean.contains('01pm') || clean.contains('-1:00') || clean.contains('-01:00') || clean.contains('13:00')) {
+      clinicEndHour = 13;
+    } else if (clean.contains('2:00pm') || clean.contains('02:00pm') || clean.contains('2pm') || clean.contains('02pm') || clean.contains('-2:00') || clean.contains('14:00')) {
+      clinicEndHour = 14;
+    } else if (clean.contains('4:00pm') || clean.contains('04:00pm') || clean.contains('4pm') || clean.contains('16:00')) {
+      clinicEndHour = 16;
+    }
+
+    if (clean.startsWith('12:') || clean.startsWith('12pm') || clean.startsWith('1:') || clean.startsWith('01:')) {
+      clinicStartHour = 12;
+    }
+
+    int slotStartHour = 8;
+    int slotEndHour = 9;
+    if (slot.id == 'slot_1') {
+      slotStartHour = 8; slotEndHour = 9;
+    } else if (slot.id == 'slot_2') {
+      slotStartHour = 9; slotEndHour = 10;
+    } else if (slot.id == 'slot_3') {
+      slotStartHour = 10; slotEndHour = 11;
+    } else if (slot.id == 'slot_4') {
+      slotStartHour = 11; slotEndHour = 12;
+    } else if (slot.id == 'slot_5') {
+      slotStartHour = 12; slotEndHour = 13;
+    } else if (slot.id == 'slot_6') {
+      slotStartHour = 13; slotEndHour = 14;
+    }
+
+    return slotStartHour >= clinicStartHour && slotEndHour <= clinicEndHour;
+  }
+
+  List<OpdTimeSlot> get _visibleSlots {
+    final list = _slots.where((s) => _isSlotWithinOperatingHours(s, widget.clinic.hours)).toList();
+    return list.isNotEmpty ? list : _slots;
+  }
+
   void _recomputeSelection() {
-    if (!_currentSelectedSlot.isSelectable) {
-      final firstAvailable = _slots.firstWhere(
+    final visible = _visibleSlots;
+    if (visible.isEmpty) return;
+
+    if (!visible.any((s) => s.id == _selectedSlotId && s.isSelectable)) {
+      final firstAvailable = visible.firstWhere(
         (s) => s.isSelectable,
-        orElse: () => _slots.first,
+        orElse: () => visible.first,
       );
       _selectedSlotId = firstAvailable.id;
     }
   }
 
   OpdTimeSlot get _currentSelectedSlot {
-    return _slots.firstWhere(
+    final visible = _visibleSlots;
+    if (visible.isEmpty) return _slots.first;
+    return visible.firstWhere(
       (s) => s.id == _selectedSlotId,
-      orElse: () => _slots.first,
+      orElse: () => visible.first,
     );
   }
 
@@ -391,8 +441,8 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
   Widget build(BuildContext context) {
     final formattedDate = DateFormat('EEEE, d MMMM yyyy').format(widget.selectedDate);
 
-    final morningSlots = _slots.where((s) => s.session == 'morning').toList();
-    final afternoonSlots = _slots.where((s) => s.session == 'afternoon').toList();
+    final morningSlots = _visibleSlots.where((s) => s.session == 'morning').toList();
+    final afternoonSlots = _visibleSlots.where((s) => s.session == 'afternoon').toList();
 
     return AnimatedBuilder(
       animation: Listenable.merge([
@@ -458,33 +508,31 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
                           ),
                           const SizedBox(height: 20),
 
-                          // 1. Morning Session Header
-                          _buildSessionHeader(
-                            icon: Icons.wb_sunny_rounded,
-                            title: AppTranslations.tr('morningSession'),
-                            subtitle: '08:00 AM - 12:00 PM',
-                            color: Colors.orange.shade700,
-                          ),
-                          const SizedBox(height: 10),
+                          // 1. Morning Session Header & Grid
+                          if (morningSlots.isNotEmpty) ...[
+                            _buildSessionHeader(
+                              icon: Icons.wb_sunny_rounded,
+                              title: AppTranslations.tr('morningSession'),
+                              subtitle: '08:00 AM - 12:00 PM',
+                              color: Colors.orange.shade700,
+                            ),
+                            const SizedBox(height: 10),
+                            _buildSlotGrid(morningSlots),
+                            const SizedBox(height: 24),
+                          ],
 
-                          // Morning Slots Grid (2 Columns)
-                          _buildSlotGrid(morningSlots),
-
-                          const SizedBox(height: 24),
-
-                          // 2. Afternoon Session Header
-                          _buildSessionHeader(
-                            icon: Icons.wb_twilight_rounded,
-                            title: AppTranslations.tr('afternoonSession'),
-                            subtitle: '12:00 PM - 02:00 PM',
-                            color: Colors.blueGrey.shade700,
-                          ),
-                          const SizedBox(height: 10),
-
-                          // Afternoon Slots Grid (2 Columns)
-                          _buildSlotGrid(afternoonSlots),
-
-                          const SizedBox(height: 20),
+                          // 2. Afternoon Session Header & Grid
+                          if (afternoonSlots.isNotEmpty) ...[
+                            _buildSessionHeader(
+                              icon: Icons.wb_twilight_rounded,
+                              title: AppTranslations.tr('afternoonSession'),
+                              subtitle: '12:00 PM - 02:00 PM',
+                              color: Colors.blueGrey.shade700,
+                            ),
+                            const SizedBox(height: 10),
+                            _buildSlotGrid(afternoonSlots),
+                            const SizedBox(height: 20),
+                          ],
 
                           // Clean Legend
                           Container(

@@ -338,6 +338,48 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                           return null;
                         },
                       ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          '8:00 AM - 12:00 PM',
+                          '8:00 AM - 01:00 PM',
+                          '8:00 AM - 02:00 PM',
+                          '12:00 PM - 04:00 PM',
+                        ].map((preset) {
+                          return InkWell(
+                            onTap: () {
+                              setModalState(() {
+                                hoursController.text = preset;
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(6),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: hoursController.text == preset
+                                    ? AppColors.primary.withValues(alpha: 0.15)
+                                    : AppColors.background,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: hoursController.text == preset
+                                      ? AppColors.primary
+                                      : AppColors.border,
+                                ),
+                              ),
+                              child: Text(
+                                preset,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: hoursController.text == preset ? FontWeight.bold : FontWeight.normal,
+                                  color: hoursController.text == preset ? AppColors.primary : AppColors.textSecondary,
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
                       const SizedBox(height: 14),
 
                       // Slot Capacity
@@ -462,12 +504,122 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                                 ),
                         ),
                       ),
+
+                      if (isEditing) ...[
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 44,
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error, size: 18),
+                            label: const Text('Delete Clinic', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: AppColors.error),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            onPressed: () {
+                              Navigator.pop(context);
+                              _confirmDeleteDepartment(existing);
+                            },
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
               ),
             );
           },
+        );
+      },
+    );
+  }
+
+  void _confirmDeleteDepartment(DepartmentItem dept) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          title: Row(
+            children: [
+              const Icon(Icons.delete_outline_rounded, color: AppColors.error),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text('Delete Clinic / Department', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          content: Text('Are you sure you want to delete "${dept.name}" from ${dept.hospitalName}? Patients will no longer see this clinic.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.error,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                Navigator.pop(ctx);
+                final success = await HospitalAdminService().deleteDepartment(dept.id);
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(success ? '${dept.name} deleted successfully!' : 'Failed to delete clinic.'),
+                    backgroundColor: success ? AppColors.statusGreen : AppColors.error,
+                  ),
+                );
+              },
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _confirmCleanAllTestDepartments() {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          title: const Row(
+            children: [
+              Icon(Icons.cleaning_services_rounded, color: AppColors.primary),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text('Clean Duplicate Clinics', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          content: Text('This will remove duplicate clinic entries for "$_selectedHospitalFilter" and clean up test clinics. Continue?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                Navigator.pop(ctx);
+                final count = await HospitalAdminService().cleanupDuplicateDepartments(hospitalName: _selectedHospitalFilter);
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(count > 0 ? '$count duplicate clinics removed successfully!' : 'No duplicates found to clean.'),
+                    backgroundColor: AppColors.statusGreen,
+                  ),
+                );
+              },
+              child: const Text('Clean Duplicates'),
+            ),
+          ],
         );
       },
     );
@@ -497,6 +649,13 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
           tooltip: 'Back',
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.cleaning_services_rounded, color: Colors.white),
+            tooltip: 'Clean Duplicate Clinics',
+            onPressed: _confirmCleanAllTestDepartments,
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppColors.primary,
@@ -629,6 +788,11 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                                       icon: const Icon(Icons.edit_outlined, size: 20, color: AppColors.primary),
                                       tooltip: 'Edit Clinic',
                                       onPressed: () => _showAddEditDepartmentDialog(dept),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppColors.error),
+                                      tooltip: 'Delete Clinic',
+                                      onPressed: () => _confirmDeleteDepartment(dept),
                                     ),
                                   ],
                                 ),
