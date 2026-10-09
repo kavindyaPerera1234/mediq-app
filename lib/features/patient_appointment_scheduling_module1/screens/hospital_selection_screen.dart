@@ -117,6 +117,7 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
 
   void _mergeHospitals([List<QueryDocumentSnapshot<Map<String, dynamic>>>? firestoreDocs]) {
     final Map<String, GovernmentHospital> map = {};
+    final Set<String> disabledHospitalKeys = {};
 
     if (firestoreDocs != null) {
       for (var doc in firestoreDocs) {
@@ -125,8 +126,19 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
         final name = (data['name'] ?? '').toString().trim();
         if (name.isEmpty) continue;
 
-        final isActive = data['isActive'] == true || data['isOpdAvailable'] == true;
+        final cleanName = name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+        final bool isActive;
+        if (data['isActive'] is bool) {
+          isActive = data['isActive'] as bool;
+        } else if (data['isOpdAvailable'] is bool) {
+          isActive = data['isOpdAvailable'] as bool;
+        } else {
+          isActive = true;
+        }
+
         if (!isActive) {
+          disabledHospitalKeys.add(id);
+          disabledHospitalKeys.add(cleanName);
           continue;
         }
 
@@ -143,15 +155,24 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
       }
     }
 
-    // Add default hospitals only if not already represented in Firestore (deduplicate)
+    // Add default hospitals only if they were NOT explicitly disabled in Firestore
     for (var def in GovernmentHospital.getSampleHospitals()) {
+      final defId = def.id.toLowerCase();
       final defClean = def.name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+      final isExplicitlyDisabled = disabledHospitalKeys.contains(defId) ||
+          disabledHospitalKeys.any((k) => defClean.contains(k) || k.contains(defClean));
+
+      if (isExplicitlyDisabled) {
+        continue;
+      }
+
       final alreadyExists = map.values.any((h) {
         final hClean = h.name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-        return h.id.toLowerCase() == def.id.toLowerCase() || hClean.contains(defClean) || defClean.contains(hClean);
+        return h.id.toLowerCase() == defId || hClean.contains(defClean) || defClean.contains(hClean);
       });
-      if (!alreadyExists && !map.containsKey(def.id.toLowerCase())) {
-        map[def.id.toLowerCase()] = def;
+      if (!alreadyExists && !map.containsKey(defId)) {
+        map[defId] = def;
       }
     }
 

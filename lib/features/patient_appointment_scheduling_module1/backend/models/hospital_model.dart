@@ -81,7 +81,14 @@ class GovernmentHospital {
         ? data['location'].toString()
         : (address.isNotEmpty ? '$district • $address' : district);
     final phone = (data['phone'] ?? '').toString();
-    final isActive = data['isActive'] == true || data['isOpdAvailable'] == true;
+    final bool isActive;
+    if (data['isActive'] is bool) {
+      isActive = data['isActive'] as bool;
+    } else if (data['isOpdAvailable'] is bool) {
+      isActive = data['isOpdAvailable'] as bool;
+    } else {
+      isActive = true;
+    }
 
     return GovernmentHospital(
       id: docId.isNotEmpty ? docId : (data['hospitalId'] ?? data['id'] ?? 'hosp').toString(),
