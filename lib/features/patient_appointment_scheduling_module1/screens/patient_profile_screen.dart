@@ -2415,21 +2415,6 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                                     Row(
                                       children: [
                                         _buildAppointmentStatusBadge(app, isUpcoming),
-                                        if (!isUpcoming) ...[
-                                          const SizedBox(width: 6),
-                                          InkWell(
-                                            borderRadius: BorderRadius.circular(6),
-                                            onTap: () => _confirmDeletePastAppointment(app),
-                                            child: Container(
-                                              padding: const EdgeInsets.all(4),
-                                              decoration: BoxDecoration(
-                                                color: AppColors.error.withValues(alpha: 0.1),
-                                                borderRadius: BorderRadius.circular(6),
-                                              ),
-                                              child: const Icon(Icons.delete_outline_rounded, size: 15, color: AppColors.error),
-                                            ),
-                                          ),
-                                        ],
                                         const SizedBox(width: 4),
                                         Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.bodyText),
                                       ],
