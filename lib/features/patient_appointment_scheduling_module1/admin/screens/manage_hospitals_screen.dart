@@ -720,34 +720,22 @@ class _ManageHospitalsScreenState extends State<ManageHospitalsScreen> {
                             ],
                           ),
                           const SizedBox(height: 10),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: hosp.isActive
-                                      ? AppColors.statusGreen.withValues(alpha: 0.12)
-                                      : AppColors.error.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  hosp.isActive ? '● OPD ACTIVE' : '● CLOSED / INACTIVE',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: hosp.isActive ? AppColors.statusGreen : AppColors.error,
-                                  ),
-                                ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: hosp.isActive
+                                  ? AppColors.statusGreen.withValues(alpha: 0.12)
+                                  : AppColors.error.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              hosp.isActive ? '● OPD ACTIVE' : '● CLOSED / INACTIVE',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: hosp.isActive ? AppColors.statusGreen : AppColors.error,
                               ),
-                              TextButton(
-                                onPressed: () => _showAddEditHospitalDialog(hosp),
-                                child: const Text(
-                                  'Edit Settings →',
-                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
                         ],
                       ),
