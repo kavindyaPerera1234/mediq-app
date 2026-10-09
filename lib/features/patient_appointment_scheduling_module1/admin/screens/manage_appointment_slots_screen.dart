@@ -106,19 +106,25 @@ class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScr
 
   StreamSubscription<QuerySnapshot>? _deptSub;
   StreamSubscription<QuerySnapshot>? _hospSub;
+  StreamSubscription<QuerySnapshot>? _appointmentsSub;
+  StreamSubscription<QuerySnapshot>? _slotsSub;
   final Map<String, List<String>> _hospitalToClinics = {};
+  Map<String, int> _realtimeCounts = {};
+  Map<String, Map<String, dynamic>> _realtimeConfigs = {};
 
   @override
   void initState() {
     super.initState();
     _startFirestoreListeners();
-    _loadSlotData();
+    _listenToSlotDataRealtime();
   }
 
   @override
   void dispose() {
     _deptSub?.cancel();
     _hospSub?.cancel();
+    _appointmentsSub?.cancel();
+    _slotsSub?.cancel();
     super.dispose();
   }
 
@@ -219,7 +225,7 @@ class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScr
         _selectedClinic = _clinicOptions.first;
       }
     });
-    _loadSlotData();
+    _listenToSlotDataRealtime();
   }
 
   bool _timesMatch(String a, String b) {
@@ -248,17 +254,18 @@ class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScr
     return cleanA.contains(cleanB) || cleanB.contains(cleanA);
   }
 
-  Future<void> _loadSlotData() async {
-    try {
-      final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+  void _listenToSlotDataRealtime() {
+    _appointmentsSub?.cancel();
+    _slotsSub?.cancel();
 
-      // 1. Fetch appointments for this hospital, clinic, and date
-      final appSnap = await FirebaseFirestore.instance
-          .collection('appointments')
-          .where('appointmentDate', isEqualTo: dateStr)
-          .get()
-          .timeout(const Duration(seconds: 4));
+    final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
 
+    // 1. Live stream of appointments for this date
+    _appointmentsSub = FirebaseFirestore.instance
+        .collection('appointments')
+        .where('appointmentDate', isEqualTo: dateStr)
+        .snapshots()
+        .listen((appSnap) {
       final Map<String, int> counts = {};
       for (final doc in appSnap.docs) {
         final data = doc.data();
@@ -276,14 +283,18 @@ class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScr
           counts[slotTime] = (counts[slotTime] ?? 0) + 1;
         }
       }
+      _realtimeCounts = counts;
+      _applySlotUpdates();
+    }, onError: (e) {
+      debugPrint('Error listening to live appointments: $e');
+    });
 
-      // 2. Fetch slot configs from appointment_slots
-      final slotSnap = await FirebaseFirestore.instance
-          .collection('appointment_slots')
-          .where('date', isEqualTo: dateStr)
-          .get()
-          .timeout(const Duration(seconds: 4));
-
+    // 2. Live stream of appointment_slots configs for this date
+    _slotsSub = FirebaseFirestore.instance
+        .collection('appointment_slots')
+        .where('date', isEqualTo: dateStr)
+        .snapshots()
+        .listen((slotSnap) {
       final Map<String, Map<String, dynamic>> configs = {};
       for (final doc in slotSnap.docs) {
         final data = doc.data();
@@ -295,42 +306,45 @@ class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScr
           }
         }
       }
+      _realtimeConfigs = configs;
+      _applySlotUpdates();
+    }, onError: (e) {
+      debugPrint('Error listening to live slot configs: $e');
+    });
+  }
 
-      if (mounted) {
-        setState(() {
-          for (final slot in _slots) {
-            int count = counts[slot.slotRange] ?? 0;
-            if (count == 0) {
-              for (final entry in counts.entries) {
-                if (_timesMatch(entry.key, slot.slotRange)) {
-                  count += entry.value;
-                }
-              }
-            }
-            slot.bookedCount = count;
-
-            if (configs.containsKey(slot.id)) {
-              final cfg = configs[slot.id]!;
-              if (cfg['capacity'] is num) {
-                slot.capacity = (cfg['capacity'] as num).toInt();
-              }
-              if (cfg['isClosed'] is bool) {
-                slot.isClosed = cfg['isClosed'] as bool;
-              }
-              if (cfg['closureReason'] is String) {
-                slot.reason = cfg['closureReason'] as String;
-              }
-            } else {
-              slot.capacity = 25;
-              slot.isClosed = false;
-              slot.reason = '';
+  void _applySlotUpdates() {
+    if (!mounted) return;
+    setState(() {
+      for (final slot in _slots) {
+        int count = _realtimeCounts[slot.slotRange] ?? 0;
+        if (count == 0) {
+          for (final entry in _realtimeCounts.entries) {
+            if (_timesMatch(entry.key, slot.slotRange)) {
+              count += entry.value;
             }
           }
-        });
+        }
+        slot.bookedCount = count;
+
+        if (_realtimeConfigs.containsKey(slot.id)) {
+          final cfg = _realtimeConfigs[slot.id]!;
+          if (cfg['capacity'] is num) {
+            slot.capacity = (cfg['capacity'] as num).toInt();
+          }
+          if (cfg['isClosed'] is bool) {
+            slot.isClosed = cfg['isClosed'] as bool;
+          }
+          if (cfg['closureReason'] is String) {
+            slot.reason = cfg['closureReason'] as String;
+          }
+        } else {
+          slot.capacity = 25;
+          slot.isClosed = false;
+          slot.reason = '';
+        }
       }
-    } catch (e) {
-      debugPrint('ManageAppointmentSlotsScreen: _loadSlotData notice: $e');
-    }
+    });
   }
 
   void _editSlotCapacity(AdminTimeSlotConfig slot) {
@@ -624,7 +638,7 @@ class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScr
                                         setState(() {
                                           _selectedClinic = val;
                                         });
-                                        _loadSlotData();
+                                        _listenToSlotDataRealtime();
                                       }
                                     },
                                   ),
@@ -655,7 +669,7 @@ class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScr
                                     setState(() {
                                       _selectedDate = picked;
                                     });
-                                    _loadSlotData();
+                                    _listenToSlotDataRealtime();
                                   }
                                 },
                                 borderRadius: BorderRadius.circular(10),
