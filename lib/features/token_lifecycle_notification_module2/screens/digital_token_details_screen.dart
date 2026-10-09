@@ -402,12 +402,7 @@ Time: $timeSlot
 
                       OutlinedButton.icon(
                         onPressed: () {
-                          final lang = AppAccessibility.currentLanguage.value;
-                          final msg = lang == 'si'
-                              ? 'ඩිජිටල් ටෝකන් අංකය $tokenCode. $clinicName, $hospitalName. දිනය $appointmentDate, වේලාව $timeSlot. රෝගියා: $patientName.'
-                              : (lang == 'ta'
-                                  ? 'டிஜிட்டல் டோக்கன் எண் $tokenCode, $clinicName, $hospitalName.'
-                                  : 'Digital token number $tokenCode for $clinicName at $hospitalName. Date: $appointmentDate, time slot: $timeSlot for patient $patientName.');
+                          final msg = 'Digital OPD Token number $tokenCode for $clinicName at $hospitalName. Scheduled date: $appointmentDate, time slot: $timeSlot for patient $patientName.';
                           VoiceGuidanceService.speak(msg, context: context, force: true);
                         },
                         icon: const Icon(Icons.volume_up_rounded, size: 16),

@@ -412,14 +412,9 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                         icon: const Icon(Icons.volume_up_rounded, color: Colors.white, size: 20),
                         tooltip: 'Listen to Token Announcement',
                         onPressed: () {
-                          final lang = AppAccessibility.currentLanguage.value;
                           final msg = isCalled
-                              ? (lang == 'si'
-                                  ? 'ඔබගේ වාරය පැමිණ ඇත! ටෝකන් අංකය ${appointment.tokenCode}, කරුණාකර ${appointment.departmentName}, කාමර අංක ${appointment.roomNumber} වෙත වහාම ඇතුල්වන්න.'
-                                  : 'Your turn is called now! Token number ${appointment.tokenCode}. Please proceed to ${appointment.departmentName}, room ${appointment.roomNumber}.')
-                              : (lang == 'si'
-                                  ? 'ඔබගේ ටෝකන් අංකය ${appointment.tokenCode}. ${appointment.departmentName}, ${appointment.hospitalName}, කාමර අංක ${appointment.roomNumber}. දිනය ${appointment.appointmentDate}, වේලාව ${appointment.timeSlot}.'
-                                  : 'Your next token code is ${appointment.tokenCode} for ${appointment.departmentName} at ${appointment.hospitalName}, room ${appointment.roomNumber}. Date: ${appointment.appointmentDate}, time: ${appointment.timeSlot}.');
+                              ? 'Attention please! Your turn is called now. Token number ${appointment.tokenCode}, please proceed immediately to ${appointment.departmentName}, room ${appointment.roomNumber}.'
+                              : 'Your next OPD appointment token is ${appointment.tokenCode} for ${appointment.departmentName} at ${appointment.hospitalName}, room ${appointment.roomNumber}. Date: ${appointment.appointmentDate}, time: ${appointment.timeSlot}.';
                           VoiceGuidanceService.speak(msg, context: context, force: true);
                         },
                       ),

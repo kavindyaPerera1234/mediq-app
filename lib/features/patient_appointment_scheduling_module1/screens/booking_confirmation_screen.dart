@@ -53,12 +53,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
 
   void _speakConfirmation() {
     final formattedDate = DateFormat('EEEE, d MMMM').format(widget.selectedDate);
-    final lang = AppAccessibility.currentLanguage.value;
-    final msg = lang == 'si'
-        ? 'ඔබගේ සායන වෙන්කිරීම සාර්ථකයි! ටෝකන් අංකය ${widget.tokenNumber}. ${widget.clinic.name}, කාමර අංක ${widget.clinic.roomNumber}, ${widget.hospital.name}. දිනය $formattedDate, වේලාව ${widget.selectedTimeSlot}.'
-        : (lang == 'ta'
-            ? 'உங்கள் முன்பதிவு வெற்றிகரமானது! டோக்கன் எண் ${widget.tokenNumber}, ${widget.clinic.name}, அறை ${widget.clinic.roomNumber}.'
-            : 'Your appointment is confirmed! Token number ${widget.tokenNumber} for ${widget.clinic.name}, room ${widget.clinic.roomNumber} at ${widget.hospital.name}. Date: $formattedDate at ${widget.selectedTimeSlot}.');
+    final msg = 'Your OPD appointment is successfully confirmed! Token number ${widget.tokenNumber} for ${widget.clinic.name}, room ${widget.clinic.roomNumber} at ${widget.hospital.name}. Date: $formattedDate, allocated slot: ${widget.selectedTimeSlot}.';
     VoiceGuidanceService.speak(msg, context: context, force: true);
   }
 

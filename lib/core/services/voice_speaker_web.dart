@@ -46,7 +46,7 @@ void speakAloud(String text) {
           console.warn('Audio chime warning:', e);
         }
 
-        // 2. Synthesize Speech Announcement
+        // 2. Synthesize Crystal-Clear Speech Announcement (English Standard)
         if ('speechSynthesis' in window) {
           try {
             window.speechSynthesis.cancel();
@@ -54,19 +54,11 @@ void speakAloud(String text) {
               window.speechSynthesis.resume();
             }
             const u = new SpeechSynthesisUtterance('$sanitized');
-            u.rate = 0.92;
+            u.rate = 0.90;
             u.pitch = 1.0;
+            u.lang = 'en-US';
             
-            // Detect Sinhala / Tamil / English characters
-            if (/[\\u0D80-\\u0DFF]/.test('$sanitized')) {
-              u.lang = 'si-LK';
-            } else if (/[\\u0B80-\\u0BFF]/.test('$sanitized')) {
-              u.lang = 'ta-LK';
-            } else {
-              u.lang = 'en-US';
-            }
-            
-            // Delay voice slightly to follow the chime naturally
+            // Delay voice slightly to follow the hospital chime naturally
             setTimeout(function() {
               window.speechSynthesis.speak(u);
             }, 300);

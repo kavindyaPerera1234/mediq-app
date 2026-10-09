@@ -1449,9 +1449,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
               AppAccessibility.setVoiceGuidance(val);
               if (val) {
                 VoiceGuidanceService.speak(
-                  AppAccessibility.currentLanguage.value == 'si'
-                      ? 'හඬ මඟපෙන්වීම සක්‍රිය කරන ලදී'
-                      : (AppAccessibility.currentLanguage.value == 'ta' ? 'குரல் வழிகாட்டுதல் இயக்கப்பட்டது' : 'Voice Guidance is activated'),
+                  'Voice Guidance is activated. OPD tokens and turn announcements will be spoken aloud.',
                   context: context,
                   force: true,
                 );

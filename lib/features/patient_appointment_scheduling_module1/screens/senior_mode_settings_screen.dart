@@ -36,9 +36,7 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
       AppAccessibility.setVoiceGuidance(voice);
       if (voice) {
         VoiceGuidanceService.speak(
-          AppAccessibility.currentLanguage.value == 'si'
-              ? "හඬ මඟපෙන්වීම සක්‍රිය කරන ලදී"
-              : (AppAccessibility.currentLanguage.value == 'ta' ? 'குரல் வழிகாட்டுதல் இயக்கப்பட்டது' : "Voice Guidance is activated. OPD tokens and screen navigation will be announced aloud."),
+          "Voice Guidance is activated. OPD tokens and screen navigation will be announced aloud.",
           context: context,
           force: true,
         );
@@ -336,14 +334,14 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary,
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             ),
                             icon: const Icon(Icons.volume_up_rounded, size: 16),
-                            label: const Text('🔊 Call Token A-024', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            label: const Text('🔊 Test OPD Token Call (A-024)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                             onPressed: () {
                               VoiceGuidanceService.speak(
-                                'Token Number A-024, please proceed to OPD Room 01 for consultation.',
+                                'Attention please! Token Number A-024, please proceed to OPD Room 01 for consultation.',
                                 context: context,
                                 force: true,
                               );
@@ -353,31 +351,14 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
                             style: OutlinedButton.styleFrom(
                               foregroundColor: isDark ? Colors.white : AppColors.textDark,
                               side: BorderSide(color: isDark ? const Color(0xFF38BDF8) : AppColors.border),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             ),
                             icon: const Icon(Icons.record_voice_over_outlined, size: 16),
-                            label: const Text('🔊 සිංහල නිවේදනය', style: TextStyle(fontSize: 12)),
+                            label: const Text('🔊 Test Booking Pass Announcement', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                             onPressed: () {
                               VoiceGuidanceService.speak(
-                                'ටෝකන් අංක ඒ බිංදුවයි විසි හතර, කරුණාකර අංක එක කාමරයට පැමිණෙන්න.',
-                                context: context,
-                                force: true,
-                              );
-                            },
-                          ),
-                          OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: isDark ? Colors.white : AppColors.textDark,
-                              side: BorderSide(color: isDark ? const Color(0xFF38BDF8) : AppColors.border),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                            icon: const Icon(Icons.record_voice_over_outlined, size: 16),
-                            label: const Text('🔊 தமிழ் அறிவிப்பு', style: TextStyle(fontSize: 12)),
-                            onPressed: () {
-                              VoiceGuidanceService.speak(
-                                'டோக்கன் எண் ஏ இருபத்தி நான்கு, தயவுசெய்து அறை ஒன்றுக்கு செல்லவும்.',
+                                'Your OPD Appointment is confirmed. Token code A-005 for Cardiology Clinic, Room 03.',
                                 context: context,
                                 force: true,
                               );
