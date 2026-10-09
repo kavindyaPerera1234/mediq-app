@@ -518,9 +518,8 @@ class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScr
 
   @override
   Widget build(BuildContext context) {
-    final formattedDate = DateFormat('EEEE, d MMMM yyyy').format(_selectedDate);
-    final totalBooked = _slots.fold<int>(0, (sum, s) => sum + s.bookedCount);
-    final totalCapacity = _slots.fold<int>(0, (sum, s) => sum + (s.isClosed ? 0 : s.capacity));
+    final totalBooked = _slots.fold<int>(0, (acc, s) => acc + s.bookedCount);
+    final totalCapacity = _slots.fold<int>(0, (acc, s) => acc + (s.isClosed ? 0 : s.capacity));
     final closedCount = _slots.where((s) => s.isClosed).length;
 
     return Scaffold(
@@ -615,7 +614,7 @@ class _ManageAppointmentSlotsScreenState extends State<ManageAppointmentSlotsScr
                                   child: DropdownButton<String>(
                                     value: _clinicOptions.contains(_selectedClinic) ? _selectedClinic : (_clinicOptions.isNotEmpty ? _clinicOptions.first : null),
                                     isExpanded: true,
-                                    icon: const Icon(Icons.medical_services_rounded, color: AppColors.accentColor, size: 18),
+                                    icon: Icon(Icons.medical_services_rounded, color: AppColors.accentColor, size: 18),
                                     items: _clinicOptions.map((c) {
                                       return DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis));
                                     }).toList(),
