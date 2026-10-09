@@ -166,12 +166,14 @@ class EstimatedWaitingTimeScreen extends StatelessWidget {
                       children: [
                         Icon(Icons.chair_outlined, color: AppColors.accentColor, size: 24),
                         const SizedBox(width: 10),
-                        Text(
-                          'Comfortable Waiting Advice',
-                          style: GoogleFonts.inter(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            color: isDark ? const Color(0xFF38BDF8) : AppColors.primaryDark,
+                        Expanded(
+                          child: Text(
+                            'Comfortable Waiting Advice',
+                            style: GoogleFonts.inter(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: isDark ? const Color(0xFF38BDF8) : AppColors.primaryDark,
+                            ),
                           ),
                         ),
                       ],
@@ -241,18 +243,22 @@ class EstimatedWaitingTimeScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      title,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.headingText,
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.headingText,
+                        ),
                       ),
                     ),
+                    const SizedBox(width: 8),
                     Text(
                       math,
+                      textAlign: TextAlign.end,
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w800,

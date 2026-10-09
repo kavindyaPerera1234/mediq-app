@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -216,6 +217,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 TextFormField(
                   controller: _phoneOrEmailController,
                   keyboardType: _isStaff ? TextInputType.emailAddress : TextInputType.text,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9@\.\+\-_]')),
+                  ],
                   style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
                   decoration: InputDecoration(
                     prefixIcon: Icon(
@@ -243,8 +247,17 @@ class _LoginScreenState extends State<LoginScreen> {
                     if (value == null || value.trim().isEmpty) {
                       return _isStaff ? 'Please enter your email' : 'Please enter your phone number or email';
                     }
-                    if (_isStaff && !value.contains('@')) {
-                      return 'Please enter a valid email address';
+                    final clean = value.trim();
+                    if (_isStaff) {
+                      if (!RegExp(r'^[\w\.-]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(clean)) {
+                        return 'Please enter a valid staff email address';
+                      }
+                    } else {
+                      final isEmail = RegExp(r'^[\w\.-]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(clean);
+                      final isPhone = RegExp(r'^(?:0|94|\+94)?[0-9]{9,10}$').hasMatch(clean.replaceAll(RegExp(r'[\s\-]'), ''));
+                      if (!isEmail && !isPhone) {
+                        return 'Please enter a valid phone number or email address';
+                      }
                     }
                     return null;
                   },

@@ -5,6 +5,7 @@ import '../../../core/constants/app_accessibility.dart';
 import '../../../core/constants/app_translations.dart';
 import '../backend/backend.dart';
 import 'patient_main_screen.dart';
+import '../../token_lifecycle_notification_module2/screens/digital_token_details_screen.dart';
 
 class BookingConfirmationScreen extends StatelessWidget {
   final GovernmentHospital hospital;
@@ -12,6 +13,7 @@ class BookingConfirmationScreen extends StatelessWidget {
   final DateTime selectedDate;
   final String selectedTimeSlot;
   final String tokenNumber;
+  final String appointmentId;
   final String patientName;
   final String patientNic;
   final bool isCaregiverBooking;
@@ -25,6 +27,7 @@ class BookingConfirmationScreen extends StatelessWidget {
     required this.selectedDate,
     required this.selectedTimeSlot,
     required this.tokenNumber,
+    this.appointmentId = '',
     this.patientName = 'Patient',
     this.patientNic = 'N/A',
     this.isCaregiverBooking = false,
@@ -280,18 +283,20 @@ class BookingConfirmationScreen extends StatelessWidget {
                                 child: SizedBox(
                                   height: 48,
                                   child: OutlinedButton.icon(
-                                    icon: const Icon(Icons.download_rounded, size: 18),
-                                    label: Text(AppTranslations.tr('savePass'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                    icon: const Icon(Icons.qr_code_rounded, size: 18),
+                                    label: const Text('View Digital Token', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                                     style: OutlinedButton.styleFrom(
                                       foregroundColor: AppColors.accentColor,
                                       side: BorderSide(color: AppColors.accentColor),
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                     ),
                                     onPressed: () {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('Token $tokenNumber saved. Confirmation SMS queued to registered mobile.'),
-                                          backgroundColor: AppColors.statusGreen,
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => DigitalTokenDetailsScreen(
+                                            appointmentId: appointmentId.isNotEmpty ? appointmentId : tokenNumber,
+                                          ),
                                         ),
                                       );
                                     },

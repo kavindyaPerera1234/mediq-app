@@ -24,6 +24,8 @@ class GovernmentHospital {
   final String id;
   final String name;
   final String location;
+  final String district;
+  final String phone;
   final bool isOpdAvailable;
   final List<OpdClinic> clinics;
 
@@ -31,9 +33,64 @@ class GovernmentHospital {
     required this.id,
     required this.name,
     required this.location,
+    this.district = 'Colombo',
+    this.phone = '',
     this.isOpdAvailable = true,
     required this.clinics,
   });
+
+  static List<OpdClinic> getDefaultClinics(String hospitalPrefix) {
+    final clean = hospitalPrefix.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_');
+    return [
+      OpdClinic(
+        id: 'gen_med_$clean',
+        name: 'General Medicine OPD',
+        hours: '8:00 AM - 12:00 PM',
+        icon: Icons.medical_services_outlined,
+        roomNumber: 'OPD Room 01',
+      ),
+      OpdClinic(
+        id: 'ortho_$clean',
+        name: 'Orthopedics (Bone)',
+        hours: '8:00 AM - 12:00 PM',
+        icon: Icons.accessibility_new_outlined,
+        roomNumber: 'OPD Room 02',
+      ),
+      OpdClinic(
+        id: 'pedia_$clean',
+        name: 'Pediatrics (Children)',
+        hours: '8:00 AM - 1:00 PM',
+        icon: Icons.child_care_outlined,
+        roomNumber: 'OPD Room 03',
+      ),
+      OpdClinic(
+        id: 'ent_$clean',
+        name: 'ENT (Ear, Nose, Throat)',
+        hours: '8:30 AM - 12:00 PM',
+        icon: Icons.hearing_outlined,
+        roomNumber: 'OPD Room 04',
+      ),
+    ];
+  }
+
+  factory GovernmentHospital.fromMap(Map<String, dynamic> data, String docId, {List<OpdClinic>? customClinics}) {
+    final name = (data['name'] ?? 'Government Hospital').toString();
+    final district = (data['district'] ?? 'Colombo').toString();
+    final address = (data['address'] ?? '').toString();
+    final location = (data['location'] != null && data['location'].toString().isNotEmpty)
+        ? data['location'].toString()
+        : (address.isNotEmpty ? '$district • $address' : district);
+    final phone = (data['phone'] ?? '').toString();
+
+    return GovernmentHospital(
+      id: docId.isNotEmpty ? docId : (data['hospitalId'] ?? data['id'] ?? 'hosp').toString(),
+      name: name,
+      location: location,
+      district: district,
+      phone: phone,
+      clinics: customClinics ?? [],
+    );
+  }
 
   // Sample data matching our exact Figma screens!
   static List<GovernmentHospital> getSampleHospitals() {
