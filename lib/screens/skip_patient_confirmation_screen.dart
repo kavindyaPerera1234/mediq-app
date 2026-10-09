@@ -42,7 +42,7 @@ class _SkipPatientConfirmationScreenState extends State<SkipPatientConfirmationS
     });
 
     if (mounted) {
-      Navigator.pop(context); // Close dialog
+      Navigator.pop(context, result.isSuccess); // Close dialog with result
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result.message),

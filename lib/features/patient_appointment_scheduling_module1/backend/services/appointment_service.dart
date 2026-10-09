@@ -211,7 +211,7 @@ class AppointmentService {
 
       // Dual-sync: create corresponding queue_entries document for Module 3 & Module 4 Live Queue
       try {
-        final sessId = 'sess_${appointment.hospitalId}_${appointment.departmentId}_${appointment.appointmentDate}';
+        final sessId = '${appointment.hospitalId}_${appointment.departmentId}_${appointment.appointmentDate}';
         await _firestore.collection('queue_entries').doc(docRef.id).set({
           'queueEntryId': docRef.id,
           'appointmentId': docRef.id,

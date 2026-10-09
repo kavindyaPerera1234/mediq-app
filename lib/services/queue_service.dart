@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../core/constants/app_constants.dart';
 import '../models/queue_session.dart';
@@ -77,9 +78,13 @@ class QueueService {
       }
 
       // 3. Find eligible next patient (waiting or rejoined)
+      final altSessionId = queueSessionId.startsWith('sess_')
+          ? queueSessionId.substring(5)
+          : 'sess_$queueSessionId';
+
       final entriesSnapshot = await _db
           .collection(AppConstants.queueEntriesCollection)
-          .where('queueSessionId', isEqualTo: queueSessionId)
+          .where('queueSessionId', whereIn: [queueSessionId, altSessionId])
           .get();
 
       List<QueueEntry> eligible = [];
@@ -90,43 +95,100 @@ class QueueService {
         }
       }
 
+      // If queue_entries has no eligible patient, check real booked appointments from Module 1
       if (eligible.isEmpty) {
-        // Dynamic fallback: Create next token entry so calling next always works
-        final nowTime = DateTime.now();
-        final nowServer = FieldValue.serverTimestamp();
-        final nextTokenNum = 'A-021';
-        final newDoc = _db.collection(AppConstants.queueEntriesCollection).doc();
+        try {
+          final parts = queueSessionId.split('_');
+          final hId = parts.isNotEmpty ? parts[0] : 'nhsl';
+          final dId = parts.length >= 2 ? parts[1] : 'gen_med';
 
-        await newDoc.set({
-          'queueSessionId': queueSessionId,
-          'appointmentId': 'APT-021',
-          'patientId': 'pat-021',
-          'tokenNumber': nextTokenNum,
-          'tokenCode': nextTokenNum,
-          'status': AppConstants.statusWaiting,
-          'queuePosition': 1,
-          'estimatedWaitMinutes': 10,
-          'priority': AppConstants.priorityNormal,
-          'patientName': 'Kasun Perera',
-          'createdAt': nowServer,
-          'updatedAt': nowServer,
-        });
+          final aptQuery = _db.collection(AppConstants.appointmentsCollection);
+          final aptSnap = await aptQuery.get();
 
-        final newEntry = QueueEntry(
-          queueEntryId: newDoc.id,
-          queueSessionId: queueSessionId,
-          appointmentId: 'APT-021',
-          patientId: 'pat-021',
-          tokenNumber: nextTokenNum,
-          tokenCode: nextTokenNum,
-          status: AppConstants.statusWaiting,
-          queuePosition: 1,
-          estimatedWaitMinutes: 10,
-          priority: AppConstants.priorityNormal,
-          patientName: 'Kasun Perera',
-          createdAt: nowTime,
-        );
-        eligible.add(newEntry);
+          for (var aptDoc in aptSnap.docs) {
+            final aptData = aptDoc.data();
+            final status = (aptData['status'] ?? 'waiting').toString().toLowerCase();
+            if (status != 'waiting' && status != 'confirmed') continue;
+
+            final rawAptH = (aptData['hospitalId'] ?? '').toString().toLowerCase();
+            final rawAptD = (aptData['departmentId'] ?? aptData['clinicId'] ?? '').toString().toLowerCase();
+            final aptH = (rawAptH == 'hosp-001' || rawAptH.isEmpty) ? 'nhsl' : rawAptH;
+            
+            String aptD = rawAptD;
+            if (aptD == 'dept-001' || aptD.contains('gen_med')) aptD = 'gen_med';
+            else if (aptD.contains('ortho')) aptD = 'ortho';
+            else if (aptD.contains('ent')) aptD = 'ent';
+            else if (aptD.contains('derma')) aptD = 'derma';
+            else if (aptD.contains('pedia')) aptD = 'pedia';
+
+            final normH = (hId.toLowerCase() == 'hosp-001' || hId.isEmpty) ? 'nhsl' : hId.toLowerCase();
+            final normD = (dId.toLowerCase() == 'dept-001') ? 'gen_med' : dId.toLowerCase();
+
+            final hospMatches = normH.isEmpty || normH == 'all' || aptH.isEmpty || aptH == normH || normH.contains(aptH) || aptH.contains(normH);
+            
+            bool deptMatches = false;
+            if (normD.isEmpty || normD == 'all') {
+              deptMatches = true;
+            } else if (normD == 'gen_med') {
+              deptMatches = aptD == 'gen_med' || aptD.contains('gen');
+            } else if (normD == 'ortho') {
+              deptMatches = aptD == 'ortho';
+            } else if (normD == 'ent' || normD == 'dept_ent') {
+              deptMatches = aptD == 'ent' || aptD == 'dept_ent';
+            } else if (normD == 'derma') {
+              deptMatches = aptD == 'derma';
+            } else if (normD == 'pedia' || normD == 'dept_pediatrics') {
+              deptMatches = aptD == 'pedia' || aptD == 'dept_pediatrics';
+            } else {
+              deptMatches = aptD == normD;
+            }
+
+            final shouldInclude = (normD == 'all') ? true : (hospMatches && deptMatches);
+
+            if (shouldInclude) {
+              final token = aptData['tokenNumber'] ?? aptData['tokenCode'] ?? 'A-001';
+              final patientName = aptData['patientName'] ?? 'Patient';
+              
+              // Create real queue entry for this appointment so it's tracked properly
+              final newDoc = _db.collection(AppConstants.queueEntriesCollection).doc(aptDoc.id);
+              await newDoc.set({
+                'queueSessionId': queueSessionId,
+                'appointmentId': aptDoc.id,
+                'patientId': aptData['patientId'] ?? '',
+                'tokenNumber': token,
+                'tokenCode': token,
+                'status': AppConstants.statusWaiting,
+                'queuePosition': eligible.length + 1,
+                'estimatedWaitMinutes': (eligible.length + 1) * 10,
+                'priority': aptData['priority'] ?? AppConstants.priorityNormal,
+                'patientName': patientName,
+                'createdAt': FieldValue.serverTimestamp(),
+                'updatedAt': FieldValue.serverTimestamp(),
+              }, SetOptions(merge: true));
+
+              eligible.add(QueueEntry(
+                queueEntryId: aptDoc.id,
+                queueSessionId: queueSessionId,
+                appointmentId: aptDoc.id,
+                patientId: aptData['patientId'] ?? '',
+                tokenNumber: token,
+                tokenCode: token,
+                status: AppConstants.statusWaiting,
+                queuePosition: eligible.length + 1,
+                estimatedWaitMinutes: (eligible.length + 1) * 10,
+                priority: aptData['priority'] ?? AppConstants.priorityNormal,
+                patientName: patientName,
+                createdAt: DateTime.now(),
+              ));
+            }
+          }
+        } catch (e) {
+          debugPrint('QueueService: Error checking booked appointments: $e');
+        }
+      }
+
+      if (eligible.isEmpty) {
+        return QueueActionResult.failure('No waiting patients found in the queue.');
       }
 
       // 4. Sort: Emergency priority first, then queuePosition
