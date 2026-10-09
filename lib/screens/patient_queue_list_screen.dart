@@ -38,10 +38,17 @@ class _PatientQueueListScreenState extends State<PatientQueueListScreen>
   String _searchQuery = '';
   String _selectedPriority = 'All';
   int _currentBottomNavIndex = 1;
+  String? _selectedHospitalId;
+  String? _selectedDepartmentId;
 
-  String get effectiveSessionId => widget.queueSessionId.isNotEmpty
-      ? widget.queueSessionId
-      : AppConstants.defaultQueueSessionId();
+  String get effectiveSessionId {
+    final hId = _selectedHospitalId ?? widget.authService.currentStaffProfile?.hospitalId ?? '';
+    final dId = _selectedDepartmentId ?? widget.authService.currentStaffProfile?.departmentId ?? '';
+    if (widget.queueSessionId.isNotEmpty && _selectedHospitalId == null && _selectedDepartmentId == null) {
+      return widget.queueSessionId;
+    }
+    return AppConstants.defaultQueueSessionId(hId, dId);
+  }
 
   @override
   void initState() {
@@ -51,6 +58,14 @@ class _PatientQueueListScreenState extends State<PatientQueueListScreen>
       vsync: this,
       initialIndex: widget.initialTabIndex,
     );
+
+    if (widget.queueSessionId.contains('_')) {
+      final parts = widget.queueSessionId.split('_');
+      if (parts.length >= 2) {
+        _selectedHospitalId = parts[0];
+        _selectedDepartmentId = parts[1];
+      }
+    }
   }
 
   @override
@@ -62,18 +77,30 @@ class _PatientQueueListScreenState extends State<PatientQueueListScreen>
 
   @override
   Widget build(BuildContext context) {
+    final currentH = _selectedHospitalId ?? widget.authService.currentStaffProfile?.hospitalId ?? 'nhsl';
+    final currentD = _selectedDepartmentId ?? widget.authService.currentStaffProfile?.departmentId ?? 'gen_med';
+
+    String hospLabel = 'NHSL Colombo';
+    if (currentH == 'hosp_kandy') hospLabel = 'Kandy General';
+    if (currentH == 'hosp_karapitiya') hospLabel = 'Karapitiya Teaching';
+
+    String deptLabel = 'General Medicine OPD';
+    if (currentD == 'dept_pediatrics') deptLabel = 'Pediatrics OPD';
+    if (currentD == 'dept_cardiology') deptLabel = 'Cardiology OPD';
+    if (currentD == 'dept_ent') deptLabel = 'ENT Clinic';
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Column(
-          children: const [
-            Text(
+          children: [
+            const Text(
               "Today's Queue",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             Text(
-              "General Medicine OPD",
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w400, color: AppColors.primary),
+              "$hospLabel • $deptLabel",
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w400, color: AppColors.primary),
             ),
           ],
         ),
@@ -222,6 +249,46 @@ class _PatientQueueListScreenState extends State<PatientQueueListScreen>
                   color: Colors.white,
                   child: Column(
                     children: [
+                      // Department & Hospital Switcher Dropdown
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.meeting_room_rounded, size: 18, color: AppColors.primary),
+                            const SizedBox(width: 8),
+                            const Text('OPD Clinic:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: ['gen_med', 'dept_pediatrics', 'dept_cardiology', 'dept_ent'].contains(currentD) ? currentD : 'gen_med',
+                                  isDense: true,
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
+                                  items: const [
+                                    DropdownMenuItem(value: 'gen_med', child: Text('General Medicine OPD')),
+                                    DropdownMenuItem(value: 'dept_pediatrics', child: Text('Pediatrics OPD')),
+                                    DropdownMenuItem(value: 'dept_cardiology', child: Text('Cardiology OPD')),
+                                    DropdownMenuItem(value: 'dept_ent', child: Text('ENT Clinic')),
+                                  ],
+                                  onChanged: (val) {
+                                    if (val != null) {
+                                      setState(() {
+                                        _selectedDepartmentId = val;
+                                      });
+                                    }
+                                  },
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                       TextField(
                         controller: _searchController,
                         onChanged: (val) {
