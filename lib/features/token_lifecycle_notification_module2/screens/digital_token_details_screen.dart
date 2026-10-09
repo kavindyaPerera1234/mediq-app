@@ -746,7 +746,7 @@ Time: $timeSlot
                       const SizedBox(height: 12),
 
                       // ==========================
-                      // BACK TO MY APPOINTMENTS
+                      // BACK TO Home Screen
                       // ==========================
 
                       SizedBox(
@@ -755,16 +755,7 @@ Time: $timeSlot
                         child:
                             OutlinedButton.icon(
                           onPressed: () {
-                            Navigator.pushAndRemoveUntil(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const MyAppointmentsScreen(
-                                  initialTab: 0,
-                                ),
-                              ),
-                              (route) => false,
-                            );
+                           Navigator.pop(context);
                           },
 
                           icon: const Icon(
@@ -775,7 +766,7 @@ Time: $timeSlot
                           ),
 
                           label: const Text(
-                            'Back to My Appointments',
+                            'Back to Home ',
                             style: TextStyle(
                               color:
                                   AppColors.primary,

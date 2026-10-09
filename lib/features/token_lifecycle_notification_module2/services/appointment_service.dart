@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../../auth_live_queue_module3/services/auth_service.dart';
 import '../models/appointment_model.dart';
 
@@ -8,29 +9,64 @@ class AppointmentService {
 
   Set<String> _buildUserLookupIds(String patientId) {
     final ids = <String>{};
-    if (patientId.trim().isNotEmpty) ids.add(patientId.trim());
+
+    if (patientId.trim().isNotEmpty) {
+      ids.add(patientId.trim());
+    }
+
     try {
       final user = AuthService().currentUser;
+
       if (user != null) {
-        if (user.nic != null && user.nic!.trim().isNotEmpty) ids.add(user.nic!.trim());
-        if (user.phoneNumber.trim().isNotEmpty) ids.add(user.phoneNumber.trim());
-        if (user.userId.trim().isNotEmpty) ids.add(user.userId.trim());
+        if (user.nic != null &&
+            user.nic!.trim().isNotEmpty) {
+          ids.add(user.nic!.trim());
+        }
+
+        if (user.phoneNumber.trim().isNotEmpty) {
+          ids.add(user.phoneNumber.trim());
+        }
+
+        if (user.userId.trim().isNotEmpty) {
+          ids.add(user.userId.trim());
+        }
       }
     } catch (_) {}
+
     return ids;
   }
 
-  /// Real-time stream of upcoming appointments so newly booked slots appear instantly
-  Stream<List<AppointmentModel>> streamUpcomingAppointments(String patientId) {
+  // ============================================================
+  // REAL-TIME APPOINTMENTS
+  // ============================================================
+
+  Stream<List<AppointmentModel>> streamUpcomingAppointments(
+    String patientId,
+  ) {
     final ids = _buildUserLookupIds(patientId);
-    return _firestore.collection('appointments').snapshots().map((snapshot) {
-      final docs = <String, DocumentSnapshot<Map<String, dynamic>>>{};
+
+    return _firestore
+        .collection('appointments')
+        .snapshots()
+        .map((snapshot) {
+      final docs =
+          <String, DocumentSnapshot<Map<String, dynamic>>>{};
+
       for (final doc in snapshot.docs) {
         final data = doc.data();
-        final pId = data['patientId']?.toString().trim();
-        final pNic = data['patientNic']?.toString().trim();
-        final uId = data['userId']?.toString().trim();
-        final cId = data['caregiverId']?.toString().trim();
+
+        final pId =
+            data['patientId']?.toString().trim();
+
+        final pNic =
+            data['patientNic']?.toString().trim();
+
+        final uId =
+            data['userId']?.toString().trim();
+
+        final cId =
+            data['caregiverId']?.toString().trim();
+
         if ((pId != null && ids.contains(pId)) ||
             (pNic != null && ids.contains(pNic)) ||
             (uId != null && ids.contains(uId)) ||
@@ -38,83 +74,203 @@ class AppointmentService {
           docs[doc.id] = doc;
         }
       }
+
       final list = docs.values
-          .map((doc) => AppointmentModel.fromFirestore(doc.id, doc.data()!))
+          .map(
+            (doc) => AppointmentModel.fromFirestore(
+              doc.id,
+              doc.data()!,
+            ),
+          )
           .toList();
-      list.sort((a, b) => b.appointmentDate.compareTo(a.appointmentDate));
+
+      list.sort(
+        (a, b) =>
+            b.appointmentDate.compareTo(a.appointmentDate),
+      );
+
       return list;
     });
   }
 
-  // Get upcoming appointments
-  Future<List<AppointmentModel>> getUpcomingAppointments(String patientId) async {
+  // ============================================================
+  // GET UPCOMING APPOINTMENTS
+  // ============================================================
+
+  Future<List<AppointmentModel>> getUpcomingAppointments(
+    String patientId,
+  ) async {
     try {
       final ids = _buildUserLookupIds(patientId);
-      final docs = <String, DocumentSnapshot<Map<String, dynamic>>>{};
+
+      final docs =
+          <String, DocumentSnapshot<Map<String, dynamic>>>{};
 
       for (final id in ids) {
-        final q1 = await _firestore.collection('appointments').where('patientId', isEqualTo: id).get();
+        final q1 = await _firestore
+            .collection('appointments')
+            .where(
+              'patientId',
+              isEqualTo: id,
+            )
+            .get();
+
         for (final doc in q1.docs) {
           docs[doc.id] = doc;
         }
-        final q2 = await _firestore.collection('appointments').where('patientNic', isEqualTo: id).get();
+
+        final q2 = await _firestore
+            .collection('appointments')
+            .where(
+              'patientNic',
+              isEqualTo: id,
+            )
+            .get();
+
         for (final doc in q2.docs) {
           docs[doc.id] = doc;
         }
-        final q3 = await _firestore.collection('appointments').where('userId', isEqualTo: id).get();
+
+        final q3 = await _firestore
+            .collection('appointments')
+            .where(
+              'userId',
+              isEqualTo: id,
+            )
+            .get();
+
         for (final doc in q3.docs) {
           docs[doc.id] = doc;
         }
-        final q4 = await _firestore.collection('appointments').where('caregiverId', isEqualTo: id).get();
+
+        final q4 = await _firestore
+            .collection('appointments')
+            .where(
+              'caregiverId',
+              isEqualTo: id,
+            )
+            .get();
+
         for (final doc in q4.docs) {
           docs[doc.id] = doc;
         }
       }
 
-      final list = docs.values.map((doc) => AppointmentModel.fromFirestore(doc.id, doc.data()!)).toList();
-      list.sort((a, b) => b.appointmentDate.compareTo(a.appointmentDate));
+      final list = docs.values
+          .map(
+            (doc) => AppointmentModel.fromFirestore(
+              doc.id,
+              doc.data()!,
+            ),
+          )
+          .toList();
+
+      list.sort(
+        (a, b) =>
+            b.appointmentDate.compareTo(a.appointmentDate),
+      );
+
       return list;
     } catch (e) {
-      debugPrint("Firestore Error in getUpcomingAppointments: $e");
+      debugPrint(
+        "Firestore Error in getUpcomingAppointments: $e",
+      );
+
       return [];
     }
   }
 
-  // Get appointment history
-  Future<List<AppointmentModel>> getAppointmentHistory(String patientId) async {
+  // ============================================================
+  // GET APPOINTMENT HISTORY
+  // ============================================================
+
+  Future<List<AppointmentModel>> getAppointmentHistory(
+    String patientId,
+  ) async {
     try {
       final ids = _buildUserLookupIds(patientId);
-      final docs = <String, DocumentSnapshot<Map<String, dynamic>>>{};
+
+      final docs =
+          <String, DocumentSnapshot<Map<String, dynamic>>>{};
 
       for (final id in ids) {
-        final q1 = await _firestore.collection('appointments').where('patientId', isEqualTo: id).get();
+        final q1 = await _firestore
+            .collection('appointments')
+            .where(
+              'patientId',
+              isEqualTo: id,
+            )
+            .get();
+
         for (final doc in q1.docs) {
           docs[doc.id] = doc;
         }
-        final q2 = await _firestore.collection('appointments').where('patientNic', isEqualTo: id).get();
+
+        final q2 = await _firestore
+            .collection('appointments')
+            .where(
+              'patientNic',
+              isEqualTo: id,
+            )
+            .get();
+
         for (final doc in q2.docs) {
           docs[doc.id] = doc;
         }
-        final q3 = await _firestore.collection('appointments').where('userId', isEqualTo: id).get();
+
+        final q3 = await _firestore
+            .collection('appointments')
+            .where(
+              'userId',
+              isEqualTo: id,
+            )
+            .get();
+
         for (final doc in q3.docs) {
           docs[doc.id] = doc;
         }
-        final q4 = await _firestore.collection('appointments').where('caregiverId', isEqualTo: id).get();
+
+        final q4 = await _firestore
+            .collection('appointments')
+            .where(
+              'caregiverId',
+              isEqualTo: id,
+            )
+            .get();
+
         for (final doc in q4.docs) {
           docs[doc.id] = doc;
         }
       }
 
-      final list = docs.values.map((doc) => AppointmentModel.fromFirestore(doc.id, doc.data()!)).toList();
-      list.sort((a, b) => b.appointmentDate.compareTo(a.appointmentDate));
+      final list = docs.values
+          .map(
+            (doc) => AppointmentModel.fromFirestore(
+              doc.id,
+              doc.data()!,
+            ),
+          )
+          .toList();
+
+      list.sort(
+        (a, b) =>
+            b.appointmentDate.compareTo(a.appointmentDate),
+      );
+
       return list;
     } catch (e) {
-      debugPrint("Firestore Error in getAppointmentHistory: $e");
+      debugPrint(
+        "Firestore Error in getAppointmentHistory: $e",
+      );
+
       return [];
     }
   }
 
-  // Reschedule appointment
+  // ============================================================
+  // RESCHEDULE APPOINTMENT
+  // ============================================================
+
   Future<void> rescheduleAppointment({
     required String appointmentId,
     required String newDate,
@@ -135,9 +291,12 @@ class AppointmentService {
     });
   }
 
-  // Cancel appointment
+  // ============================================================
+  // CANCEL APPOINTMENT
+  // ============================================================
+
   Future<void> cancelAppointment(
-      String appointmentId,
+    String appointmentId,
   ) async {
     await _firestore
         .collection('appointments')
@@ -149,10 +308,106 @@ class AppointmentService {
     });
 
     try {
-      await _firestore.collection('queue_entries').doc(appointmentId).update({
-        'status': 'cancelled',
-        'updatedAt': Timestamp.now(),
-      });
+      final queueSnapshot = await _firestore
+          .collection('queue_entries')
+          .where(
+            'appointmentId',
+            isEqualTo: appointmentId,
+          )
+          .get();
+
+      for (final queueDoc in queueSnapshot.docs) {
+        await queueDoc.reference.update({
+          'status': 'cancelled',
+          'updatedAt': Timestamp.now(),
+        });
+      }
     } catch (_) {}
+  }
+
+  // ============================================================
+  // DELETE CANCELLED APPOINTMENT
+  // ============================================================
+
+  Future<void> deleteCancelledAppointment(
+    String appointmentId,
+  ) async {
+    final appointmentRef = _firestore
+        .collection('appointments')
+        .doc(appointmentId);
+
+    final appointmentDoc =
+        await appointmentRef.get();
+
+    if (!appointmentDoc.exists) {
+      return;
+    }
+
+    final data = appointmentDoc.data();
+
+    final status =
+        (data?['status'] ?? '')
+            .toString()
+            .toLowerCase()
+            .trim();
+
+    // Safety:
+    // only cancelled appointments can be deleted.
+    if (status != 'cancelled') {
+      throw Exception(
+        'Only cancelled appointments can be deleted.',
+      );
+    }
+
+    // ----------------------------------------------------------
+    // DELETE RELATED QUEUE ENTRIES
+    // ----------------------------------------------------------
+
+    try {
+      final queueSnapshot = await _firestore
+          .collection('queue_entries')
+          .where(
+            'appointmentId',
+            isEqualTo: appointmentId,
+          )
+          .get();
+
+      for (final queueDoc in queueSnapshot.docs) {
+        await queueDoc.reference.delete();
+      }
+    } catch (e) {
+      debugPrint(
+        'Unable to delete related queue entries: $e',
+      );
+    }
+
+    // ----------------------------------------------------------
+    // DELETE RELATED NOTIFICATIONS
+    // ----------------------------------------------------------
+
+    try {
+      final notificationSnapshot = await _firestore
+          .collection('notifications')
+          .where(
+            'appointmentId',
+            isEqualTo: appointmentId,
+          )
+          .get();
+
+      for (final notificationDoc
+          in notificationSnapshot.docs) {
+        await notificationDoc.reference.delete();
+      }
+    } catch (e) {
+      debugPrint(
+        'Unable to delete related notifications: $e',
+      );
+    }
+
+    // ----------------------------------------------------------
+    // DELETE APPOINTMENT
+    // ----------------------------------------------------------
+
+    await appointmentRef.delete();
   }
 }
