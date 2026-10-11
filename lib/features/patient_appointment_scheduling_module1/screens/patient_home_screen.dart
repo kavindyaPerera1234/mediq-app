@@ -38,6 +38,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
         AppAccessibility.isHighContrastMode,
         AppAccessibility.currentLanguage,
         AppAccessibility.isVoiceGuidance,
+        VoiceGuidanceService.isSpeaking,
         ProfileService.activeProfileNotifier,
       ]),
       builder: (context, _) {
@@ -313,9 +314,6 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   Widget _buildActiveTokenCard(BuildContext context, AppointmentModel appointment) {
     final st = appointment.status.toLowerCase().trim();
     final isCalled = st == 'called' || st == 'serving' || st == 'in_consultation';
-    final targetNic = appointment.patientNic.isNotEmpty
-        ? appointment.patientNic
-        : ProfileService.activeProfileNotifier.value.nic;
 
     return Material(
       color: Colors.transparent,
@@ -412,44 +410,76 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     children: [
                       Builder(
                         builder: (ctx) {
-                          final isVoiceOn = AppAccessibility.isVoiceGuidance.value;
+                          final isVoiceEnabled = AppAccessibility.isVoiceGuidance.value;
+                          final isSpeaking = VoiceGuidanceService.isSpeaking.value;
+
                           return IconButton(
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                             icon: Icon(
-                              isVoiceOn ? Icons.volume_up_rounded : Icons.volume_off_rounded,
-                              color: isVoiceOn ? Colors.white : Colors.white60,
+                              !isVoiceEnabled
+                                  ? Icons.volume_off_rounded
+                                  : (isSpeaking ? Icons.stop_circle_rounded : Icons.volume_up_rounded),
+                              color: !isVoiceEnabled
+                                  ? Colors.white60
+                                  : (isSpeaking ? Colors.amberAccent : Colors.white),
                               size: 20,
                             ),
-                            tooltip: isVoiceOn
+                            tooltip: !isVoiceEnabled
                                 ? (AppAccessibility.currentLanguage.value == 'si'
-                                    ? 'හඬ මඟපෙන්වීම ක්‍රියාත්මකයි (නවත්වන්න ක්ලික් කරන්න)'
-                                    : 'Voice Guidance Active (Tap to Mute & Stop)')
-                                : (AppAccessibility.currentLanguage.value == 'si'
-                                    ? 'හඬ මඟපෙන්වීම අක්‍රීයයි (ක්‍රියාත්මක කරන්න ක්ලික් කරන්න)'
-                                    : 'Voice Guidance Off (Tap to Enable)'),
+                                    ? 'හඬ මඟපෙන්වීම අක්‍රීයයි (Profile Settings වෙතින් සක්‍රීය කරන්න)'
+                                    : 'Voice Guidance is Off (Enable in Profile Settings)')
+                                : (isSpeaking
+                                    ? (AppAccessibility.currentLanguage.value == 'si'
+                                        ? 'හඬ නිවේදනය නවත්වන්න (Stop Announcement)'
+                                        : 'Stop Announcement')
+                                    : (AppAccessibility.currentLanguage.value == 'si'
+                                        ? 'ටෝකන් නිවේදනය අසන්න'
+                                        : 'Listen to Token Announcement')),
                             onPressed: () {
-                              if (isVoiceOn) {
-                                VoiceGuidanceService.stop(context: context);
-                                AppAccessibility.setVoiceGuidance(false);
-                                ProfileService().saveAccessibilitySettings(
-                                  patientNic: targetNic,
-                                  largeTextMode: AppAccessibility.isLargeTextMode.value,
-                                  highContrastMode: AppAccessibility.isHighContrastMode.value,
-                                  simplifiedNav: AppAccessibility.isSimplifiedNav.value,
-                                  voiceGuidance: false,
-                                );
+                              if (!isVoiceEnabled) {
+                                // Strictly respect user setting: Voice Guidance is OFF in Profile!
                                 ScaffoldMessenger.of(context).hideCurrentSnackBar();
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Row(
                                       children: [
-                                        const Icon(Icons.volume_off_rounded, color: Colors.white70, size: 20),
+                                        const Icon(Icons.volume_off_rounded, color: Colors.amberAccent, size: 20),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Text(
+                                            AppAccessibility.currentLanguage.value == 'si'
+                                                ? 'හඬ මඟපෙන්වීම අක්‍රීය කර ඇත. ක්‍රියාත්මක කිරීමට Profile > Settings වෙතින් Voice Guidance සක්‍රීය කරන්න.'
+                                                : 'Voice Guidance is OFF. Please enable it in Profile Settings to listen to announcements.',
+                                            style: const TextStyle(fontSize: 12),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    backgroundColor: const Color(0xFF1E293B),
+                                    duration: const Duration(seconds: 3),
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              // Voice Guidance IS enabled:
+                              if (isSpeaking) {
+                                // Cancel / stop ongoing utterance immediately
+                                VoiceGuidanceService.stop(context: context);
+                                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Row(
+                                      children: [
+                                        const Icon(Icons.stop_circle_outlined, color: Colors.white70, size: 20),
                                         const SizedBox(width: 10),
                                         Text(
                                           AppAccessibility.currentLanguage.value == 'si'
-                                              ? 'හඬ මඟපෙන්වීම නවත්වන ලදී'
-                                              : 'Voice guidance stopped and muted',
+                                              ? 'හඬ නිවේදනය නවත්වන ලදී'
+                                              : 'Token announcement stopped',
                                         ),
                                       ],
                                     ),
@@ -460,18 +490,11 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                                   ),
                                 );
                               } else {
-                                AppAccessibility.setVoiceGuidance(true);
-                                ProfileService().saveAccessibilitySettings(
-                                  patientNic: targetNic,
-                                  largeTextMode: AppAccessibility.isLargeTextMode.value,
-                                  highContrastMode: AppAccessibility.isHighContrastMode.value,
-                                  simplifiedNav: AppAccessibility.isSimplifiedNav.value,
-                                  voiceGuidance: true,
-                                );
+                                // Speak token announcement
                                 final msg = isCalled
                                     ? 'Attention please! Your turn is called now. Token number ${appointment.tokenCode}, please proceed immediately to ${appointment.departmentName}, room ${appointment.roomNumber}.'
                                     : 'Your next OPD appointment token is ${appointment.tokenCode} for ${appointment.departmentName} at ${appointment.hospitalName}, room ${appointment.roomNumber}. Date: ${appointment.appointmentDate}, time: ${appointment.timeSlot}.';
-                                VoiceGuidanceService.speak(msg, context: context, force: true);
+                                VoiceGuidanceService.speak(msg, context: context);
                               }
                             },
                           );

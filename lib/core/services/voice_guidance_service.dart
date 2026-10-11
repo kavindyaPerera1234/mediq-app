@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import '../constants/app_accessibility.dart';
@@ -7,9 +8,21 @@ import 'voice_speaker_stub.dart'
     if (dart.library.js) 'voice_speaker_web.dart' as speaker;
 
 class VoiceGuidanceService {
+  /// Notifier indicating if voice announcement audio is actively speaking
+  static final ValueNotifier<bool> isSpeaking = ValueNotifier<bool>(false);
+  static Timer? _speakTimer;
+
   /// Speaks the given text aloud if Voice Guidance is enabled (or forced during tests)
   static void speak(String text, {BuildContext? context, bool force = false}) {
     if (!force && !AppAccessibility.isVoiceGuidance.value) return;
+
+    _speakTimer?.cancel();
+    isSpeaking.value = true;
+    final words = text.split(RegExp(r'\s+')).length;
+    final durationSec = (words * 0.45).clamp(4.0, 16.0).toInt();
+    _speakTimer = Timer(Duration(seconds: durationSec), () {
+      isSpeaking.value = false;
+    });
 
     // 1. Native Flutter Semantics announcement for TalkBack / VoiceOver / Narrator
     SemanticsService.announce(text, TextDirection.ltr);
@@ -42,7 +55,7 @@ class VoiceGuidanceService {
           ),
           backgroundColor: const Color(0xFF0F172A),
           behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 4),
+          duration: Duration(seconds: durationSec),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
@@ -51,6 +64,8 @@ class VoiceGuidanceService {
 
   /// Immediately cancels any active spoken audio
   static void stop({BuildContext? context}) {
+    _speakTimer?.cancel();
+    isSpeaking.value = false;
     try {
       speaker.stopSpeaking();
     } catch (_) {}
