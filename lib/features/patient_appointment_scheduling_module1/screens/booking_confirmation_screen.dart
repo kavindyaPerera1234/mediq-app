@@ -108,15 +108,18 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
           appBar: AppBar(
             title: Text(
               AppTranslations.tr('appointmentConfirmed'),
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+              overflow: TextOverflow.ellipsis,
             ),
             backgroundColor: AppColors.appBarBg,
             foregroundColor: Colors.white,
-            centerTitle: true,
+            centerTitle: false,
             elevation: isDark ? 1 : 0,
             automaticallyImplyLeading: false,
             actions: [
               IconButton(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                constraints: const BoxConstraints(),
                 icon: Icon(
                   VoiceGuidanceService.isSpeaking.value
                       ? Icons.stop_circle_rounded
@@ -130,6 +133,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                     : (AppAccessibility.currentLanguage.value == 'si' ? 'විස්තර අසන්න' : 'Listen to Details'),
                 onPressed: _toggleVoice,
               ),
+              const SizedBox(width: 8),
             ],
           ),
           body: Center(
