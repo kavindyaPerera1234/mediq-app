@@ -30,6 +30,12 @@ class _DigitalTokenDetailsScreenState
     extends State<DigitalTokenDetailsScreen> {
   bool _isDownloading = false;
 
+  @override
+  void dispose() {
+    VoiceGuidanceService.stop();
+    super.dispose();
+  }
+
   Set<String> _currentUserIds() {
     final ids = <String>{};
 
@@ -617,22 +623,57 @@ Time: $timeSlot
 
                       const SizedBox(height: 12),
 
-                      OutlinedButton.icon(
-                        onPressed: () {
-                          final msg = 'Digital OPD Token number $tokenCode for $clinicName at $hospitalName. Scheduled date: $appointmentDate, time slot: $timeSlot for patient $patientName.';
-                          VoiceGuidanceService.speak(msg, context: context, force: true);
+                      ValueListenableBuilder<bool>(
+                        valueListenable: VoiceGuidanceService.isSpeaking,
+                        builder: (ctx, isSpeaking, _) {
+                          return OutlinedButton.icon(
+                            onPressed: () {
+                              if (isSpeaking) {
+                                VoiceGuidanceService.stop(context: context);
+                                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: const Row(
+                                      children: [
+                                        Icon(Icons.stop_circle_outlined, color: Colors.white70, size: 20),
+                                        SizedBox(width: 10),
+                                        Text('Token announcement stopped'),
+                                      ],
+                                    ),
+                                    backgroundColor: const Color(0xFF1E293B),
+                                    duration: const Duration(seconds: 2),
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                );
+                              } else {
+                                final msg = 'Digital OPD Token number $tokenCode for $clinicName at $hospitalName. Scheduled date: $appointmentDate, time slot: $timeSlot for patient $patientName.';
+                                VoiceGuidanceService.speak(msg, context: context, force: true);
+                              }
+                            },
+                            icon: Icon(
+                              isSpeaking ? Icons.stop_circle_rounded : Icons.volume_up_rounded,
+                              size: 16,
+                              color: isSpeaking ? Colors.redAccent : AppColors.primary,
+                            ),
+                            label: Text(
+                              isSpeaking
+                                  ? (AppAccessibility.currentLanguage.value == 'si' ? '⏹️ හඬ නවත්වන්න' : '⏹️ Stop Announcement')
+                                  : (AppAccessibility.currentLanguage.value == 'si' ? '🔊 ටෝකන් විස්තර අසන්න' : '🔊 Listen to Token Pass'),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: isSpeaking ? Colors.redAccent : AppColors.primary,
+                              ),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: isSpeaking ? Colors.redAccent : AppColors.primary,
+                              side: BorderSide(color: isSpeaking ? Colors.redAccent : AppColors.primary),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          );
                         },
-                        icon: const Icon(Icons.volume_up_rounded, size: 16),
-                        label: Text(
-                          AppAccessibility.currentLanguage.value == 'si' ? '🔊 ටෝකන් විස්තර අසන්න' : '🔊 Listen to Token Pass',
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.primary,
-                          side: const BorderSide(color: AppColors.primary),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
                       ),
                     ],
                   ),
