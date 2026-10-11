@@ -51,10 +51,44 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     });
   }
 
+  @override
+  void dispose() {
+    VoiceGuidanceService.stop();
+    super.dispose();
+  }
+
   void _speakConfirmation() {
     final formattedDate = DateFormat('EEEE, d MMMM').format(widget.selectedDate);
     final msg = 'Your OPD appointment is successfully confirmed! Token number ${widget.tokenNumber} for ${widget.clinic.name}, room ${widget.clinic.roomNumber} at ${widget.hospital.name}. Date: $formattedDate, allocated slot: ${widget.selectedTimeSlot}.';
     VoiceGuidanceService.speak(msg, context: context, force: true);
+  }
+
+  void _toggleVoice() {
+    if (VoiceGuidanceService.isSpeaking.value) {
+      VoiceGuidanceService.stop(context: context);
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.stop_circle_outlined, color: Colors.white70, size: 20),
+              const SizedBox(width: 10),
+              Text(
+                AppAccessibility.currentLanguage.value == 'si'
+                    ? 'හඬ නිවේදනය නවත්වන ලදී'
+                    : 'Voice announcement stopped',
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFF1E293B),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      );
+    } else {
+      _speakConfirmation();
+    }
   }
 
   @override
@@ -62,7 +96,11 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     final formattedDate = DateFormat('EEEE, d MMMM yyyy').format(widget.selectedDate);
 
     return AnimatedBuilder(
-      animation: Listenable.merge([AppAccessibility.isHighContrastMode, AppAccessibility.currentLanguage]),
+      animation: Listenable.merge([
+        AppAccessibility.isHighContrastMode,
+        AppAccessibility.currentLanguage,
+        VoiceGuidanceService.isSpeaking,
+      ]),
       builder: (context, _) {
         final isDark = AppAccessibility.isHighContrastMode.value;
         return Scaffold(
@@ -70,19 +108,32 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
           appBar: AppBar(
             title: Text(
               AppTranslations.tr('appointmentConfirmed'),
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+              overflow: TextOverflow.ellipsis,
             ),
             backgroundColor: AppColors.appBarBg,
             foregroundColor: Colors.white,
-            centerTitle: true,
+            centerTitle: false,
             elevation: isDark ? 1 : 0,
             automaticallyImplyLeading: false,
             actions: [
               IconButton(
-                icon: const Icon(Icons.volume_up_rounded, color: Colors.white),
-                tooltip: 'Listen to Details',
-                onPressed: _speakConfirmation,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                constraints: const BoxConstraints(),
+                icon: Icon(
+                  VoiceGuidanceService.isSpeaking.value
+                      ? Icons.stop_circle_rounded
+                      : Icons.volume_up_rounded,
+                  color: VoiceGuidanceService.isSpeaking.value
+                      ? Colors.amberAccent
+                      : Colors.white,
+                ),
+                tooltip: VoiceGuidanceService.isSpeaking.value
+                    ? (AppAccessibility.currentLanguage.value == 'si' ? 'හඬ නවත්වන්න' : 'Stop Audio')
+                    : (AppAccessibility.currentLanguage.value == 'si' ? 'විස්තර අසන්න' : 'Listen to Details'),
+                onPressed: _toggleVoice,
               ),
+              const SizedBox(width: 8),
             ],
           ),
           body: Center(
@@ -208,21 +259,44 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                                       const SizedBox(height: 10),
 
                                       // Audio Announcement Button
-                                      OutlinedButton.icon(
-                                        onPressed: _speakConfirmation,
-                                        icon: const Icon(Icons.volume_up_rounded, size: 16),
-                                        label: Text(
-                                          AppAccessibility.currentLanguage.value == 'si'
-                                              ? '🔊 විස්තර හඬින් අසන්න'
-                                              : (AppAccessibility.currentLanguage.value == 'ta' ? '🔊 விவரங்களை கேட்கவும்' : '🔊 Listen to Details'),
-                                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                                        ),
-                                        style: OutlinedButton.styleFrom(
-                                          foregroundColor: AppColors.accentColor,
-                                          side: BorderSide(color: AppColors.accentColor.withValues(alpha: 0.5)),
-                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                        ),
+                                      Builder(
+                                        builder: (ctx) {
+                                          final isSpeaking = VoiceGuidanceService.isSpeaking.value;
+                                          return OutlinedButton.icon(
+                                            onPressed: _toggleVoice,
+                                            icon: Icon(
+                                              isSpeaking ? Icons.stop_circle_rounded : Icons.volume_up_rounded,
+                                              size: 16,
+                                              color: isSpeaking ? Colors.redAccent : AppColors.accentColor,
+                                            ),
+                                            label: Text(
+                                              isSpeaking
+                                                  ? (AppAccessibility.currentLanguage.value == 'si'
+                                                      ? '⏹️ හඬ නවත්වන්න'
+                                                      : '⏹️ Stop Announcement')
+                                                  : (AppAccessibility.currentLanguage.value == 'si'
+                                                      ? '🔊 විස්තර හඬින් අසන්න'
+                                                      : (AppAccessibility.currentLanguage.value == 'ta'
+                                                          ? '🔊 விவரங்களை கேட்கவும்'
+                                                          : '🔊 Listen to Details')),
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold,
+                                                color: isSpeaking ? Colors.redAccent : AppColors.accentColor,
+                                              ),
+                                            ),
+                                            style: OutlinedButton.styleFrom(
+                                              foregroundColor: isSpeaking ? Colors.redAccent : AppColors.accentColor,
+                                              side: BorderSide(
+                                                color: isSpeaking
+                                                    ? Colors.redAccent
+                                                    : AppColors.accentColor.withValues(alpha: 0.5),
+                                              ),
+                                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                            ),
+                                          );
+                                        },
                                       ),
                                     ],
                                   ),
@@ -339,6 +413,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                     ),
                                     onPressed: () {
+                                      VoiceGuidanceService.stop();
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
@@ -357,6 +432,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                                   height: 48,
                                   child: ElevatedButton(
                                     onPressed: () {
+                                      VoiceGuidanceService.stop();
                                       Navigator.pushAndRemoveUntil(
                                         context,
                                         MaterialPageRoute(
@@ -386,6 +462,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                             height: 48,
                             child: ElevatedButton(
                               onPressed: () {
+                                VoiceGuidanceService.stop();
                                 Navigator.pushAndRemoveUntil(
                                   context,
                                   MaterialPageRoute(

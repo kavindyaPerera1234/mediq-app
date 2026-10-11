@@ -1,13 +1,22 @@
 import 'package:flutter/material.dart';
+
 import '../../../core/constants/app_colors.dart';
 import '../models/notification_model.dart';
 
 class NotificationDetailScreen extends StatelessWidget {
   final NotificationModel notification;
+
   const NotificationDetailScreen({
     super.key,
     required this.notification,
   });
+
+  String _value(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Not available';
+    }
+    return value.trim();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +30,7 @@ class NotificationDetailScreen extends StatelessWidget {
             Icons.arrow_back_ios_new,
             color: Colors.black87,
           ),
-          onPressed: (){
+          onPressed: () {
             Navigator.pop(context);
           },
         ),
@@ -33,447 +42,603 @@ class NotificationDetailScreen extends StatelessWidget {
           ),
         ),
       ),
-
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: _buildScreen(),
       ),
     );
   }
 
-  String _appBarTitle(){
-
-    if(notification.type=="missed_token"){
+  String _appBarTitle() {
+    if (notification.type == "missed_token") {
       return "Token Status";
     }
+
     return "Notification";
   }
 
-  Widget _buildScreen(){
-    switch(notification.type){
-        case "near_turn":
-            return nearTurn();
-        case "delay":
-        case "delay_broadcast":
-        case "queue_delayed":
-            return delay();
-        case "missed_token":
-            return missedToken();
-        case "appointment_confirmed":
-            return appointmentConfirmed();   
-        case "reminder":
-            return opdReminder();
-        default:
-            return normal();
+  Widget _buildScreen() {
+    switch (notification.type) {
+      case "near_turn":
+      case "queue_approaching":
+      case "caregiver_queue_approaching":
+        return nearTurn();
+
+      case "delay":
+      case "delay_broadcast":
+      case "queue_delayed":
+        return delay();
+
+      case "missed_token":
+        return missedToken();
+
+      case "appointment_confirmed":
+        return appointmentConfirmed();
+
+      case "reminder":
+        return opdReminder();
+
+      default:
+        return normal();
     }
   }
 
-  Widget nearTurn(){
+  Widget nearTurn() {
     return Column(
       children: [
-        const SizedBox(height:20),
+        const SizedBox(height: 20),
+
         CircleAvatar(
-          radius:28,
+          radius: 28,
           backgroundColor: Colors.orange.shade100,
           child: const Icon(
             Icons.notifications_none,
             color: Colors.orange,
-            size:30,
-          ),
-        ),
-        const SizedBox(height:15),
-        const Text(
-          "Your Turn is Approaching!",
-          style: TextStyle(
-            fontSize:20,
-            fontWeight:FontWeight.bold,
-            color:Colors.orange,
+            size: 30,
           ),
         ),
 
-        const Text(
-          "Please make your way near OPD Counter",
-          style:TextStyle(
-            color:Colors.grey,
+        const SizedBox(height: 15),
+
+        Text(
+          notification.title.isNotEmpty
+              ? notification.title
+              : "Your Turn is Approaching",
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.orange,
           ),
         ),
 
-        const SizedBox(height:25),
+        const SizedBox(height: 8),
 
-        detailCard([
-          infoRow(
-              Icons.person,
-              "YOUR TOKEN",
-              "A-024"
-          ),
-
-          infoRow(
-              Icons.medical_services,
-              "NOW SERVING",
-              "A-022"
-          ),
-
-          infoRow(
-              Icons.people,
-              "PEOPLE AHEAD",
-              "2 Patients"
-          ),
-
-          infoRow(
-              Icons.timer,
-              "ESTIMATED WAIT",
-              "~10 minutes"
-          ),
-       ]),
-
-        const SizedBox(height:20),
-        Container(
-          padding:const EdgeInsets.all(16),
-          decoration:BoxDecoration(
-            color:Colors.yellow.shade50,
-            borderRadius:BorderRadius.circular(12),
-          ),
-          child:const Text(
-            "Please proceed immediately to the General Medicine OPD waiting area outside Counter Room 3.",
-          ),
-        )
-      ],
-    );
-  }
-
-  Widget delay(){
-    return Column(
-      children:[
-        detailCard([
-          Container(
-            padding:const EdgeInsets.all(10),
-            decoration:BoxDecoration(
-              color:Colors.orange.shade50,
-              borderRadius:BorderRadius.circular(10),
-            ),
-            child: Text(
-              "⚠ OPD Delayed - ${notification.affectedOPD ?? notification.clinicName ?? 'General Medicine'}",
-              style: const TextStyle(
-                fontWeight:FontWeight.bold,
-              ),
-            ),
-          ),
-
-          const SizedBox(height:15),
-          Text(notification.message),
-          const Divider(),
-          infoRow(
-              Icons.local_hospital,
-              "Affected OPD",
-              notification.affectedOPD ?? notification.clinicName ?? "General Medicine"
-          ),
-          infoRow(
-              Icons.timer_outlined,
-              "Estimated Delay",
-              notification.delayTime ?? "30 mins"
-          ),
-          infoRow(
-              Icons.confirmation_number,
-              "Your Token",
-              notification.tokenNumber ?? "Active Queue"
-          ),
-        ]),
-
-        const SizedBox(height:20),
-        button("View Queue")
-      ],
-    );
-  }
-
-  Widget missedToken(){
-    return Column(
-      children:[
-        const SizedBox(height:20),
-        CircleAvatar(
-          radius:30,
-          backgroundColor:Colors.red.shade50,
-          child:const Icon(
-            Icons.error_outline,
-            color:Colors.red,
-            size:35,
+        Text(
+          notification.message,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Colors.grey,
           ),
         ),
-        const SizedBox(height:15),
-        const Text(
-          "You Missed Your Turn",
-          style:TextStyle(
-            fontSize:20,
-            fontWeight:FontWeight.bold,
-            color:Colors.red,
-          ),
-        ),
-        const SizedBox(height:20),
-        detailCard([
-          infoRow(
-              Icons.confirmation_number,
-              "YOUR TOKEN",
-              "A-024"
-          ),
-          const Divider(),
-          const Text(
-            "Please contact the General Medicine OPD counter staff immediately or rejoin the queue below.",
-            textAlign:TextAlign.center,
-          )
-        ]),
-        const SizedBox(height:15),
-        button("Rejoin Queue"),
-        const SizedBox(height:10),
-        outlinedButton("Contact OPD")
-      ],
-    );
-  }
 
-  Widget appointmentConfirmed(){
-    return Column(
-      children: [
-        const SizedBox(height:20),
-        CircleAvatar(
-          radius:30,
-          backgroundColor:Colors.green.shade50,
-          child:const Icon(
-            Icons.check_circle_outline,
-            color:Colors.green,
-            size:40,
-          ),
-        ),
-        const SizedBox(height:15),
-        const Text(
-          "Appointment Confirmed",
-          style:TextStyle(
-            fontSize:22,
-            fontWeight:FontWeight.bold,
-            color:Colors.green,
-          ),
-        ),
-        const SizedBox(height:8),
-        const Text(
-          "Your OPD appointment has been successfully confirmed.",
-          textAlign:TextAlign.center,
-          style:TextStyle(
-          color:Colors.grey,
-          ),
-        ),
+        const SizedBox(height: 25),
+
         detailCard([
           infoRow(
             Icons.confirmation_number_outlined,
             "YOUR TOKEN",
-            notification.tokenNumber ?? "A-024",
+            _value(notification.tokenNumber),
           ),
+
           const Divider(),
+
           infoRow(
-            Icons.person_outline,
-            "PATIENT",
-            "Kumara Perera",
+            Icons.medical_services,
+            "NOW SERVING",
+            _value(notification.nowServing),
           ),
+
           const Divider(),
+
+          infoRow(
+            Icons.people,
+            "PEOPLE AHEAD",
+            _value(notification.peopleAhead),
+          ),
+
+          const Divider(),
+
+          infoRow(
+            Icons.timer,
+            "ESTIMATED WAIT",
+            _value(notification.estimatedWait),
+          ),
+
+          const Divider(),
+
           infoRow(
             Icons.local_hospital_outlined,
             "HOSPITAL",
-            notification.hospitalName ??
-            "National Hospital Sri Lanka",
+            _value(notification.hospitalName),
           ),
+
           const Divider(),
+
           infoRow(
             Icons.medical_services_outlined,
             "CLINIC / OPD",
-            notification.clinicName ??
-            "General Medicine OPD",
+            _value(notification.clinicName),
           ),
+
           const Divider(),
+
           infoRow(
-            Icons.calendar_month_outlined,
-            "DATE",
-            notification.dateTime ??
-            "Monday, 15 September 2026",
-          ),
-          const Divider(),
-          infoRow(
-            Icons.access_time,
-            "TIME SLOT",
-            "8:30 AM - 9:00 AM",
+            Icons.meeting_room_outlined,
+            "OPD ROOM",
+            _value(notification.roomNumber),
           ),
         ]),
-        const SizedBox(height:20),
-        button("View Appointment Details"),
+
+        const SizedBox(height: 20),
+
+        if (notification.roomNumber != null &&
+            notification.roomNumber!.trim().isNotEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.yellow.shade50,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              "Please proceed to ${notification.roomNumber}.",
+              textAlign: TextAlign.center,
+            ),
+          ),
       ],
     );
   }
 
-  Widget opdReminder(){
+  Widget delay() {
     return Column(
       children: [
-        const SizedBox(height:20),
-        CircleAvatar(
-          radius:30,
-          backgroundColor:Colors.blue.shade50,
-          child:const Icon(
-            Icons.calendar_month_outlined,
-            color:Colors.blue,
-            size:40,
-          ),
-        ),
-        const SizedBox(height:15),
-        const Text(
-          "OPD Reminder",
-            style:TextStyle(
-            fontSize:22,
-            fontWeight:FontWeight.bold,
-            color:Colors.blue,
-          ),
-        ),
-
-        const SizedBox(height:8),
-        const Text(
-          "Your appointment is scheduled for tomorrow.",
-          textAlign:TextAlign.center,
-          style:TextStyle(
-          color:Colors.grey,
-          ),
-        ),
-
-        const SizedBox(height:25),
         detailCard([
-          infoRow(
-            Icons.local_hospital_outlined,
-            "HOSPITAL",
-            notification.hospitalName ??
-            "National Hospital Sri Lanka",
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              notification.title.isNotEmpty
+                  ? notification.title
+                  : "OPD Queue Delayed",
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
-          const Divider(),
-          infoRow(
-            Icons.medical_services_outlined,
-            "CLINIC",
-            notification.clinicName ??
-            "General Medicine OPD",
+
+          const SizedBox(height: 15),
+
+          Text(
+            notification.message,
+            textAlign: TextAlign.center,
           ),
+
           const Divider(),
+
           infoRow(
-            Icons.calendar_today,
-            "DATE",
-            "Tomorrow",
+            Icons.local_hospital,
+            "AFFECTED OPD",
+            _value(
+              notification.affectedOPD ??
+                  notification.clinicName,
+            ),
           ),
+
           const Divider(),
+
           infoRow(
-            Icons.access_time,
-            "TIME",
-            "8:30 AM",
+            Icons.timer_outlined,
+            "ESTIMATED DELAY",
+            _value(notification.delayTime),
           ),
+
           const Divider(),
+
           infoRow(
             Icons.confirmation_number,
             "YOUR TOKEN",
-            notification.tokenNumber ??
-            "A-024",
+            _value(notification.tokenNumber),
+          ),
+
+          const Divider(),
+
+          infoRow(
+            Icons.meeting_room_outlined,
+            "OPD ROOM",
+            _value(notification.roomNumber),
           ),
         ]),
-        const SizedBox(height:20),
-        Container(
-          width:double.infinity,
-          padding:const EdgeInsets.all(15),
-          decoration:BoxDecoration(
-            color:Colors.blue.shade50,
-            borderRadius:BorderRadius.circular(12)
+      ],
+    );
+  }
+
+  Widget missedToken() {
+    return Column(
+      children: [
+        const SizedBox(height: 20),
+
+        CircleAvatar(
+          radius: 30,
+          backgroundColor: Colors.red.shade50,
+          child: const Icon(
+            Icons.error_outline,
+            color: Colors.red,
+            size: 35,
           ),
-          child:const Text(
+        ),
+
+        const SizedBox(height: 15),
+
+        Text(
+          notification.title.isNotEmpty
+              ? notification.title
+              : "You Missed Your Turn",
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.red,
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        Text(
+          notification.message,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Colors.grey,
+          ),
+        ),
+
+        const SizedBox(height: 20),
+
+        detailCard([
+          infoRow(
+            Icons.confirmation_number,
+            "YOUR TOKEN",
+            _value(notification.tokenNumber),
+          ),
+
+          const Divider(),
+
+          infoRow(
+            Icons.local_hospital_outlined,
+            "HOSPITAL",
+            _value(notification.hospitalName),
+          ),
+
+          const Divider(),
+
+          infoRow(
+            Icons.medical_services_outlined,
+            "CLINIC / OPD",
+            _value(notification.clinicName),
+          ),
+
+          const Divider(),
+
+          infoRow(
+            Icons.meeting_room_outlined,
+            "OPD ROOM",
+            _value(notification.roomNumber),
+          ),
+        ]),
+      ],
+    );
+  }
+
+  Widget appointmentConfirmed() {
+    return Column(
+      children: [
+        const SizedBox(height: 20),
+
+        CircleAvatar(
+          radius: 30,
+          backgroundColor: Colors.green.shade50,
+          child: const Icon(
+            Icons.check_circle_outline,
+            color: Colors.green,
+            size: 40,
+          ),
+        ),
+
+        const SizedBox(height: 15),
+
+        Text(
+          notification.title.isNotEmpty
+              ? notification.title
+              : "Appointment Confirmed",
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: Colors.green,
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        Text(
+          notification.message,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Colors.grey,
+          ),
+        ),
+
+        const SizedBox(height: 20),
+
+        detailCard([
+          infoRow(
+            Icons.confirmation_number_outlined,
+            "YOUR TOKEN",
+            _value(notification.tokenNumber),
+          ),
+
+          const Divider(),
+
+          infoRow(
+            Icons.person_outline,
+            "PATIENT",
+            _value(notification.patientName),
+          ),
+
+          const Divider(),
+
+          infoRow(
+            Icons.local_hospital_outlined,
+            "HOSPITAL",
+            _value(notification.hospitalName),
+          ),
+
+          const Divider(),
+
+          infoRow(
+            Icons.medical_services_outlined,
+            "CLINIC / OPD",
+            _value(notification.clinicName),
+          ),
+
+          const Divider(),
+
+          infoRow(
+            Icons.meeting_room_outlined,
+            "OPD ROOM",
+            _value(notification.roomNumber),
+          ),
+
+          const Divider(),
+
+          infoRow(
+            Icons.calendar_month_outlined,
+            "DATE",
+            _value(notification.appointmentDate),
+          ),
+
+          const Divider(),
+
+          infoRow(
+            Icons.access_time,
+            "TIME SLOT",
+            _value(notification.timeSlot),
+          ),
+        ]),
+      ],
+    );
+  }
+
+  Widget opdReminder() {
+    return Column(
+      children: [
+        const SizedBox(height: 20),
+
+        CircleAvatar(
+          radius: 30,
+          backgroundColor: Colors.blue.shade50,
+          child: const Icon(
+            Icons.calendar_month_outlined,
+            color: Colors.blue,
+            size: 40,
+          ),
+        ),
+
+        const SizedBox(height: 15),
+
+        Text(
+          notification.title.isNotEmpty
+              ? notification.title
+              : "OPD Reminder",
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: Colors.blue,
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        Text(
+          notification.message,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Colors.grey,
+          ),
+        ),
+
+        const SizedBox(height: 25),
+
+        detailCard([
+          infoRow(
+            Icons.person_outline,
+            "PATIENT",
+            _value(notification.patientName),
+          ),
+
+          const Divider(),
+
+          infoRow(
+            Icons.local_hospital_outlined,
+            "HOSPITAL",
+            _value(notification.hospitalName),
+          ),
+
+          const Divider(),
+
+          infoRow(
+            Icons.medical_services_outlined,
+            "CLINIC / OPD",
+            _value(notification.clinicName),
+          ),
+
+          const Divider(),
+
+          infoRow(
+            Icons.meeting_room_outlined,
+            "OPD ROOM",
+            _value(notification.roomNumber),
+          ),
+
+          const Divider(),
+
+          infoRow(
+            Icons.calendar_today,
+            "DATE",
+            _value(notification.appointmentDate),
+          ),
+
+          const Divider(),
+
+          infoRow(
+            Icons.access_time,
+            "TIME",
+            _value(notification.timeSlot),
+          ),
+
+          const Divider(),
+
+          infoRow(
+            Icons.confirmation_number,
+            "YOUR TOKEN",
+            _value(notification.tokenNumber),
+          ),
+        ]),
+
+        const SizedBox(height: 20),
+
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(15),
+          decoration: BoxDecoration(
+            color: Colors.blue.shade50,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Text(
             "Please arrive 15 minutes before your appointment time.",
-            textAlign:TextAlign.center,
+            textAlign: TextAlign.center,
           ),
         ),
       ],
     );
   }
 
-  Widget detailCard(List<Widget> children){
+  Widget detailCard(List<Widget> children) {
     return Container(
-      width:double.infinity,
-      padding:const EdgeInsets.all(18),
-      decoration:BoxDecoration(
-        color:Colors.white,
-        borderRadius:BorderRadius.circular(16),
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
       ),
-      child:Column(
-        children:children,
+      child: Column(
+        children: children,
       ),
     );
   }
 
   Widget infoRow(
-      IconData icon,
-      String title,
-      String value
-  ){
+    IconData icon,
+    String title,
+    String value,
+  ) {
     return Padding(
-      padding:const EdgeInsets.symmetric(vertical:10),
-      child:Row(
-        children:[
+      padding: const EdgeInsets.symmetric(
+        vertical: 10,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Icon(
             icon,
-            color:Colors.blue,
+            color: Colors.blue,
           ),
-          const SizedBox(width:12),
+
+          const SizedBox(width: 12),
+
           Expanded(
-            child:Column(
-              crossAxisAlignment:CrossAxisAlignment.start,
-              children:[
+            child: Column(
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
+              children: [
                 Text(
                   title,
-                  style:const TextStyle(
-                    fontSize:11,
-                    color:Colors.grey,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey,
                   ),
                 ),
+
+                const SizedBox(height: 3),
+
                 Text(
                   value,
-                  style:const TextStyle(
-                    fontWeight:FontWeight.bold,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
                   ),
-                )
+                ),
               ],
             ),
-          )
+          ),
         ],
       ),
     );
   }
 
-  Widget button(String text){
-    return SizedBox(
-      width:double.infinity,
-      child:ElevatedButton(
-        style:ElevatedButton.styleFrom(
-          backgroundColor:AppColors.primary,
-          padding:const EdgeInsets.all(14),
-        ),
-        onPressed:(){},
-        child:Text(
-          text,
-          style:const TextStyle(
-            color:Colors.white,
+  Widget normal() {
+    return detailCard([
+      if (notification.title.isNotEmpty)
+        Text(
+          notification.title,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
           ),
         ),
+
+      if (notification.title.isNotEmpty)
+        const SizedBox(height: 12),
+
+      Text(
+        notification.message.isEmpty
+            ? 'No notification details available.'
+            : notification.message,
       ),
-    );
-  }
-
-  Widget outlinedButton(String text){
-
-    return SizedBox(
-      width:double.infinity,
-      child:OutlinedButton(
-        onPressed:(){},
-        child:Text(text),
-      ),
-    );
-
-  }
-  Widget normal(){
-    return detailCard([
-      Text(notification.message)
     ]);
   }
 }

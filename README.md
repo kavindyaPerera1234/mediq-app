@@ -99,7 +99,7 @@ Ensure there are no blocking issues with Flutter and your chosen target platform
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-username/mediq-app.git
+git clone https://github.com/kavindyaPerera1234/mediq-app.git
 cd mediq-app
 ```
 
@@ -233,4 +233,4 @@ mediq-app/
 ---
 
 ## 📜 Academic Integrity & License
-This project was designed, implemented, and submitted as an academic software engineering capstone for the **Application Frameworks / Mobile Healthcare Systems** module. All intellectual rights reserved.
+This project was designed, implemented, and submitted for **IT3060: Human Computer Interaction (Milestone 03)**, BSc (Hons) in Information Technology, SLIIT. All intellectual rights reserved.

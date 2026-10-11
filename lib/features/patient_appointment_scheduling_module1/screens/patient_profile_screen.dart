@@ -1453,6 +1453,8 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                   context: context,
                   force: true,
                 );
+              } else {
+                VoiceGuidanceService.stop(context: context);
               }
               _profileService.saveAccessibilitySettings(
                 patientNic: _currentPatientNic,

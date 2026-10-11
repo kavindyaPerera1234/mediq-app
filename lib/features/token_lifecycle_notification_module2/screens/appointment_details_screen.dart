@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_colors.dart';
@@ -29,15 +30,39 @@ class AppointmentDetailsScreen extends StatelessWidget {
     required this.status,
   });
 
+  Future<String> _loadRoomNumber() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('appointments')
+          .doc(appointmentId)
+          .get();
+
+      if (!doc.exists || doc.data() == null) {
+        return 'Not available';
+      }
+
+      final data = doc.data()!;
+
+      final roomNumber =
+          (data['roomNumber'] ?? '').toString().trim();
+
+      if (roomNumber.isEmpty) {
+        return 'Not available';
+      }
+
+      return roomNumber;
+    } catch (_) {
+      return 'Not available';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-
         leading: IconButton(
           icon: const Icon(
             Icons.arrow_back_ios_new,
@@ -47,7 +72,6 @@ class AppointmentDetailsScreen extends StatelessWidget {
             Navigator.pop(context);
           },
         ),
-
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -69,16 +93,13 @@ class AppointmentDetailsScreen extends StatelessWidget {
           ],
         ),
       ),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-
         child: Column(
           children: [
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
-
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(18),
@@ -86,34 +107,26 @@ class AppointmentDetailsScreen extends StatelessWidget {
                   color: Colors.grey.shade200,
                 ),
               ),
-
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-
                 children: [
                   Row(
                     mainAxisAlignment:
                         MainAxisAlignment.spaceBetween,
-
                     children: [
                       Column(
                         crossAxisAlignment:
                             CrossAxisAlignment.start,
-
                         children: [
                           Text(
                             "YOUR TOKEN",
                             style: TextStyle(
                               fontSize: 11,
-                              color:
-                                  AppColors.textSecondary,
-                              fontWeight:
-                                  FontWeight.w600,
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-
                           const SizedBox(height: 5),
-
                           Text(
                             token,
                             style: const TextStyle(
@@ -124,20 +137,17 @@ class AppointmentDetailsScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-
                       Container(
                         padding:
                             const EdgeInsets.symmetric(
                           horizontal: 12,
                           vertical: 6,
                         ),
-
                         decoration: BoxDecoration(
                           color: Colors.green.shade100,
                           borderRadius:
                               BorderRadius.circular(20),
                         ),
-
                         child: Text(
                           status.toUpperCase(),
                           style: TextStyle(
@@ -149,7 +159,6 @@ class AppointmentDetailsScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-
                   const Divider(height: 25),
 
                   detailItem(
@@ -168,6 +177,23 @@ class AppointmentDetailsScreen extends StatelessWidget {
                     Icons.medical_services_outlined,
                     "CLINIC / OPD",
                     clinic,
+                  ),
+
+                  // OPD ROOM
+                  FutureBuilder<String>(
+                    future: _loadRoomNumber(),
+                    builder: (context, snapshot) {
+                      final room = snapshot.connectionState ==
+                              ConnectionState.waiting
+                          ? 'Loading...'
+                          : snapshot.data ?? 'Not available';
+
+                      return detailItem(
+                        Icons.meeting_room_outlined,
+                        "OPD ROOM",
+                        room,
+                      );
+                    },
                   ),
 
                   detailItem(
@@ -189,35 +215,31 @@ class AppointmentDetailsScreen extends StatelessWidget {
 
             SizedBox(
               width: double.infinity,
-
               child: ElevatedButton.icon(
                 icon: const Icon(
                   Icons.people_outline,
                   color: Colors.white,
                 ),
-
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   padding:
                       const EdgeInsets.symmetric(
                     vertical: 14,
                   ),
-
                   shape: RoundedRectangleBorder(
                     borderRadius:
                         BorderRadius.circular(10),
                   ),
                 ),
-
                 onPressed: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const LiveQueueMainScreen(),
+                      builder: (context) =>
+                          const LiveQueueMainScreen(),
                     ),
                   );
                 },
-
                 label: const Text(
                   "Track Live Queue",
                   style: TextStyle(
@@ -230,24 +252,31 @@ class AppointmentDetailsScreen extends StatelessWidget {
 
             const SizedBox(height: 10),
 
-            // Digital Token & QR Code Action
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                icon: const Icon(Icons.qr_code_2_rounded, color: Colors.white),
+                icon: const Icon(
+                  Icons.qr_code_2_rounded,
+                  color: Colors.white,
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  padding:
+                      const EdgeInsets.symmetric(
+                    vertical: 14,
+                  ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius:
+                        BorderRadius.circular(10),
                   ),
                 ),
                 onPressed: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => DigitalTokenDetailsScreen(
+                      builder: (context) =>
+                          DigitalTokenDetailsScreen(
                         appointmentId: appointmentId,
                       ),
                     ),
@@ -255,14 +284,15 @@ class AppointmentDetailsScreen extends StatelessWidget {
                 },
                 label: const Text(
                   "View Digital Token & QR Code",
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
 
             const SizedBox(height: 10),
 
-            // Assisted Queue & Caregiver Alert Setup
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
@@ -271,17 +301,24 @@ class AppointmentDetailsScreen extends StatelessWidget {
                   color: Color(0xFF0D9488),
                 ),
                 style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  side: const BorderSide(color: Color(0xFF0D9488)),
+                  padding:
+                      const EdgeInsets.symmetric(
+                    vertical: 14,
+                  ),
+                  side: const BorderSide(
+                    color: Color(0xFF0D9488),
+                  ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius:
+                        BorderRadius.circular(10),
                   ),
                 ),
                 onPressed: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => AssistedQueueSetupScreen(
+                      builder: (context) =>
+                          AssistedQueueSetupScreen(
                         appointmentId: appointmentId,
                       ),
                     ),
@@ -301,33 +338,27 @@ class AppointmentDetailsScreen extends StatelessWidget {
 
             SizedBox(
               width: double.infinity,
-
               child: OutlinedButton.icon(
                 icon: const Icon(
                   Icons.calendar_month,
                   color: AppColors.primary,
                 ),
-
                 style: OutlinedButton.styleFrom(
                   padding:
                       const EdgeInsets.symmetric(
                     vertical: 14,
                   ),
-
                   side: const BorderSide(
                     color: AppColors.primary,
                   ),
-
                   shape: RoundedRectangleBorder(
                     borderRadius:
                         BorderRadius.circular(10),
                   ),
                 ),
-
                 onPressed: () {
                   Navigator.push(
                     context,
-
                     MaterialPageRoute(
                       builder: (context) =>
                           RescheduleAppointmentScreen(
@@ -341,7 +372,6 @@ class AppointmentDetailsScreen extends StatelessWidget {
                     ),
                   );
                 },
-
                 label: const Text(
                   "Reschedule Appointment",
                   style: TextStyle(
@@ -356,33 +386,27 @@ class AppointmentDetailsScreen extends StatelessWidget {
 
             SizedBox(
               width: double.infinity,
-
               child: OutlinedButton.icon(
                 icon: const Icon(
                   Icons.delete_outline,
                   color: Colors.red,
                 ),
-
                 style: OutlinedButton.styleFrom(
                   padding:
                       const EdgeInsets.symmetric(
                     vertical: 14,
                   ),
-
                   side: const BorderSide(
                     color: Colors.red,
                   ),
-
                   shape: RoundedRectangleBorder(
                     borderRadius:
                         BorderRadius.circular(10),
                   ),
                 ),
-
                 onPressed: () {
                   Navigator.push(
                     context,
-
                     MaterialPageRoute(
                       builder: (context) =>
                           CancelAppointmentScreen(
@@ -397,7 +421,6 @@ class AppointmentDetailsScreen extends StatelessWidget {
                     ),
                   );
                 },
-
                 label: const Text(
                   "Cancel Appointment",
                   style: TextStyle(
@@ -419,33 +442,29 @@ class AppointmentDetailsScreen extends StatelessWidget {
     String value,
   ) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-
+      padding: const EdgeInsets.only(
+        bottom: 14,
+      ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(7),
-
             decoration: BoxDecoration(
               color: Colors.blue.shade50,
               borderRadius:
                   BorderRadius.circular(8),
             ),
-
             child: Icon(
               icon,
               size: 18,
               color: AppColors.primary,
             ),
           ),
-
           const SizedBox(width: 12),
-
           Expanded(
             child: Column(
               crossAxisAlignment:
                   CrossAxisAlignment.start,
-
               children: [
                 Text(
                   title,
@@ -455,7 +474,6 @@ class AppointmentDetailsScreen extends StatelessWidget {
                         AppColors.textSecondary,
                   ),
                 ),
-
                 Text(
                   value,
                   style: const TextStyle(
