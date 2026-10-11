@@ -2,3 +2,5 @@
 void speakAloud(String text) {
   // On mobile/desktop, native OS accessibility / Semantics handles announcements
 }
+
+void stopSpeaking() {}

@@ -41,7 +41,7 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
           force: true,
         );
       } else {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        VoiceGuidanceService.stop(context: context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("Voice Guidance disabled."),

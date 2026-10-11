@@ -48,4 +48,14 @@ class VoiceGuidanceService {
       );
     }
   }
+
+  /// Immediately cancels any active spoken audio
+  static void stop({BuildContext? context}) {
+    try {
+      speaker.stopSpeaking();
+    } catch (_) {}
+    if (context != null && context.mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    }
+  }
 }

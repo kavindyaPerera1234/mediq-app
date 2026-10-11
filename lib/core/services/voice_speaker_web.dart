@@ -59,7 +59,10 @@ void speakAloud(String text) {
             u.lang = 'en-US';
             
             // Delay voice slightly to follow the hospital chime naturally
-            setTimeout(function() {
+            if (window._mediqVoiceTimeout) {
+              clearTimeout(window._mediqVoiceTimeout);
+            }
+            window._mediqVoiceTimeout = setTimeout(function() {
               window.speechSynthesis.speak(u);
             }, 300);
           } catch (e) {
@@ -72,4 +75,23 @@ void speakAloud(String text) {
   } catch (_) {
     // Graceful fallback if Web Speech / Audio is blocked
   }
+}
+
+/// Cancel / stop any ongoing speech synthesis immediately
+void stopSpeaking() {
+  try {
+    js.context.callMethod('eval', [
+      """
+      try {
+        if (window._mediqVoiceTimeout) {
+          clearTimeout(window._mediqVoiceTimeout);
+          window._mediqVoiceTimeout = null;
+        }
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+        }
+      } catch (e) {}
+      """
+    ]);
+  } catch (_) {}
 }
