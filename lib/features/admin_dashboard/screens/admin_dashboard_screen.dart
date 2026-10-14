@@ -4,7 +4,9 @@ import '../../../services/auth_service.dart';
 import '../../../widgets/statistic_card.dart';
 import 'admin_live_queue_console_screen.dart';
 import 'admin_user_management_screen.dart';
+import 'admin_doctor_queue_crud_screen.dart';
 import '../../patient_appointment_scheduling_module1/admin/screens/hospital_admin_dashboard.dart';
+import '../../doctor_consultation_admin/screens/doctor_consultation_admin_dashboard.dart';
 import '../../auth_live_queue_module3/screens/auth/welcome_entry_screen.dart';
 import '../../auth_live_queue_module3/services/auth_service.dart' as mod3_auth;
 
@@ -221,6 +223,44 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             context,
                             MaterialPageRoute(
                               builder: (context) => const HospitalAdminDashboard(),
+                            ),
+                          );
+                        },
+                      ),
+                      const Divider(),
+                      ListTile(
+                        leading: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(color: AppColors.primaryLight, shape: BoxShape.circle),
+                          child: const Icon(Icons.medical_information_rounded, color: AppColors.primary),
+                        ),
+                        title: const Text('Doctor Consultation & Clinical Operations Console (Module 4)', style: TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: const Text('Manage patient clinical consultations, doctor room allocations & prescription templates (CRUD)'),
+                        trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => DoctorConsultationAdminDashboard(authService: widget.authService),
+                            ),
+                          );
+                        },
+                      ),
+                      const Divider(),
+                      ListTile(
+                        leading: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(color: AppColors.primaryLight, shape: BoxShape.circle),
+                          child: const Icon(Icons.assignment_turned_in_rounded, color: AppColors.primary),
+                        ),
+                        title: const Text('Doctor Queue & Consultations Master Console (CRUD)', style: TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: const Text('Issue tokens, call/hold/skip patients, doctor consultations & clinic delays'),
+                        trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const AdminDoctorQueueCrudScreen(),
                             ),
                           );
                         },
