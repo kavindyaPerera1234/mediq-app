@@ -423,12 +423,12 @@ Time: $timeSlot
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.primary,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(
             Icons.arrow_back_ios_new,
-            color: AppColors.textPrimary,
+            color: Colors.white,
           ),
           onPressed: () {
             Navigator.pop(context);
@@ -437,7 +437,7 @@ Time: $timeSlot
         title: const Text(
           'Digital Token',
           style: TextStyle(
-            color: AppColors.textPrimary,
+            color: Colors.white,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),

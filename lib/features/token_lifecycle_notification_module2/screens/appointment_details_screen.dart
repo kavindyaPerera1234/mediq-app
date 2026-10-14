@@ -61,12 +61,12 @@ class AppointmentDetailsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.primary,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(
             Icons.arrow_back_ios_new,
-            color: AppColors.textPrimary,
+            color: Colors.white,
           ),
           onPressed: () {
             Navigator.pop(context);
@@ -78,7 +78,7 @@ class AppointmentDetailsScreen extends StatelessWidget {
             const Text(
               "Appointment Details",
               style: TextStyle(
-                color: AppColors.textPrimary,
+                color: Colors.white,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -86,7 +86,7 @@ class AppointmentDetailsScreen extends StatelessWidget {
             Text(
               "Ref No: $appointmentId",
               style: TextStyle(
-                color: AppColors.textSecondary,
+                color: Colors.white70,
                 fontSize: 12,
               ),
             ),

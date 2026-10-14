@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
+
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_accessibility.dart';
+
 import '../../auth_live_queue_module3/services/auth_service.dart';
 import '../../patient_appointment_scheduling_module1/backend/services/profile_service.dart';
 import '../../patient_appointment_scheduling_module1/screens/caregiver_setup_screen.dart';
+
 import '../services/appointment_service.dart';
+import '../services/notification_service.dart';
+
 import '../models/appointment_model.dart';
+
 import 'appointment_details_screen.dart';
 import 'digital_token_details_screen.dart';
 
@@ -22,10 +28,15 @@ class MyAppointmentsScreen extends StatefulWidget {
       _MyAppointmentsScreenState();
 }
 
-class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
+class _MyAppointmentsScreenState
+    extends State<MyAppointmentsScreen> {
   int selectedTab = 0;
 
-  final AppointmentService _appointmentService = AppointmentService();
+  final AppointmentService _appointmentService =
+      AppointmentService();
+
+  final NotificationService _notificationService =
+      NotificationService();
 
   List<AppointmentModel> appointments = [];
 
@@ -37,9 +48,11 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
 
   String get _currentPatientId {
     try {
-      final profile = ProfileService.activeProfileNotifier.value;
+      final profile =
+          ProfileService.activeProfileNotifier.value;
 
-      if (profile.nic.isNotEmpty && profile.nic != 'N/A') {
+      if (profile.nic.isNotEmpty &&
+          profile.nic != 'N/A') {
         return profile.nic.trim();
       }
 
@@ -48,14 +61,18 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
       }
     } catch (_) {}
 
-    final user = AuthService().currentUser;
+    final user =
+        AuthService().currentUser;
 
     if (user != null) {
-      if (user.nic != null && user.nic!.trim().isNotEmpty) {
+      if (user.nic != null &&
+          user.nic!.trim().isNotEmpty) {
         return user.nic!.trim();
       }
 
-      if (user.phoneNumber.trim().isNotEmpty) {
+      if (user.phoneNumber
+          .trim()
+          .isNotEmpty) {
         return user.phoneNumber.trim();
       }
 
@@ -70,22 +87,43 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
   @override
   void initState() {
     super.initState();
-    selectedTab = widget.initialTab;
+
+    selectedTab =
+        widget.initialTab;
+
     loadAppointments();
   }
 
   Future<void> loadAppointments() async {
     if (mounted) {
-      setState(() => isLoading = true);
+      setState(() {
+        isLoading = true;
+      });
     }
 
-    final data = await _appointmentService.getUpcomingAppointments(
+    await _appointmentService
+        .syncMissedAppointments(
       _currentPatientId,
     );
 
-    debugPrint("UI received appointments: ${data.length}");
+    await _notificationService
+        .checkAndCreateAppointmentReminder(
+      _currentPatientId,
+    );
 
-    if (!mounted) return;
+    final data =
+        await _appointmentService
+            .getUpcomingAppointments(
+      _currentPatientId,
+    );
+
+    debugPrint(
+      "UI received appointments: ${data.length}",
+    );
+
+    if (!mounted) {
+      return;
+    }
 
     setState(() {
       appointments = data;
@@ -93,29 +131,50 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
     });
   }
 
-  Future<void> _deleteSelectedAppointments() async {
-    if (selectedAppointments.isEmpty || isDeleting) return;
+  Future<void>
+      _deleteSelectedAppointments() async {
+    if (selectedAppointments.isEmpty ||
+        isDeleting) {
+      return;
+    }
 
-    final confirmed = await showDialog<bool>(
+    final confirmed =
+        await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete Cancelled Appointments?'),
+      builder: (dialogContext) =>
+          AlertDialog(
+        title: const Text(
+          'Delete Cancelled Appointments?',
+        ),
         content: Text(
           'Are you sure you want to permanently delete '
           '${selectedAppointments.length} selected appointment(s)?',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
+            onPressed: () {
+              Navigator.pop(
+                dialogContext,
+                false,
+              );
+            },
+            child: const Text(
+              'Cancel',
+            ),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
+            onPressed: () {
+              Navigator.pop(
+                dialogContext,
+                true,
+              );
+            },
             child: const Text(
               'Delete',
               style: TextStyle(
                 color: Colors.red,
-                fontWeight: FontWeight.bold,
+                fontWeight:
+                    FontWeight.bold,
               ),
             ),
           ),
@@ -123,20 +182,29 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
       ),
     );
 
-    if (confirmed != true) return;
+    if (confirmed != true) {
+      return;
+    }
 
-    setState(() => isDeleting = true);
+    setState(() {
+      isDeleting = true;
+    });
 
     try {
-      final ids = selectedAppointments.toList();
+      final ids =
+          selectedAppointments.toList();
 
-      for (final appointmentId in ids) {
-        await _appointmentService.deleteCancelledAppointment(
+      for (final appointmentId
+          in ids) {
+        await _appointmentService
+            .deleteCancelledAppointment(
           appointmentId,
         );
       }
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
         selectedAppointments.clear();
@@ -144,7 +212,8 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
         isDeleting = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
         const SnackBar(
           content: Text(
             'Cancelled appointment(s) deleted successfully.',
@@ -154,11 +223,16 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
 
       await loadAppointments();
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
-      setState(() => isDeleting = false);
+      setState(() {
+        isDeleting = false;
+      });
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
         SnackBar(
           content: Text(
             'Unable to delete appointment(s): $e',
@@ -168,7 +242,9 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
     }
   }
 
-  void _changeTab(int index) {
+  void _changeTab(
+    int index,
+  ) {
     setState(() {
       selectedTab = index;
       isDeleteMode = false;
@@ -177,27 +253,43 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     return AnimatedBuilder(
       animation: Listenable.merge([
-        AppAccessibility.isHighContrastMode,
-        AppAccessibility.currentLanguage,
+        AppAccessibility
+            .isHighContrastMode,
+        AppAccessibility
+            .currentLanguage,
       ]),
-      builder: (context, _) {
-        final isDark = AppAccessibility.isHighContrastMode.value;
-        final lang = AppAccessibility.currentLanguage.value;
+      builder: (
+        context,
+        _,
+      ) {
+        final isDark =
+            AppAccessibility
+                .isHighContrastMode
+                .value;
 
-        final pageTitle = lang == 'si'
-            ? "මගේ සායන වෙන්කිරීම්"
-            : lang == 'ta'
-                ? "எனது சந்திப்புகள்"
-                : "My Appointments";
+        final lang =
+            AppAccessibility
+                .currentLanguage
+                .value;
 
-        final pageSubtitle = lang == 'si'
-            ? "ඔබගේ OPD සායන කළමනාකරණය"
-            : lang == 'ta'
-                ? "உங்கள் OPD சந்திப்புகளை நிர்வகிக்கவும்"
-                : "Manage your OPD visits";
+        final pageTitle =
+            lang == 'si'
+                ? "මගේ සායන වෙන්කිරීම්"
+                : lang == 'ta'
+                    ? "எனது சந்திப்புகள்"
+                    : "My Appointments";
+
+        final pageSubtitle =
+            lang == 'si'
+                ? "ඔබගේ OPD සායන කළමනාකරණය"
+                : lang == 'ta'
+                    ? "உங்கள் OPD சந்திப்புகளை நிர்வகிக்கவும்"
+                    : "Manage your OPD visits";
 
         final tabTitles = [
           lang == 'si'
@@ -217,43 +309,65 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                   : "Cancelled",
         ];
 
-        final bookBtnText = lang == 'si'
-            ? "නව සායනයක් වෙන්කරවා ගැනීම"
-            : lang == 'ta'
-                ? "புதிய சந்திப்பை பதிவு செய்யவும்"
-                : "Book New Appointment";
+        final bookBtnText =
+            lang == 'si'
+                ? "නව සායනයක් වෙන්කරවා ගැනීම"
+                : lang == 'ta'
+                    ? "புதிய சந்திப்பை பதிவு செய்யவும்"
+                    : "Book New Appointment";
 
         return Scaffold(
-          backgroundColor: AppColors.pageBg,
+          backgroundColor:
+              AppColors.pageBg,
           appBar: AppBar(
-            backgroundColor: AppColors.appBarBg,
-            foregroundColor: Colors.white,
-            elevation: isDark ? 1 : 0,
-            leading: Navigator.canPop(context)
-                ? IconButton(
-                    icon: const Icon(
-                      Icons.arrow_back_ios_new,
-                      color: Colors.white,
-                      size: 18,
-                    ),
-                    onPressed: () => Navigator.pop(context),
-                  )
-                : null,
+            backgroundColor:
+                AppColors.appBarBg,
+            foregroundColor:
+                Colors.white,
+            elevation:
+                isDark ? 1 : 0,
+            leading:
+                Navigator.canPop(
+              context,
+            )
+                    ? IconButton(
+                        icon:
+                            const Icon(
+                          Icons
+                              .arrow_back_ios_new,
+                          color:
+                              Colors.white,
+                          size: 18,
+                        ),
+                        onPressed: () {
+                          Navigator.pop(
+                            context,
+                          );
+                        },
+                      )
+                    : null,
             title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment:
+                  CrossAxisAlignment
+                      .start,
               children: [
                 Text(
                   pageTitle,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+                  style:
+                      const TextStyle(
+                    color:
+                        Colors.white,
+                    fontWeight:
+                        FontWeight.bold,
                     fontSize: 18,
                   ),
                 ),
                 Text(
                   pageSubtitle,
-                  style: const TextStyle(
-                    color: Colors.white70,
+                  style:
+                      const TextStyle(
+                    color:
+                        Colors.white70,
                     fontSize: 12,
                   ),
                 ),
@@ -262,219 +376,332 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
             actions: [
               if (selectedTab == 2)
                 IconButton(
-                  tooltip: isDeleteMode
-                      ? 'Cancel Selection'
-                      : 'Delete Cancelled Appointments',
+                  tooltip:
+                      isDeleteMode
+                          ? 'Cancel Selection'
+                          : 'Delete Cancelled Appointments',
                   icon: Icon(
                     isDeleteMode
                         ? Icons.close
-                        : Icons.delete_outline,
-                    color: Colors.white,
+                        : Icons
+                            .delete_outline,
+                    color:
+                        Colors.white,
                   ),
-                  onPressed: isDeleting
-                      ? null
-                      : () {
-                          setState(() {
-                            if (isDeleteMode) {
-                              selectedAppointments.clear();
-                            }
+                  onPressed:
+                      isDeleting
+                          ? null
+                          : () {
+                              setState(
+                                () {
+                                  if (isDeleteMode) {
+                                    selectedAppointments.clear();
+                                  }
 
-                            isDeleteMode = !isDeleteMode;
-                          });
-                        },
+                                  isDeleteMode =
+                                      !isDeleteMode;
+                                },
+                              );
+                            },
                 ),
               if (selectedTab == 2 &&
                   isDeleteMode &&
-                  selectedAppointments.isNotEmpty)
+                  selectedAppointments
+                      .isNotEmpty)
                 IconButton(
-                  tooltip: 'Delete Selected',
-                  onPressed: isDeleting
-                      ? null
-                      : _deleteSelectedAppointments,
+                  tooltip:
+                      'Delete Selected',
+                  onPressed:
+                      isDeleting
+                          ? null
+                          : _deleteSelectedAppointments,
                   icon: isDeleting
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
+                          child:
+                              CircularProgressIndicator(
+                            strokeWidth:
+                                2,
+                            color:
+                                Colors.white,
                           ),
                         )
                       : const Icon(
-                          Icons.delete_forever,
-                          color: Colors.white,
+                          Icons
+                              .delete_forever,
+                          color:
+                              Colors.white,
                         ),
                 ),
             ],
           ),
           body: Column(
             children: [
-              _buildTabs(tabTitles),
-
-              if (selectedTab == 2 && isDeleteMode)
+              _buildTabs(
+                tabTitles,
+              ),
+              if (selectedTab ==
+                      2 &&
+                  isDeleteMode)
                 Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
+                  width:
+                      double.infinity,
+                  padding:
+                      const EdgeInsets
+                          .symmetric(
                     horizontal: 16,
                     vertical: 10,
                   ),
-                  color: Colors.red.shade50,
+                  color:
+                      Colors.red.shade50,
                   child: Row(
                     children: [
                       const Icon(
-                        Icons.check_circle_outline,
-                        color: Colors.red,
+                        Icons
+                            .check_circle_outline,
+                        color:
+                            Colors.red,
                         size: 20,
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(
+                        width: 8,
+                      ),
                       Text(
-                        selectedAppointments.isEmpty
+                        selectedAppointments
+                                .isEmpty
                             ? 'Select cancelled appointments to delete'
                             : '${selectedAppointments.length} selected',
-                        style: TextStyle(
-                          color: Colors.red.shade700,
-                          fontWeight: FontWeight.w600,
+                        style:
+                            TextStyle(
+                          color: Colors
+                              .red
+                              .shade700,
+                          fontWeight:
+                              FontWeight
+                                  .w600,
                           fontSize: 13,
                         ),
                       ),
                     ],
                   ),
                 ),
-
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding:
+                      const EdgeInsets
+                          .all(16),
                   child: Column(
                     children: [
                       Expanded(
-                        child: StreamBuilder<List<AppointmentModel>>(
-                          stream: _appointmentService
-                              .streamUpcomingAppointments(
+                        child:
+                            StreamBuilder<
+                                List<
+                                    AppointmentModel>>(
+                          stream:
+                              _appointmentService
+                                  .streamUpcomingAppointments(
                             _currentPatientId,
                           ),
-                          builder: (context, snapshot) {
+                          builder: (
+                            context,
+                            snapshot,
+                          ) {
                             if (snapshot.connectionState ==
-                                    ConnectionState.waiting &&
-                                appointments.isEmpty) {
+                                    ConnectionState
+                                        .waiting &&
+                                appointments
+                                    .isEmpty) {
                               return const Center(
-                                child: CircularProgressIndicator(),
+                                child:
+                                    CircularProgressIndicator(),
                               );
                             }
 
                             final list =
-                                snapshot.data ?? appointments;
+                                snapshot.data ??
+                                    appointments;
 
-                            final filtered = list.where(
-                              (appointment) {
-                                final st = appointment.status
-                                    .toLowerCase()
-                                    .trim();
+                            final filtered =
+                                list.where(
+                              (
+                                appointment,
+                              ) {
+                                final st =
+                                    appointment
+                                        .status
+                                        .toLowerCase()
+                                        .trim();
 
-                                if (selectedTab == 0) {
-                                  return st == "confirmed" ||
-                                      st == "rescheduled" ||
-                                      st == "waiting" ||
-                                      st == "scheduled" ||
-                                      st == "called" ||
-                                      st == "serving" ||
-                                      st == "in_consultation" ||
-                                      st == "arrived" ||
-                                      st == "on_hold";
+                                if (selectedTab ==
+                                    0) {
+                                  return st ==
+                                          "confirmed" ||
+                                      st ==
+                                          "rescheduled" ||
+                                      st ==
+                                          "waiting" ||
+                                      st ==
+                                          "scheduled" ||
+                                      st ==
+                                          "called" ||
+                                      st ==
+                                          "serving" ||
+                                      st ==
+                                          "in_consultation" ||
+                                      st ==
+                                          "arrived" ||
+                                      st ==
+                                          "on_hold";
                                 }
 
-                                if (selectedTab == 1) {
-                                  return st == "completed";
+                                if (selectedTab ==
+                                    1) {
+                                  return st ==
+                                      "completed";
                                 }
 
-                                if (selectedTab == 2) {
-                                  return st == "cancelled";
+                                if (selectedTab ==
+                                    2) {
+                                  return st ==
+                                      "cancelled";
                                 }
 
                                 return false;
                               },
                             ).toList();
 
-                            if (filtered.isEmpty) {
+                            if (filtered
+                                .isEmpty) {
                               return _buildEmptyState(
-                                tabTitles[selectedTab],
+                                tabTitles[
+                                    selectedTab],
                                 lang,
                                 isDark,
                                 bookBtnText,
                               );
                             }
 
-                            return ListView.builder(
-                              itemCount: filtered.length,
-                              itemBuilder: (context, i) {
+                            return ListView
+                                .builder(
+                              itemCount:
+                                  filtered
+                                      .length,
+                              itemBuilder:
+                                  (
+                                context,
+                                i,
+                              ) {
                                 final appointment =
-                                    filtered[i];
+                                    filtered[
+                                        i];
 
                                 final status =
-                                    appointment.status
+                                    appointment
+                                        .status
                                         .toLowerCase();
 
                                 return appointmentCard(
                                   hospital:
-                                      appointment.hospitalName,
+                                      appointment
+                                          .hospitalName,
                                   clinic:
-                                      appointment.departmentName,
+                                      appointment
+                                          .departmentName,
                                   time:
-                                      appointment.timeSlot,
+                                      appointment
+                                          .timeSlot,
                                   date:
-                                      appointment.appointmentDate,
+                                      appointment
+                                          .appointmentDate,
                                   token:
-                                      appointment.tokenCode,
+                                      appointment
+                                          .tokenCode,
                                   status:
-                                      appointment.status,
+                                      appointment
+                                          .status,
                                   patientName:
-                                      appointment.patientName,
+                                      appointment
+                                          .patientName,
                                   appointmentId:
-                                      appointment.id,
-                                  color: status == "called" ||
-                                          status == "serving" ||
-                                          status == "confirmed"
-                                      ? AppColors.statusGreen
-                                      : AppColors.statusOrange,
+                                      appointment
+                                          .id,
+                                  color: status ==
+                                              "called" ||
+                                          status ==
+                                              "serving" ||
+                                          status ==
+                                              "confirmed"
+                                      ? AppColors
+                                          .statusGreen
+                                      : AppColors
+                                          .statusOrange,
                                 );
                               },
                             );
                           },
                         ),
                       ),
-
-                      const SizedBox(height: 15),
-
+                      const SizedBox(
+                        height: 15,
+                      ),
                       SizedBox(
-                        width: double.infinity,
+                        width:
+                            double.infinity,
                         height: 52,
-                        child: ElevatedButton.icon(
-                          icon: const Icon(
-                            Icons.add_circle_outline_rounded,
+                        child:
+                            ElevatedButton
+                                .icon(
+                          icon:
+                              const Icon(
+                            Icons
+                                .add_circle_outline_rounded,
                             size: 20,
                           ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
+                          style:
+                              ElevatedButton
+                                  .styleFrom(
+                            backgroundColor:
+                                AppColors
+                                    .primary,
+                            foregroundColor:
+                                Colors
+                                    .white,
+                            shape:
+                                RoundedRectangleBorder(
                               borderRadius:
-                                  BorderRadius.circular(12),
+                                  BorderRadius
+                                      .circular(
+                                12,
+                              ),
                             ),
                           ),
-                          onPressed: () {
-                            Navigator.push(
+                          onPressed:
+                              () {
+                            Navigator
+                                .push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) =>
-                                    const CaregiverSetupScreen(),
+                                builder:
+                                    (
+                                  context,
+                                ) =>
+                                        const CaregiverSetupScreen(),
                               ),
                             );
                           },
                           label: Text(
                             bookBtnText,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
+                            style:
+                                const TextStyle(
+                              color:
+                                  Colors
+                                      .white,
+                              fontWeight:
+                                  FontWeight
+                                      .bold,
+                              fontSize:
+                                  15,
                             ),
                           ),
                         ),
@@ -490,40 +717,64 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
     );
   }
 
-  Widget _buildTabs(List<String> tabTitles) {
+  Widget _buildTabs(
+    List<String> tabTitles,
+  ) {
     return Container(
       color: AppColors.cardSurface,
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        mainAxisAlignment:
+            MainAxisAlignment
+                .spaceAround,
         children: List.generate(
           tabTitles.length,
-          (index) {
-            final active = selectedTab == index;
+          (
+            index,
+          ) {
+            final active =
+                selectedTab == index;
 
             return GestureDetector(
-              onTap: () => _changeTab(index),
+              onTap: () {
+                _changeTab(
+                  index,
+                );
+              },
               child: Container(
                 padding:
-                    const EdgeInsets.symmetric(vertical: 14),
-                decoration: BoxDecoration(
+                    const EdgeInsets
+                        .symmetric(
+                  vertical: 14,
+                ),
+                decoration:
+                    BoxDecoration(
                   border: Border(
-                    bottom: BorderSide(
+                    bottom:
+                        BorderSide(
                       color: active
-                          ? AppColors.accentColor
-                          : Colors.transparent,
+                          ? AppColors
+                              .accentColor
+                          : Colors
+                              .transparent,
                       width: 2.5,
                     ),
                   ),
                 ),
                 child: Text(
                   tabTitles[index],
-                  style: TextStyle(
+                  style:
+                      TextStyle(
                     color: active
-                        ? AppColors.accentColor
-                        : AppColors.bodyText,
-                    fontWeight: active
-                        ? FontWeight.bold
-                        : FontWeight.normal,
+                        ? AppColors
+                            .accentColor
+                        : AppColors
+                            .bodyText,
+                    fontWeight:
+                        active
+                            ? FontWeight
+                                .bold
+                            : FontWeight
+                                .normal,
                   ),
                 ),
               ),
@@ -542,35 +793,47 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
   ) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding:
+            const EdgeInsets.all(
+          32,
+        ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment:
+              MainAxisAlignment
+                  .center,
           children: [
             Icon(
-              Icons.event_note_outlined,
+              Icons
+                  .event_note_outlined,
               size: 64,
               color: isDark
-                  ? AppColors.accentColor
-                  : Colors.grey.shade400,
+                  ? AppColors
+                      .accentColor
+                  : Colors
+                      .grey
+                      .shade400,
             ),
-
-            const SizedBox(height: 16),
-
+            const SizedBox(
+              height: 16,
+            ),
             Text(
               lang == 'si'
                   ? "$currentTabTitle කිසිවක් නොමැත"
                   : lang == 'ta'
                       ? "$currentTabTitle எதுவும் இல்லை"
                       : "No $currentTabTitle appointments",
-              style: TextStyle(
+              style:
+                  TextStyle(
                 fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppColors.headingText,
+                fontWeight:
+                    FontWeight.bold,
+                color: AppColors
+                    .headingText,
               ),
             ),
-
-            const SizedBox(height: 8),
-
+            const SizedBox(
+              height: 8,
+            ),
             Text(
               selectedTab == 0
                   ? lang == 'si'
@@ -583,43 +846,69 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                       : lang == 'ta'
                           ? "பதிவுகள் எதுவும் கிடைக்கவில்லை."
                           : "No records found for your account.",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.bodyText,
+              textAlign:
+                  TextAlign.center,
+              style:
+                  TextStyle(
+                color:
+                    AppColors.bodyText,
                 fontSize: 13,
               ),
             ),
-
-            if (selectedTab == 0) ...[
-              const SizedBox(height: 18),
-              ElevatedButton.icon(
-                icon: const Icon(
-                  Icons.add_circle_outline_rounded,
+            if (selectedTab ==
+                0) ...[
+              const SizedBox(
+                height: 18,
+              ),
+              ElevatedButton
+                  .icon(
+                icon:
+                    const Icon(
+                  Icons
+                      .add_circle_outline_rounded,
                   size: 18,
                 ),
                 label: Text(
                   bookBtnText,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
+                  style:
+                      const TextStyle(
+                    fontWeight:
+                        FontWeight
+                            .bold,
                   ),
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
+                style:
+                    ElevatedButton
+                        .styleFrom(
+                  backgroundColor:
+                      AppColors
+                          .primary,
+                  foregroundColor:
+                      Colors.white,
+                  padding:
+                      const EdgeInsets
+                          .symmetric(
                     horizontal: 20,
                     vertical: 12,
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                  shape:
+                      RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius
+                            .circular(
+                      10,
+                    ),
                   ),
                 ),
                 onPressed: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) =>
-                          const CaregiverSetupScreen(),
+                      builder:
+                          (
+                        context,
+                      ) =>
+                              const CaregiverSetupScreen(),
                     ),
                   );
                 },
@@ -643,16 +932,26 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
     required Color color,
   }) {
     final isSelected =
-        selectedAppointments.contains(appointmentId);
+        selectedAppointments
+            .contains(
+      appointmentId,
+    );
 
     return GestureDetector(
       onTap: () async {
-        if (selectedTab == 2 && isDeleteMode) {
+        if (selectedTab == 2 &&
+            isDeleteMode) {
           setState(() {
             if (isSelected) {
-              selectedAppointments.remove(appointmentId);
+              selectedAppointments
+                  .remove(
+                appointmentId,
+              );
             } else {
-              selectedAppointments.add(appointmentId);
+              selectedAppointments
+                  .add(
+                appointmentId,
+              );
             }
           });
 
@@ -662,12 +961,17 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
         await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) =>
+            builder: (
+              context,
+            ) =>
                 AppointmentDetailsScreen(
-              appointmentId: appointmentId,
+              appointmentId:
+                  appointmentId,
               token: token,
-              patientName: patientName,
-              hospitalName: hospital,
+              patientName:
+                  patientName,
+              hospitalName:
+                  hospital,
               clinic: clinic,
               date: date,
               time: time,
@@ -679,124 +983,187 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
         await loadAppointments();
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
+        margin:
+            const EdgeInsets.only(
+          bottom: 12,
+        ),
+        padding:
+            const EdgeInsets.all(
+          14,
+        ),
+        decoration:
+            BoxDecoration(
           color: isSelected
-              ? AppColors.primary.withOpacity(0.08)
-              : AppColors.cardSurface,
-          borderRadius: BorderRadius.circular(12),
+              ? AppColors.primary
+                  .withOpacity(
+                  0.08,
+                )
+              : AppColors
+                  .cardSurface,
+          borderRadius:
+              BorderRadius.circular(
+            12,
+          ),
           border: Border.all(
             color: isSelected
                 ? AppColors.primary
-                : AppColors.cardBorder,
-            width: isSelected ? 2 : 1,
+                : AppColors
+                    .cardBorder,
+            width:
+                isSelected ? 2 : 1,
           ),
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment:
+              CrossAxisAlignment
+                  .start,
           children: [
             Row(
               children: [
-                if (selectedTab == 2 && isDeleteMode)
+                if (selectedTab ==
+                        2 &&
+                    isDeleteMode)
                   Padding(
                     padding:
-                        const EdgeInsets.only(right: 10),
+                        const EdgeInsets
+                            .only(
+                      right: 10,
+                    ),
                     child: Icon(
                       isSelected
-                          ? Icons.check_circle
-                          : Icons.radio_button_unchecked,
+                          ? Icons
+                              .check_circle
+                          : Icons
+                              .radio_button_unchecked,
                       color: isSelected
-                          ? AppColors.primary
-                          : Colors.grey,
+                          ? AppColors
+                              .primary
+                          : Colors
+                              .grey,
                       size: 22,
                     ),
                   ),
-
                 Expanded(
                   child: Text(
                     hospital,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                      color: AppColors.headingText,
+                    overflow:
+                        TextOverflow
+                            .ellipsis,
+                    style:
+                        TextStyle(
+                      fontWeight:
+                          FontWeight
+                              .bold,
+                      fontSize:
+                          13,
+                      color:
+                          AppColors
+                              .headingText,
                     ),
                   ),
                 ),
-
                 Container(
-                  padding: const EdgeInsets.symmetric(
+                  padding:
+                      const EdgeInsets
+                          .symmetric(
                     horizontal: 8,
                     vertical: 4,
                   ),
-                  decoration: BoxDecoration(
-                    color:
-                        color.withValues(alpha: 0.15),
+                  decoration:
+                      BoxDecoration(
+                    color: color
+                        .withValues(
+                      alpha: 0.15,
+                    ),
                     borderRadius:
-                        BorderRadius.circular(6),
+                        BorderRadius
+                            .circular(
+                      6,
+                    ),
                   ),
                   child: Text(
-                    status.toUpperCase(),
-                    style: TextStyle(
-                      color: color,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
+                    status
+                        .toUpperCase(),
+                    style:
+                        TextStyle(
+                      color:
+                          color,
+                      fontSize:
+                          10,
+                      fontWeight:
+                          FontWeight
+                              .bold,
                     ),
                   ),
                 ),
               ],
             ),
-
-            const SizedBox(height: 5),
-
+            const SizedBox(
+              height: 5,
+            ),
             Text(
               clinic,
               style: TextStyle(
-                color: AppColors.bodyText,
-                fontSize: 12,
+                color:
+                    AppColors.bodyText,
+                fontSize:
+                    12,
               ),
             ),
-
             Divider(
-              color: AppColors.cardBorder,
+              color:
+                  AppColors.cardBorder,
             ),
-
             Row(
               mainAxisAlignment:
-                  MainAxisAlignment.spaceBetween,
+                  MainAxisAlignment
+                      .spaceBetween,
               children: [
                 Column(
                   crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                      CrossAxisAlignment
+                          .start,
                   children: [
                     Text(
                       date,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                        color: AppColors.headingText,
+                      style:
+                          TextStyle(
+                        fontWeight:
+                            FontWeight
+                                .w600,
+                        fontSize:
+                            13,
+                        color:
+                            AppColors
+                                .headingText,
                       ),
                     ),
                     Text(
                       time,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.bodyText,
+                      style:
+                          TextStyle(
+                        fontSize:
+                            12,
+                        color:
+                            AppColors
+                                .bodyText,
                       ),
                     ),
                   ],
                 ),
-
-                if (!(selectedTab == 2 &&
+                if (!(selectedTab ==
+                        2 &&
                     isDeleteMode))
                   InkWell(
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) =>
-                              DigitalTokenDetailsScreen(
+                          builder:
+                              (
+                            context,
+                          ) =>
+                                  DigitalTokenDetailsScreen(
                             appointmentId:
                                 appointmentId,
                           ),
@@ -804,34 +1171,51 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                       );
                     },
                     borderRadius:
-                        BorderRadius.circular(6),
+                        BorderRadius
+                            .circular(
+                      6,
+                    ),
                     child: Padding(
                       padding:
-                          const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 3,
+                          const EdgeInsets
+                              .symmetric(
+                        horizontal:
+                            6,
+                        vertical:
+                            3,
                       ),
                       child: Row(
                         mainAxisSize:
-                            MainAxisSize.min,
+                            MainAxisSize
+                                .min,
                         children: [
                           Icon(
-                            Icons.qr_code_2_rounded,
+                            Icons
+                                .qr_code_2_rounded,
                             size: 16,
                             color:
-                                AppColors.accentColor,
+                                AppColors
+                                    .accentColor,
                           ),
-                          const SizedBox(width: 4),
+                          const SizedBox(
+                            width:
+                                4,
+                          ),
                           Text(
-                            token.isEmpty
+                            token
+                                    .isEmpty
                                 ? "View Token"
                                 : "Token: $token",
-                            style: TextStyle(
+                            style:
+                                TextStyle(
                               color:
-                                  AppColors.accentColor,
+                                  AppColors
+                                      .accentColor,
                               fontWeight:
-                                  FontWeight.bold,
-                              fontSize: 13,
+                                  FontWeight
+                                      .bold,
+                              fontSize:
+                                  13,
                             ),
                           ),
                         ],

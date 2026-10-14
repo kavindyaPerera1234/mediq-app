@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
 import '../../../core/constants/app_colors.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
@@ -15,8 +16,11 @@ class NotificationSettingsScreen extends StatefulWidget {
 
 class _NotificationSettingsScreenState
     extends State<NotificationSettingsScreen> {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore =
+      FirebaseFirestore.instance;
+
+  final FirebaseAuth _auth =
+      FirebaseAuth.instance;
 
   bool appNotifications = true;
   bool smsNotifications = true;
@@ -26,6 +30,90 @@ class _NotificationSettingsScreenState
   bool appointmentReminder = false;
 
   bool isSaving = false;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotificationPreferences();
+  }
+
+  Future<void> _loadNotificationPreferences() async {
+    final user = _auth.currentUser;
+
+    if (user == null) {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+      return;
+    }
+
+    try {
+      final document = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('settings')
+          .doc('notifications')
+          .get();
+
+      if (!mounted) return;
+
+      if (document.exists &&
+          document.data() != null) {
+        final data = document.data()!;
+
+        setState(() {
+          appNotifications =
+              data['appNotifications'] is bool
+                  ? data['appNotifications']
+                  : true;
+
+          smsNotifications =
+              data['smsNotifications'] is bool
+                  ? data['smsNotifications']
+                  : true;
+
+          appointmentConfirmation =
+              data['appointmentConfirmation'] is bool
+                  ? data['appointmentConfirmation']
+                  : true;
+
+          queueApproaching =
+              data['queueApproaching'] is bool
+                  ? data['queueApproaching']
+                  : true;
+
+          opdDelay =
+              data['opdDelay'] is bool
+                  ? data['opdDelay']
+                  : true;
+
+          appointmentReminder =
+              data['appointmentReminder'] is bool
+                  ? data['appointmentReminder']
+                  : false;
+
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        isLoading = false;
+      });
+
+      debugPrint(
+        'Unable to load notification preferences: $e',
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,10 +131,11 @@ class _NotificationSettingsScreenState
             Navigator.pop(context);
           },
         ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        title: const Column(
+          crossAxisAlignment:
+              CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               "Notification Settings",
               style: TextStyle(
                 color: AppColors.textPrimary,
@@ -54,7 +143,7 @@ class _NotificationSettingsScreenState
                 fontSize: 18,
               ),
             ),
-            const Text(
+            Text(
               "Preferences",
               style: TextStyle(
                 color: AppColors.textSecondary,
@@ -64,144 +153,209 @@ class _NotificationSettingsScreenState
           ],
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _sectionCard(
-              title: "NOTIFICATION DELIVERY",
-              children: [
-                _switchTile(
-                  title: "App Notifications",
-                  subtitle: "Receive live updates directly in-app",
-                  value: appNotifications,
-                  onChanged: (value) {
-                    setState(() {
-                      appNotifications = value;
-                    });
-                  },
-                ),
-                _switchTile(
-                  title: "SMS Notifications",
-                  subtitle:
-                      "Recommended for areas with weak internet",
-                  value: smsNotifications,
-                  onChanged: (value) {
-                    setState(() {
-                      smsNotifications = value;
-                    });
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _sectionCard(
-              title: "NOTIFY ME ABOUT:",
-              children: [
-                _switchTile(
-                  title: "Appointment confirmations",
-                  value: appointmentConfirmation,
-                  onChanged: (value) {
-                    setState(() {
-                      appointmentConfirmation = value;
-                    });
-                  },
-                ),
-                _switchTile(
-                  title: "Queue approaching turn",
-                  value: queueApproaching,
-                  onChanged: (value) {
-                    setState(() {
-                      queueApproaching = value;
-                    });
-                  },
-                ),
-                _switchTile(
-                  title: "OPD delays",
-                  value: opdDelay,
-                  onChanged: (value) {
-                    setState(() {
-                      opdDelay = value;
-                    });
-                  },
-                ),
-                _switchTile(
-                  title: "Appointment reminders",
-                  value: appointmentReminder,
-                  onChanged: (value) {
-                    setState(() {
-                      appointmentReminder = value;
-                    });
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.green.shade50,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Text(
-                "SMS notifications work on all phone types, "
-                "including basic/keypad phones. Safely integrated with MOH.",
-                style: TextStyle(
-                  fontSize: 12,
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 15,
+      body: isLoading
+          ? const Center(
+              child:
+                  CircularProgressIndicator(),
+            )
+          : SingleChildScrollView(
+              padding:
+                  const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  _sectionCard(
+                    title:
+                        "NOTIFICATION DELIVERY",
+                    children: [
+                      _switchTile(
+                        title:
+                            "App Notifications",
+                        subtitle:
+                            "Receive live updates directly in-app",
+                        value:
+                            appNotifications,
+                        onChanged: (value) {
+                          setState(() {
+                            appNotifications =
+                                value;
+                          });
+                        },
+                      ),
+                      _switchTile(
+                        title:
+                            "SMS Notifications",
+                        subtitle:
+                            "Recommended for areas with weak internet",
+                        value:
+                            smsNotifications,
+                        onChanged: (value) {
+                          setState(() {
+                            smsNotifications =
+                                value;
+                          });
+                        },
+                      ),
+                    ],
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                  const SizedBox(
+                    height: 16,
                   ),
-                ),
-                onPressed: isSaving ? null : _saveNotificationPreferences,
-                child: isSaving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
+                  _sectionCard(
+                    title:
+                        "NOTIFY ME ABOUT:",
+                    children: [
+                      _switchTile(
+                        title:
+                            "Appointment confirmations",
+                        value:
+                            appointmentConfirmation,
+                        onChanged: (value) {
+                          setState(() {
+                            appointmentConfirmation =
+                                value;
+                          });
+                        },
+                      ),
+                      _switchTile(
+                        title:
+                            "Queue approaching turn",
+                        value:
+                            queueApproaching,
+                        onChanged: (value) {
+                          setState(() {
+                            queueApproaching =
+                                value;
+                          });
+                        },
+                      ),
+                      _switchTile(
+                        title: "OPD delays",
+                        value: opdDelay,
+                        onChanged: (value) {
+                          setState(() {
+                            opdDelay = value;
+                          });
+                        },
+                      ),
+                      _switchTile(
+                        title:
+                            "Appointment reminders",
+                        value:
+                            appointmentReminder,
+                        onChanged: (value) {
+                          setState(() {
+                            appointmentReminder =
+                                value;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(
+                    height: 16,
+                  ),
+                  Container(
+                    width:
+                        double.infinity,
+                    padding:
+                        const EdgeInsets
+                            .all(14),
+                    decoration:
+                        BoxDecoration(
+                      color: Colors
+                          .green.shade50,
+                      borderRadius:
+                          BorderRadius
+                              .circular(12),
+                    ),
+                    child: const Text(
+                      "SMS notifications work on all phone types, "
+                      "including basic/keypad phones. Safely integrated with MOH.",
+                      style: TextStyle(
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(
+                    height: 20,
+                  ),
+                  SizedBox(
+                    width:
+                        double.infinity,
+                    child:
+                        ElevatedButton(
+                      style:
+                          ElevatedButton
+                              .styleFrom(
+                        backgroundColor:
+                            AppColors
+                                .primary,
+                        padding:
+                            const EdgeInsets
+                                .symmetric(
+                          vertical: 15,
                         ),
-                      )
-                    : const Text(
-                        "Save Preferences",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
+                        shape:
+                            RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius
+                                  .circular(
+                            12,
+                          ),
                         ),
                       ),
+                      onPressed:
+                          isSaving
+                              ? null
+                              : _saveNotificationPreferences,
+                      child: isSaving
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child:
+                                  CircularProgressIndicator(
+                                strokeWidth:
+                                    2,
+                                color: Colors
+                                    .white,
+                              ),
+                            )
+                          : const Text(
+                              "Save Preferences",
+                              style:
+                                  TextStyle(
+                                color: Colors
+                                    .white,
+                                fontWeight:
+                                    FontWeight
+                                        .bold,
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(
+                    height: 10,
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 10),
-          ],
-        ),
-      ),
     );
   }
 
-  Future<void> _saveNotificationPreferences() async {
+  Future<void>
+      _saveNotificationPreferences() async {
     final user = _auth.currentUser;
 
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
         const SnackBar(
           content: Text(
             'Please log in to save notification preferences.',
           ),
         ),
       );
+
       return;
     }
 
@@ -216,13 +370,19 @@ class _NotificationSettingsScreenState
           .collection('settings')
           .doc('notifications')
           .set({
-        'appNotifications': appNotifications,
-        'smsNotifications': smsNotifications,
-        'appointmentConfirmation': appointmentConfirmation,
-        'queueApproaching': queueApproaching,
+        'appNotifications':
+            appNotifications,
+        'smsNotifications':
+            smsNotifications,
+        'appointmentConfirmation':
+            appointmentConfirmation,
+        'queueApproaching':
+            queueApproaching,
         'opdDelay': opdDelay,
-        'appointmentReminder': appointmentReminder,
-        'updatedAt': FieldValue.serverTimestamp(),
+        'appointmentReminder':
+            appointmentReminder,
+        'updatedAt':
+            FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
       if (!mounted) return;
@@ -231,7 +391,8 @@ class _NotificationSettingsScreenState
         isSaving = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
         const SnackBar(
           content: Text(
             'Notification preferences saved successfully.',
@@ -245,7 +406,8 @@ class _NotificationSettingsScreenState
         isSaving = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
         SnackBar(
           content: Text(
             'Unable to save notification preferences: $e',
@@ -261,20 +423,25 @@ class _NotificationSettingsScreenState
   }) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(12),
+      padding:
+          const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius:
+            BorderRadius.circular(16),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
         children: [
           Text(
             title,
             style: const TextStyle(
-              color: AppColors.textSecondary,
+              color:
+                  AppColors.textSecondary,
               fontSize: 12,
-              fontWeight: FontWeight.bold,
+              fontWeight:
+                  FontWeight.bold,
             ),
           ),
           const SizedBox(height: 8),
@@ -291,41 +458,58 @@ class _NotificationSettingsScreenState
     required Function(bool) onChanged,
   }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 4),
+      margin:
+          const EdgeInsets.only(
+        bottom: 4,
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius:
+            BorderRadius.circular(12),
       ),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius:
+            BorderRadius.circular(12),
         child: SwitchListTile(
-          contentPadding: const EdgeInsets.symmetric(
+          contentPadding:
+              const EdgeInsets
+                  .symmetric(
             horizontal: 4,
             vertical: 2,
           ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+          shape:
+              RoundedRectangleBorder(
+            borderRadius:
+                BorderRadius.circular(
+              12,
+            ),
           ),
           title: Text(
             title,
             style: const TextStyle(
               fontSize: 14,
-              fontWeight: FontWeight.w500,
+              fontWeight:
+                  FontWeight.w500,
             ),
           ),
-          subtitle: subtitle == null
-              ? null
-              : Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey,
-                  ),
-                ),
+          subtitle:
+              subtitle == null
+                  ? null
+                  : Text(
+                      subtitle,
+                      style:
+                          const TextStyle(
+                        fontSize:
+                            11,
+                        color: Colors
+                            .grey,
+                      ),
+                    ),
           value: value,
           onChanged: onChanged,
-          activeColor: AppColors.primary,
+          activeColor:
+              AppColors.primary,
         ),
       ),
     );
