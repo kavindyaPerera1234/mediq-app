@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
 import '../../../core/constants/app_colors.dart';
-
 import '../../auth_live_queue_module3/screens/states/rejoin_queue_screen.dart';
-
 import '../models/notification_model.dart';
 
 class NotificationDetailScreen extends StatelessWidget {
@@ -19,7 +16,6 @@ class NotificationDetailScreen extends StatelessWidget {
     if (value == null || value.trim().isEmpty) {
       return 'Not available';
     }
-
     return value.trim();
   }
 
@@ -95,10 +91,201 @@ class NotificationDetailScreen extends StatelessWidget {
     }
   }
 
+  Future<Map<String, dynamic>>
+      _getConsultationCompletedData() async {
+    final Map<String, dynamic> result = {
+      'token':
+          notification.tokenNumber?.trim() ?? '',
+      'status': 'Completed',
+      'nextStep': 'Collect medicine',
+      'location': 'Pharmacy Counter',
+      'date':
+          notification.appointmentDate?.trim() ??
+              '',
+      'time':
+          notification.timeSlot?.trim() ?? '',
+    };
+
+    try {
+      final appointmentId =
+          notification.appointmentId?.trim() ?? '';
+
+      if (appointmentId.isNotEmpty) {
+        final appointmentDoc =
+            await FirebaseFirestore.instance
+                .collection('appointments')
+                .doc(appointmentId)
+                .get();
+
+        if (appointmentDoc.exists &&
+            appointmentDoc.data() != null) {
+          final data = appointmentDoc.data()!;
+
+          final token =
+              (data['tokenNumber'] ??
+                      data['tokenCode'] ??
+                      '')
+                  .toString()
+                  .trim();
+
+          if (token.isNotEmpty) {
+            result['token'] = token;
+          }
+
+          final status =
+              (data['status'] ?? '')
+                  .toString()
+                  .trim();
+
+          if (status.isNotEmpty) {
+            result['status'] =
+                _formatStatusText(status);
+          }
+
+          final pharmacyLocation =
+              (data['pharmacyLocation'] ??
+                      data['pharmacyCounter'] ??
+                      '')
+                  .toString()
+                  .trim();
+
+          if (pharmacyLocation.isNotEmpty) {
+            result['location'] =
+                pharmacyLocation;
+          }
+
+          final completedAt =
+              data['completedAt'];
+
+          if (completedAt is Timestamp) {
+            final completedDate =
+                completedAt.toDate();
+
+            result['date'] =
+                _formatCompletedDate(
+              completedDate,
+            );
+
+            result['time'] =
+                _formatCompletedTime(
+              completedDate,
+            );
+          } else {
+            final appointmentDate =
+                (data['appointmentDate'] ?? '')
+                    .toString()
+                    .trim();
+
+            final timeSlot =
+                (data['timeSlot'] ?? '')
+                    .toString()
+                    .trim();
+
+            if (appointmentDate.isNotEmpty) {
+              result['date'] =
+                  appointmentDate;
+            }
+
+            if (timeSlot.isNotEmpty) {
+              result['time'] = timeSlot;
+            }
+          }
+        }
+      }
+
+      if ((result['token'] ?? '')
+          .toString()
+          .trim()
+          .isEmpty) {
+        result['token'] =
+            await _getTokenFromDatabase();
+      }
+    } catch (e) {
+      debugPrint(
+        'Consultation completed detail load error: $e',
+      );
+
+      if ((result['token'] ?? '')
+          .toString()
+          .trim()
+          .isEmpty) {
+        result['token'] =
+            await _getTokenFromDatabase();
+      }
+    }
+
+    return result;
+  }
+
+  String _formatStatusText(String status) {
+    if (status.trim().isEmpty) {
+      return 'Completed';
+    }
+
+    final cleaned =
+        status.replaceAll('_', ' ').trim();
+
+    return cleaned
+        .split(' ')
+        .where((word) => word.isNotEmpty)
+        .map(
+          (word) =>
+              '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}',
+        )
+        .join(' ');
+  }
+
+  String _formatCompletedDate(
+    DateTime dateTime,
+  ) {
+    const months = <String>[
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+
+    return '${dateTime.day.toString().padLeft(2, '0')} '
+        '${months[dateTime.month - 1]} '
+        '${dateTime.year}';
+  }
+
+  String _formatCompletedTime(
+    DateTime dateTime,
+  ) {
+    int hour = dateTime.hour;
+
+    final minute =
+        dateTime.minute.toString().padLeft(
+              2,
+              '0',
+            );
+
+    final period =
+        hour >= 12 ? 'PM' : 'AM';
+
+    if (hour == 0) {
+      hour = 12;
+    } else if (hour > 12) {
+      hour -= 12;
+    }
+
+    return '$hour:$minute $period';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xffF6F8FC),
+      backgroundColor:
+          const Color(0xffF6F8FC),
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         elevation: 0,
@@ -159,6 +346,10 @@ class NotificationDetailScreen extends StatelessWidget {
       case 'caregiver_your_turn':
         return yourTurnCalled();
 
+      case 'consultation_completed':
+      case 'completed':
+        return consultationCompleted();
+
       case 'appointment_confirmed':
         return appointmentConfirmed();
 
@@ -176,7 +367,8 @@ class NotificationDetailScreen extends StatelessWidget {
         const SizedBox(height: 20),
         CircleAvatar(
           radius: 28,
-          backgroundColor: Colors.orange.shade100,
+          backgroundColor:
+              Colors.orange.shade100,
           child: const Icon(
             Icons.notifications_none,
             color: Colors.orange,
@@ -206,59 +398,80 @@ class NotificationDetailScreen extends StatelessWidget {
         const SizedBox(height: 25),
         detailCard([
           infoRow(
-            Icons.confirmation_number_outlined,
+            Icons
+                .confirmation_number_outlined,
             'YOUR TOKEN',
-            _value(notification.tokenNumber),
+            _value(
+              notification.tokenNumber,
+            ),
           ),
           const Divider(),
           infoRow(
             Icons.medical_services,
             'NOW SERVING',
-            _value(notification.nowServing),
+            _value(
+              notification.nowServing,
+            ),
           ),
           const Divider(),
           infoRow(
             Icons.people,
             'PEOPLE AHEAD',
-            _value(notification.peopleAhead),
+            _value(
+              notification.peopleAhead,
+            ),
           ),
           const Divider(),
           infoRow(
             Icons.timer,
             'ESTIMATED WAIT',
-            _value(notification.estimatedWait),
+            _value(
+              notification.estimatedWait,
+            ),
           ),
           const Divider(),
           infoRow(
             Icons.local_hospital_outlined,
             'HOSPITAL',
-            _value(notification.hospitalName),
+            _value(
+              notification.hospitalName,
+            ),
           ),
           const Divider(),
           infoRow(
-            Icons.medical_services_outlined,
+            Icons
+                .medical_services_outlined,
             'CLINIC / OPD',
-            _value(notification.clinicName),
+            _value(
+              notification.clinicName,
+            ),
           ),
           const Divider(),
           infoRow(
             Icons.meeting_room_outlined,
             'OPD ROOM',
-            _value(notification.roomNumber),
+            _value(
+              notification.roomNumber,
+            ),
           ),
         ]),
         const SizedBox(height: 20),
-        if (notification.roomNumber != null &&
+        if (notification.roomNumber !=
+                null &&
             notification.roomNumber!
                 .trim()
                 .isNotEmpty)
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
+            padding:
+                const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.yellow.shade50,
+              color:
+                  Colors.yellow.shade50,
               borderRadius:
-                  BorderRadius.circular(12),
+                  BorderRadius.circular(
+                12,
+              ),
             ),
             child: Text(
               'Please proceed to ${notification.roomNumber}.',
@@ -275,18 +488,24 @@ class NotificationDetailScreen extends StatelessWidget {
         detailCard([
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(10),
+            padding:
+                const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.orange.shade50,
+              color:
+                  Colors.orange.shade50,
               borderRadius:
-                  BorderRadius.circular(10),
+                  BorderRadius.circular(
+                10,
+              ),
             ),
             child: Text(
-              notification.title.isNotEmpty
+              notification
+                      .title.isNotEmpty
                   ? notification.title
                   : 'OPD Queue Delayed',
               style: const TextStyle(
-                fontWeight: FontWeight.bold,
+                fontWeight:
+                    FontWeight.bold,
               ),
             ),
           ),
@@ -308,19 +527,25 @@ class NotificationDetailScreen extends StatelessWidget {
           infoRow(
             Icons.timer_outlined,
             'ESTIMATED DELAY',
-            _value(notification.delayTime),
+            _value(
+              notification.delayTime,
+            ),
           ),
           const Divider(),
           infoRow(
             Icons.confirmation_number,
             'YOUR TOKEN',
-            _value(notification.tokenNumber),
+            _value(
+              notification.tokenNumber,
+            ),
           ),
           const Divider(),
           infoRow(
             Icons.meeting_room_outlined,
             'OPD ROOM',
-            _value(notification.roomNumber),
+            _value(
+              notification.roomNumber,
+            ),
           ),
         ]),
       ],
@@ -356,7 +581,9 @@ class NotificationDetailScreen extends StatelessWidget {
             ),
             child: const Icon(
               Icons.error_outline_rounded,
-              color: Color(0xFFE53935),
+              color: Color(
+                0xFFE53935,
+              ),
               size: 34,
             ),
           ),
@@ -368,7 +595,9 @@ class NotificationDetailScreen extends StatelessWidget {
           style: TextStyle(
             fontSize: 21,
             fontWeight: FontWeight.w800,
-            color: Color(0xFFE53935),
+            color: Color(
+              0xFFE53935,
+            ),
           ),
         ),
         const SizedBox(height: 7),
@@ -378,7 +607,9 @@ class NotificationDetailScreen extends StatelessWidget {
               : 'Your token was called but you were not present at the counter.',
           textAlign: TextAlign.center,
           style: const TextStyle(
-            color: Color(0xFF7A7A7A),
+            color: Color(
+              0xFF7A7A7A,
+            ),
             fontSize: 13,
             height: 1.4,
           ),
@@ -386,14 +617,17 @@ class NotificationDetailScreen extends StatelessWidget {
         const SizedBox(height: 22),
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(
+          padding:
+              const EdgeInsets.symmetric(
             horizontal: 18,
             vertical: 17,
           ),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius:
-                BorderRadius.circular(14),
+                BorderRadius.circular(
+              14,
+            ),
             border: Border.all(
               color: const Color(
                 0xFFE6EAF0,
@@ -401,7 +635,8 @@ class NotificationDetailScreen extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(
+                color: Colors.black
+                    .withValues(
                   alpha: 0.03,
                 ),
                 blurRadius: 8,
@@ -426,7 +661,8 @@ class NotificationDetailScreen extends StatelessWidget {
                       ),
                       fontWeight:
                           FontWeight.w600,
-                      letterSpacing: 0.4,
+                      letterSpacing:
+                          0.4,
                     ),
                   ),
                   Container(
@@ -438,32 +674,42 @@ class NotificationDetailScreen extends StatelessWidget {
                     ),
                     decoration:
                         BoxDecoration(
-                      color: const Color(
+                      color:
+                          const Color(
                         0xFFFFE8E8,
                       ),
                       borderRadius:
                           BorderRadius
-                              .circular(20),
+                              .circular(
+                        20,
+                      ),
                     ),
-                    child: const Text(
+                    child:
+                        const Text(
                       'MISSED',
-                      style: TextStyle(
+                      style:
+                          TextStyle(
                         color: Color(
                           0xFFE53935,
                         ),
                         fontSize: 10,
                         fontWeight:
-                            FontWeight.bold,
+                            FontWeight
+                                .bold,
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 9),
+              const SizedBox(
+                height: 9,
+              ),
               Text(
                 token,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
+                textAlign:
+                    TextAlign.center,
+                style:
+                    const TextStyle(
                   color: Color(
                     0xFF344054,
                   ),
@@ -473,16 +719,22 @@ class NotificationDetailScreen extends StatelessWidget {
                   letterSpacing: 1,
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(
+                height: 14,
+              ),
               const Divider(
                 color:
                     Color(0xFFEEF1F5),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(
+                height: 10,
+              ),
               Text(
                 _missedInstructionText(),
-                textAlign: TextAlign.center,
-                style: const TextStyle(
+                textAlign:
+                    TextAlign.center,
+                style:
+                    const TextStyle(
                   color:
                       Color(0xFF8A94A6),
                   fontSize: 12,
@@ -532,7 +784,8 @@ class NotificationDetailScreen extends StatelessWidget {
                   if (notification
                               .clinicName !=
                           null &&
-                      notification.clinicName!
+                      notification
+                          .clinicName!
                           .trim()
                           .isNotEmpty)
                     ...[
@@ -548,7 +801,8 @@ class NotificationDetailScreen extends StatelessWidget {
                   if (notification
                               .roomNumber !=
                           null &&
-                      notification.roomNumber!
+                      notification
+                          .roomNumber!
                           .trim()
                           .isNotEmpty)
                     ...[
@@ -564,7 +818,9 @@ class NotificationDetailScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(
+              height: 20,
+            ),
           ],
         SizedBox(
           height: 52,
@@ -616,8 +872,10 @@ class NotificationDetailScreen extends StatelessWidget {
                 OutlinedButton.styleFrom(
               foregroundColor:
                   AppColors.primary,
-              side: const BorderSide(
-                color: AppColors.primary,
+              side:
+                  const BorderSide(
+                color:
+                    AppColors.primary,
                 width: 1.4,
               ),
               shape:
@@ -707,7 +965,8 @@ class NotificationDetailScreen extends StatelessWidget {
           Flexible(
             child: Text(
               value,
-              textAlign: TextAlign.right,
+              textAlign:
+                  TextAlign.right,
               style: const TextStyle(
                 color:
                     Color(0xFF344054),
@@ -750,7 +1009,8 @@ class NotificationDetailScreen extends StatelessWidget {
               Icon(
                 Icons
                     .support_agent_rounded,
-                color: AppColors.primary,
+                color:
+                    AppColors.primary,
               ),
               SizedBox(width: 10),
               Text(
@@ -820,7 +1080,8 @@ class NotificationDetailScreen extends StatelessWidget {
               isTokenCalled
                   ? Icons
                       .notifications_active_rounded
-                  : Icons.campaign_outlined,
+                  : Icons
+                      .campaign_outlined,
               color: alertColor,
               size: 34,
             ),
@@ -885,7 +1146,6 @@ class NotificationDetailScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-
               FutureBuilder<String>(
                 future:
                     _getTokenFromDatabase(),
@@ -925,7 +1185,6 @@ class NotificationDetailScreen extends StatelessWidget {
                   );
                 },
               ),
-
               const SizedBox(height: 14),
               Divider(
                 color:
@@ -939,15 +1198,16 @@ class NotificationDetailScreen extends StatelessWidget {
                     height: 38,
                     decoration:
                         BoxDecoration(
-                      color: Colors
-                          .blue.shade50,
+                      color:
+                          Colors.blue.shade50,
                       borderRadius:
                           BorderRadius
                               .circular(
                         10,
                       ),
                     ),
-                    child: const Icon(
+                    child:
+                        const Icon(
                       Icons
                           .medical_services_outlined,
                       color:
@@ -1061,8 +1321,7 @@ class NotificationDetailScreen extends StatelessWidget {
                     fontSize: 12,
                     height: 1.4,
                     fontWeight:
-                        FontWeight
-                            .w500,
+                        FontWeight.w500,
                   ),
                 ),
               ),
@@ -1071,6 +1330,449 @@ class NotificationDetailScreen extends StatelessWidget {
         ),
         const SizedBox(height: 20),
       ],
+    );
+  }
+
+  Widget consultationCompleted() {
+    return FutureBuilder<
+        Map<String, dynamic>>(
+      future:
+          _getConsultationCompletedData(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState ==
+            ConnectionState.waiting) {
+          return const Padding(
+            padding:
+                EdgeInsets.only(top: 80),
+            child: Center(
+              child:
+                  CircularProgressIndicator(),
+            ),
+          );
+        }
+
+        final data =
+            snapshot.data ??
+                <String, dynamic>{
+                  'token':
+                      notification
+                              .tokenNumber ??
+                          'Not available',
+                  'status': 'Completed',
+                  'nextStep':
+                      'Collect medicine',
+                  'location':
+                      'Pharmacy Counter',
+                  'date':
+                      notification
+                              .appointmentDate ??
+                          'Not available',
+                  'time':
+                      notification.timeSlot ??
+                          'Not available',
+                };
+
+        final token = _value(
+          data['token']?.toString(),
+        );
+
+        final status = _value(
+          data['status']?.toString(),
+        );
+
+        final nextStep = _value(
+          data['nextStep']?.toString(),
+        );
+
+        final location = _value(
+          data['location']?.toString(),
+        );
+
+        final date = _value(
+          data['date']?.toString(),
+        );
+
+        final time = _value(
+          data['time']?.toString(),
+        );
+
+        return Column(
+          crossAxisAlignment:
+              CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 8),
+            Center(
+              child: Container(
+                width: 92,
+                height: 92,
+                decoration: BoxDecoration(
+                  color:
+                      Colors.green.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: Stack(
+                  alignment:
+                      Alignment.center,
+                  children: [
+                    const Icon(
+                      Icons
+                          .medical_services_outlined,
+                      color:
+                          Colors.green,
+                      size: 44,
+                    ),
+                    Positioned(
+                      right: 17,
+                      bottom: 16,
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration:
+                            const BoxDecoration(
+                          color:
+                              Colors.green,
+                          shape:
+                              BoxShape.circle,
+                        ),
+                        child:
+                            const Icon(
+                          Icons.check,
+                          color:
+                              Colors.white,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Consultation completed',
+              textAlign:
+                  TextAlign.center,
+              style: TextStyle(
+                color:
+                    Color(0xFF101828),
+                fontSize: 24,
+                fontWeight:
+                    FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              notification.message.isEmpty
+                  ? 'Your consultation for token $token is complete. Please collect medicine at the pharmacy.'
+                  : notification.message,
+              textAlign:
+                  TextAlign.center,
+              style: const TextStyle(
+                color:
+                    Color(0xFF667085),
+                fontSize: 13,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Container(
+              width: double.infinity,
+              padding:
+                  const EdgeInsets.all(
+                16,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius:
+                    BorderRadius.circular(
+                  18,
+                ),
+                border: Border.all(
+                  color: const Color(
+                    0xFFE6EAF0,
+                  ),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black
+                        .withValues(
+                      alpha: 0.03,
+                    ),
+                    blurRadius: 10,
+                    offset:
+                        const Offset(
+                      0,
+                      4,
+                    ),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    width:
+                        double.infinity,
+                    padding:
+                        const EdgeInsets
+                            .symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    decoration:
+                        BoxDecoration(
+                      color: Colors
+                          .green.shade50,
+                      borderRadius:
+                          BorderRadius
+                              .circular(
+                        12,
+                      ),
+                    ),
+                    child:
+                        const Row(
+                      children: [
+                        Icon(
+                          Icons
+                              .check_circle,
+                          color:
+                              Colors.green,
+                          size: 24,
+                        ),
+                        SizedBox(
+                          width: 10,
+                        ),
+                        Text(
+                          'COMPLETED',
+                          style:
+                              TextStyle(
+                            color: Colors
+                                .green,
+                            fontSize:
+                                14,
+                            fontWeight:
+                                FontWeight
+                                    .w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(
+                    height: 6,
+                  ),
+                  _completedDetailRow(
+                    icon: Icons
+                        .confirmation_number_outlined,
+                    label: 'Token',
+                    value: token,
+                  ),
+                  const Divider(
+                    color:
+                        Color(
+                      0xFFEEF1F5,
+                    ),
+                  ),
+                  _completedDetailRow(
+                    icon: Icons
+                        .check_circle_outline,
+                    label: 'Status',
+                    value: status,
+                    iconColor:
+                        Colors.green,
+                    iconBackground:
+                        const Color(
+                      0xFFEAF8EF,
+                    ),
+                  ),
+                  const Divider(
+                    color:
+                        Color(
+                      0xFFEEF1F5,
+                    ),
+                  ),
+                  _completedDetailRow(
+                    icon: Icons
+                        .medication_outlined,
+                    label:
+                        'Next Step',
+                    value: nextStep,
+                  ),
+                  const Divider(
+                    color:
+                        Color(
+                      0xFFEEF1F5,
+                    ),
+                  ),
+                  _completedDetailRow(
+                    icon: Icons
+                        .location_on_outlined,
+                    label:
+                        'Location',
+                    value: location,
+                  ),
+                  const Divider(
+                    color:
+                        Color(
+                      0xFFEEF1F5,
+                    ),
+                  ),
+                  _completedDetailRow(
+                    icon: Icons
+                        .calendar_month_outlined,
+                    label: 'Date',
+                    value: date,
+                  ),
+                  const Divider(
+                    color:
+                        Color(
+                      0xFFEEF1F5,
+                    ),
+                  ),
+                  _completedDetailRow(
+                    icon:
+                        Icons.access_time,
+                    label: 'Time',
+                    value: time,
+                  ),
+                  const SizedBox(
+                    height: 10,
+                  ),
+                  Container(
+                    width:
+                        double.infinity,
+                    padding:
+                        const EdgeInsets
+                            .all(
+                      14,
+                    ),
+                    decoration:
+                        BoxDecoration(
+                      color: Colors
+                          .green.shade50,
+                      borderRadius:
+                          BorderRadius
+                              .circular(
+                        12,
+                      ),
+                    ),
+                    child:
+                        const Row(
+                      crossAxisAlignment:
+                          CrossAxisAlignment
+                              .start,
+                      children: [
+                        Icon(
+                          Icons
+                              .info_outline,
+                          color:
+                              Colors.green,
+                          size: 22,
+                        ),
+                        SizedBox(
+                          width: 10,
+                        ),
+                        Expanded(
+                          child: Text(
+                            'Please keep your prescription and collect your medicine from the pharmacy.',
+                            style:
+                                TextStyle(
+                              color:
+                                  Color(
+                                0xFF1F7A3F,
+                              ),
+                              fontSize:
+                                  12,
+                              height:
+                                  1.4,
+                              fontWeight:
+                                  FontWeight
+                                      .w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _completedDetailRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    Color iconColor =
+        AppColors.primary,
+    Color iconBackground =
+        const Color(0xFFEAF4FF),
+  }) {
+    return Padding(
+      padding:
+          const EdgeInsets.symmetric(
+        vertical: 12,
+      ),
+      child: Row(
+        crossAxisAlignment:
+            CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: iconBackground,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              color: iconColor,
+              size: 21,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style:
+                      const TextStyle(
+                    color:
+                        Color(
+                      0xFF667085,
+                    ),
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(
+                  height: 3,
+                ),
+                Text(
+                  value,
+                  style:
+                      const TextStyle(
+                    color:
+                        Color(
+                      0xFF101828,
+                    ),
+                    fontSize: 15,
+                    fontWeight:
+                        FontWeight
+                            .w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1153,7 +1855,8 @@ class NotificationDetailScreen extends StatelessWidget {
           ),
           const Divider(),
           infoRow(
-            Icons.calendar_month_outlined,
+            Icons
+                .calendar_month_outlined,
             'DATE',
             _value(
               notification
