@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/queue_session_model.dart';
 import '../models/queue_entry_model.dart';
 import 'auth_service.dart';
+import '../../token_lifecycle_notification_module2/services/notification_preference_service.dart';
 
 /// Module 3 — Live Queue Service (real-time, cross-module).
 ///
@@ -706,33 +707,44 @@ class LiveQueueService extends ChangeNotifier {
     final id = '${entry.appointmentId}_$type${uniqueSuffix != null ? '_$uniqueSuffix' : ''}';
 
     try {
-      // Existing patient notification
-      final ref = _firestore.collection('notifications').doc(id);
-      final existing = await ref.get();
 
-      if (!existing.exists) {
-        await ref.set({
-          'id': id,
-          'type': type,
-          'title': title,
-          'message': message,
-          'status': 'unread',
-          'isRead': false,
-          'tokenNumber': entry.tokenCode,
-          'hospitalName': session.hospitalName,
-          'clinicName': session.departmentName,
-          'dateTime': DateTime.now().toIso8601String(),
-          'nowServing': session.currentTokenServing,
-          'peopleAhead': '${entry.peopleAhead}',
-          'estimatedWait': '~${entry.estimatedWaitMinutes} mins',
-          'affectedOPD': session.departmentName,
-          'delayTime': session.delayMinutes > 0 ? '${session.delayMinutes} mins' : null,
-          'patientId': entry.patientId,
-          'patientNic': currentPatientNic,
-          'appointmentId': entry.appointmentId,
-          'source': 'module3_live_queue',
-          'createdAt': FieldValue.serverTimestamp(),
-        });
+      final currentUser = AuthService().currentUser;
+      final notificationUserId = currentUser?.userId.trim().isNotEmpty == true
+        ? currentUser!.userId.trim()
+        : entry.patientId.trim();
+      final patientNotificationEnabled = await NotificationPreferenceService.isEnabled(
+        userId: notificationUserId,
+        type: type,
+      );
+      if (patientNotificationEnabled) {
+        // Existing patient notification
+        final ref = _firestore.collection('notifications').doc(id);
+        final existing = await ref.get();
+
+        if (!existing.exists) {
+          await ref.set({
+            'id': id,
+            'type': type,
+            'title': title,
+            'message': message,
+            'status': 'unread',
+            'isRead': false,
+            'tokenNumber': entry.tokenCode,
+            'hospitalName': session.hospitalName,
+            'clinicName': session.departmentName,
+            'dateTime': DateTime.now().toIso8601String(),
+            'nowServing': session.currentTokenServing,
+            'peopleAhead': '${entry.peopleAhead}',
+            'estimatedWait': '~${entry.estimatedWaitMinutes} mins',
+            'affectedOPD': session.departmentName,
+            'delayTime': session.delayMinutes > 0 ? '${session.delayMinutes} mins' : null,
+            'patientId': entry.patientId,
+            'patientNic': currentPatientNic,
+            'appointmentId': entry.appointmentId,
+            'source': 'module3_live_queue',
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+        }
       }
 
       // Caregiver notifications are only needed for these queue events.

@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'notification_preference_service.dart';
+
 class NotificationService {
   final FirebaseFirestore _firestore =
       FirebaseFirestore.instance;
@@ -20,6 +22,16 @@ class NotificationService {
   }) async {
     try {
       if (userId.trim().isEmpty) {
+        return null;
+      }
+
+      final enabled =
+          await NotificationPreferenceService.isEnabled(
+        userId: userId,
+        type: type,
+      );
+
+      if (!enabled) {
         return null;
       }
 
@@ -150,6 +162,23 @@ class NotificationService {
             appointmentDate.day == now.day;
 
         if (!isToday) {
+          continue;
+        }
+
+        final notificationUserId =
+            (data['userId'] ??
+                    data['patientId'] ??
+                    identifier)
+                .toString()
+                .trim();
+
+        final reminderEnabled =
+            await NotificationPreferenceService.isEnabled(
+          userId: notificationUserId,
+          type: 'reminder',
+        );
+
+        if (!reminderEnabled) {
           continue;
         }
 

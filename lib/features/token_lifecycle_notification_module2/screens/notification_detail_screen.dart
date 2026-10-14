@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../core/constants/app_colors.dart';
 
@@ -15,8 +16,7 @@ class NotificationDetailScreen extends StatelessWidget {
   });
 
   String _value(String? value) {
-    if (value == null ||
-        value.trim().isEmpty) {
+    if (value == null || value.trim().isEmpty) {
       return 'Not available';
     }
 
@@ -24,26 +24,88 @@ class NotificationDetailScreen extends StatelessWidget {
   }
 
   bool get _isMissedNotification {
-    return notification.type ==
-            'missed_token' ||
-        notification.type ==
-            'missed_turn' ||
-        notification.type ==
-            'missed';
+    return notification.type == 'missed_token' ||
+        notification.type == 'missed_turn' ||
+        notification.type == 'missed';
+  }
+
+  Future<String> _getTokenFromDatabase() async {
+    try {
+      if (notification.tokenNumber != null &&
+          notification.tokenNumber!.trim().isNotEmpty) {
+        return notification.tokenNumber!.trim();
+      }
+
+      final appointmentId =
+          notification.appointmentId?.trim() ?? '';
+
+      if (appointmentId.isNotEmpty) {
+        final appointmentDoc =
+            await FirebaseFirestore.instance
+                .collection('appointments')
+                .doc(appointmentId)
+                .get();
+
+        if (appointmentDoc.exists &&
+            appointmentDoc.data() != null) {
+          final data = appointmentDoc.data()!;
+
+          final token =
+              (data['tokenNumber'] ??
+                      data['tokenCode'] ??
+                      '')
+                  .toString()
+                  .trim();
+
+          if (token.isNotEmpty) {
+            return token;
+          }
+        }
+      }
+
+      final match = RegExp(
+        r'\b[A-Za-z]-\d+\b',
+      ).firstMatch(notification.message);
+
+      if (match != null) {
+        final token = match.group(0);
+
+        if (token != null &&
+            token.trim().isNotEmpty) {
+          return token.trim();
+        }
+      }
+
+      return 'Not available';
+    } catch (e) {
+      final match = RegExp(
+        r'\b[A-Za-z]-\d+\b',
+      ).firstMatch(notification.message);
+
+      if (match != null) {
+        final token = match.group(0);
+
+        if (token != null &&
+            token.trim().isNotEmpty) {
+          return token.trim();
+        }
+      }
+
+      return 'Not available';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor:
-          const Color(0xffF6F8FC),
+      backgroundColor: const Color(0xffF6F8FC),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.primary,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(
             Icons.arrow_back_ios_new,
-            color: Colors.black87,
+            color: Colors.white,
           ),
           onPressed: () {
             Navigator.pop(context);
@@ -52,15 +114,14 @@ class NotificationDetailScreen extends StatelessWidget {
         title: Text(
           _appBarTitle(),
           style: const TextStyle(
-            color: Colors.black87,
+            color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 18,
           ),
         ),
       ),
       body: SingleChildScrollView(
-        padding:
-            const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: _buildScreen(context),
       ),
     );
@@ -93,6 +154,11 @@ class NotificationDetailScreen extends StatelessWidget {
       case 'missed':
         return missedToken(context);
 
+      case 'your_turn':
+      case 'token_called':
+      case 'caregiver_your_turn':
+        return yourTurnCalled();
+
       case 'appointment_confirmed':
         return appointmentConfirmed();
 
@@ -110,8 +176,7 @@ class NotificationDetailScreen extends StatelessWidget {
         const SizedBox(height: 20),
         CircleAvatar(
           radius: 28,
-          backgroundColor:
-              Colors.orange.shade100,
+          backgroundColor: Colors.orange.shade100,
           child: const Icon(
             Icons.notifications_none,
             color: Colors.orange,
@@ -141,76 +206,57 @@ class NotificationDetailScreen extends StatelessWidget {
         const SizedBox(height: 25),
         detailCard([
           infoRow(
-            Icons
-                .confirmation_number_outlined,
+            Icons.confirmation_number_outlined,
             'YOUR TOKEN',
-            _value(
-              notification.tokenNumber,
-            ),
+            _value(notification.tokenNumber),
           ),
           const Divider(),
           infoRow(
             Icons.medical_services,
             'NOW SERVING',
-            _value(
-              notification.nowServing,
-            ),
+            _value(notification.nowServing),
           ),
           const Divider(),
           infoRow(
             Icons.people,
             'PEOPLE AHEAD',
-            _value(
-              notification.peopleAhead,
-            ),
+            _value(notification.peopleAhead),
           ),
           const Divider(),
           infoRow(
             Icons.timer,
             'ESTIMATED WAIT',
-            _value(
-              notification.estimatedWait,
-            ),
+            _value(notification.estimatedWait),
           ),
           const Divider(),
           infoRow(
             Icons.local_hospital_outlined,
             'HOSPITAL',
-            _value(
-              notification.hospitalName,
-            ),
+            _value(notification.hospitalName),
           ),
           const Divider(),
           infoRow(
-            Icons
-                .medical_services_outlined,
+            Icons.medical_services_outlined,
             'CLINIC / OPD',
-            _value(
-              notification.clinicName,
-            ),
+            _value(notification.clinicName),
           ),
           const Divider(),
           infoRow(
             Icons.meeting_room_outlined,
             'OPD ROOM',
-            _value(
-              notification.roomNumber,
-            ),
+            _value(notification.roomNumber),
           ),
         ]),
         const SizedBox(height: 20),
-        if (notification.roomNumber !=
-                null &&
+        if (notification.roomNumber != null &&
             notification.roomNumber!
                 .trim()
                 .isNotEmpty)
           Container(
             width: double.infinity,
-            padding:
-                const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color:
-                  Colors.yellow.shade50,
+              color: Colors.yellow.shade50,
               borderRadius:
                   BorderRadius.circular(12),
             ),
@@ -229,11 +275,9 @@ class NotificationDetailScreen extends StatelessWidget {
         detailCard([
           Container(
             width: double.infinity,
-            padding:
-                const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color:
-                  Colors.orange.shade50,
+              color: Colors.orange.shade50,
               borderRadius:
                   BorderRadius.circular(10),
             ),
@@ -242,8 +286,7 @@ class NotificationDetailScreen extends StatelessWidget {
                   ? notification.title
                   : 'OPD Queue Delayed',
               style: const TextStyle(
-                fontWeight:
-                    FontWeight.bold,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),
@@ -265,25 +308,19 @@ class NotificationDetailScreen extends StatelessWidget {
           infoRow(
             Icons.timer_outlined,
             'ESTIMATED DELAY',
-            _value(
-              notification.delayTime,
-            ),
+            _value(notification.delayTime),
           ),
           const Divider(),
           infoRow(
             Icons.confirmation_number,
             'YOUR TOKEN',
-            _value(
-              notification.tokenNumber,
-            ),
+            _value(notification.tokenNumber),
           ),
           const Divider(),
           infoRow(
             Icons.meeting_room_outlined,
             'OPD ROOM',
-            _value(
-              notification.roomNumber,
-            ),
+            _value(notification.roomNumber),
           ),
         ]),
       ],
@@ -349,8 +386,7 @@ class NotificationDetailScreen extends StatelessWidget {
         const SizedBox(height: 22),
         Container(
           width: double.infinity,
-          padding:
-              const EdgeInsets.symmetric(
+          padding: const EdgeInsets.symmetric(
             horizontal: 18,
             vertical: 17,
           ),
@@ -365,8 +401,7 @@ class NotificationDetailScreen extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black
-                    .withValues(
+                color: Colors.black.withValues(
                   alpha: 0.03,
                 ),
                 blurRadius: 8,
@@ -497,8 +532,7 @@ class NotificationDetailScreen extends StatelessWidget {
                   if (notification
                               .clinicName !=
                           null &&
-                      notification
-                          .clinicName!
+                      notification.clinicName!
                           .trim()
                           .isNotEmpty)
                     ...[
@@ -514,8 +548,7 @@ class NotificationDetailScreen extends StatelessWidget {
                   if (notification
                               .roomNumber !=
                           null &&
-                      notification
-                          .roomNumber!
+                      notification.roomNumber!
                           .trim()
                           .isNotEmpty)
                     ...[
@@ -583,7 +616,7 @@ class NotificationDetailScreen extends StatelessWidget {
                 OutlinedButton.styleFrom(
               foregroundColor:
                   AppColors.primary,
-              side: BorderSide(
+              side: const BorderSide(
                 color: AppColors.primary,
                 width: 1.4,
               ),
@@ -628,11 +661,13 @@ class NotificationDetailScreen extends StatelessWidget {
             notification.hospitalName!
                 .trim()
                 .isNotEmpty) ||
-        (notification.clinicName != null &&
+        (notification.clinicName !=
+                null &&
             notification.clinicName!
                 .trim()
                 .isNotEmpty) ||
-        (notification.roomNumber != null &&
+        (notification.roomNumber !=
+                null &&
             notification.roomNumber!
                 .trim()
                 .isNotEmpty);
@@ -749,6 +784,293 @@ class NotificationDetailScreen extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+
+  Widget yourTurnCalled() {
+    final title =
+        notification.title.trim();
+
+    final bool isTokenCalled =
+        title
+            .toLowerCase()
+            .contains('token called');
+
+    final Color alertColor =
+        isTokenCalled
+            ? Colors.red
+            : AppColors.primary;
+
+    return Column(
+      crossAxisAlignment:
+          CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 14),
+        Center(
+          child: Container(
+            width: 68,
+            height: 68,
+            decoration: BoxDecoration(
+              color: isTokenCalled
+                  ? Colors.red.shade50
+                  : Colors.blue.shade50,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isTokenCalled
+                  ? Icons
+                      .notifications_active_rounded
+                  : Icons.campaign_outlined,
+              color: alertColor,
+              size: 34,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          title.isNotEmpty
+              ? title
+              : 'Your Turn',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: alertColor,
+            fontSize: 22,
+            fontWeight:
+                FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          notification.message.isEmpty
+              ? 'Please proceed to the OPD.'
+              : notification.message,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Color(
+              0xFF667085,
+            ),
+            fontSize: 13,
+            height: 1.4,
+          ),
+        ),
+        const SizedBox(height: 22),
+        Container(
+          width: double.infinity,
+          padding:
+              const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius:
+                BorderRadius.circular(
+              16,
+            ),
+            border: Border.all(
+              color: const Color(
+                0xFFE6EAF0,
+              ),
+            ),
+          ),
+          child: Column(
+            children: [
+              const Text(
+                'YOUR TOKEN',
+                style: TextStyle(
+                  color: Color(
+                    0xFF8A94A6,
+                  ),
+                  fontSize: 11,
+                  fontWeight:
+                      FontWeight.w600,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              FutureBuilder<String>(
+                future:
+                    _getTokenFromDatabase(),
+                builder:
+                    (context, snapshot) {
+                  if (snapshot
+                          .connectionState ==
+                      ConnectionState
+                          .waiting) {
+                    return SizedBox(
+                      width: 26,
+                      height: 26,
+                      child:
+                          CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color:
+                            alertColor,
+                      ),
+                    );
+                  }
+
+                  final token =
+                      snapshot.data ??
+                          'Not available';
+
+                  return Text(
+                    token,
+                    textAlign:
+                        TextAlign.center,
+                    style: TextStyle(
+                      color:
+                          alertColor,
+                      fontSize: 30,
+                      fontWeight:
+                          FontWeight.bold,
+                    ),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 14),
+              Divider(
+                color:
+                    Colors.grey.shade200,
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration:
+                        BoxDecoration(
+                      color: Colors
+                          .blue.shade50,
+                      borderRadius:
+                          BorderRadius
+                              .circular(
+                        10,
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons
+                          .medical_services_outlined,
+                      color:
+                          AppColors.primary,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(
+                    width: 12,
+                  ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment:
+                          CrossAxisAlignment
+                              .start,
+                      children: [
+                        const Text(
+                          'STATUS',
+                          style:
+                              TextStyle(
+                            color:
+                                Color(
+                              0xFF8A94A6,
+                            ),
+                            fontSize:
+                                10,
+                          ),
+                        ),
+                        const SizedBox(
+                          height: 3,
+                        ),
+                        Text(
+                          isTokenCalled
+                              ? 'Token Called'
+                              : 'Your Turn Now',
+                          style:
+                              const TextStyle(
+                            color:
+                                Color(
+                              0xFF344054,
+                            ),
+                            fontSize:
+                                14,
+                            fontWeight:
+                                FontWeight
+                                    .w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (notification
+                          .roomNumber !=
+                      null &&
+                  notification
+                      .roomNumber!
+                      .trim()
+                      .isNotEmpty)
+                ...[
+                  const Divider(
+                    height: 28,
+                  ),
+                  infoRow(
+                    Icons
+                        .meeting_room_outlined,
+                    'OPD ROOM',
+                    notification
+                        .roomNumber!,
+                  ),
+                ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+        Container(
+          padding:
+              const EdgeInsets.all(15),
+          decoration: BoxDecoration(
+            color: isTokenCalled
+                ? Colors.red.shade50
+                : Colors.blue.shade50,
+            borderRadius:
+                BorderRadius.circular(
+              12,
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment:
+                CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.info_outline,
+                color: alertColor,
+                size: 21,
+              ),
+              const SizedBox(
+                width: 10,
+              ),
+              Expanded(
+                child: Text(
+                  isTokenCalled
+                      ? 'Your token has been called. Please proceed to the consultation room as soon as possible.'
+                      : 'It is now your turn. Please proceed to the OPD immediately.',
+                  style:
+                      const TextStyle(
+                    color: Color(
+                      0xFF344054,
+                    ),
+                    fontSize: 12,
+                    height: 1.4,
+                    fontWeight:
+                        FontWeight
+                            .w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+      ],
     );
   }
 
@@ -953,7 +1275,9 @@ class NotificationDetailScreen extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.blue.shade50,
             borderRadius:
-                BorderRadius.circular(12),
+                BorderRadius.circular(
+              12,
+            ),
           ),
           child: const Text(
             'Please arrive 15 minutes before your appointment time.',
@@ -969,7 +1293,8 @@ class NotificationDetailScreen extends StatelessWidget {
   ) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding:
+          const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius:
@@ -1039,7 +1364,8 @@ class NotificationDetailScreen extends StatelessWidget {
           notification.title,
           style: const TextStyle(
             fontSize: 18,
-            fontWeight: FontWeight.bold,
+            fontWeight:
+                FontWeight.bold,
           ),
         ),
       if (notification.title.isNotEmpty)

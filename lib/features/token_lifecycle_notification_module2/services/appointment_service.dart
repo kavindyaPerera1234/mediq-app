@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../auth_live_queue_module3/services/auth_service.dart';
 import '../models/appointment_model.dart';
+import 'notification_preference_service.dart';
+
 class AppointmentService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   Set<String> _buildUserLookupIds(String patientId) {

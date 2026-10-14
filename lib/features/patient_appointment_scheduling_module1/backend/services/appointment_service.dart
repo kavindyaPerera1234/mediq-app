@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/appointment_model.dart';
 import '../../../auth_live_queue_module3/services/auth_service.dart';
 import 'profile_service.dart';
+import '../../../token_lifecycle_notification_module2/services/notification_preference_service.dart';
 
 class AppointmentService {
 
@@ -367,16 +368,23 @@ class AppointmentService {
   }
 
   Future<void> _createAppointmentConfirmedNotification(
-
     AppointmentModel appointment,
-
   ) async {
-
     try {
+      final userId = (appointment.userId ?? appointment.patientId).trim();
+      
+      final enabled =
+        await NotificationPreferenceService.isEnabled(
+          userId: userId,
+          type: 'appointment_confirmed',
+        );
 
-      final notificationId =
+    if (!enabled) {
+      return;
+    }
 
-          'appointment_confirmed_${appointment.id}';
+    final notificationId =
+    'appointment_confirmed_${appointment.id}';
 
       await _firestore
 
