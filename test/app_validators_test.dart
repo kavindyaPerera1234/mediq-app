@@ -2,24 +2,24 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mediq_app/core/utils/app_validators.dart';
 
 void main() {
-  group('NIC Validation (Sri Lankan Format - Old & New)', () {
-    test('Valid 12-digit new NIC passes', () {
+  group('NIC Validation (Max 12 Digits Limit)', () {
+    test('Valid NIC up to 12 digits/characters passes', () {
       expect(AppValidators.validateNic('200112345678'), isNull);
-      expect(AppValidators.validateNic('199923456789'), isNull);
-    });
-
-    test('Valid 9-digit + V/X old NIC passes', () {
       expect(AppValidators.validateNic('991234567V'), isNull);
-      expect(AppValidators.validateNic('991234567v'), isNull);
-      expect(AppValidators.validateNic('851234567X'), isNull);
+      expect(AppValidators.validateNic('123456789'), isNull);
     });
 
-    test('Invalid NIC fails with descriptive message', () {
-      expect(AppValidators.validateNic('', required: true), 'National ID (NIC) is required');
-      expect(AppValidators.validateNic('12345'), 'NIC must be either 10 characters (Old) or 12 digits (New)');
-      expect(AppValidators.validateNic('1234567890123'), 'NIC must be either 10 characters (Old) or 12 digits (New)');
-      expect(AppValidators.validateNic('991234567A'), contains('Invalid Sri Lankan NIC format'));
-      expect(AppValidators.validateNic('20011234567A'), contains('Invalid Sri Lankan NIC format'));
+    test('Empty optional NIC passes', () {
+      expect(AppValidators.validateNic(''), isNull);
+      expect(AppValidators.validateNic(null), isNull);
+    });
+
+    test('Required empty NIC fails', () {
+      expect(AppValidators.validateNic('', required: true), 'NIC is required');
+    });
+
+    test('Exceeding 12 digits fails', () {
+      expect(AppValidators.validateNic('1234567890123'), 'NIC cannot exceed 12 digits');
     });
   });
 
@@ -92,7 +92,7 @@ void main() {
   group('Service Layer Assertions (assertValid)', () {
     test('assertValid throws ArgumentError on invalid input', () {
       expect(
-        () => AppValidators.assertValid(nic: '12345'),
+        () => AppValidators.assertValid(nic: '1234567890123'),
         throwsA(isA<ArgumentError>()),
       );
       expect(
