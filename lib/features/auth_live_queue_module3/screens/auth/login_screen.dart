@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/utils/app_validators.dart';
 import '../../services/auth_service.dart';
 import 'registration_screen.dart';
 import 'forgot_password_screen.dart';
@@ -217,9 +218,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 TextFormField(
                   controller: _phoneOrEmailController,
                   keyboardType: _isStaff ? TextInputType.emailAddress : TextInputType.text,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9@\.\+\-_]')),
-                  ],
+                  inputFormatters: _isStaff
+                      ? [
+                          FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9@\.\+\-_]')),
+                          LengthLimitingTextInputFormatter(60),
+                        ]
+                      : AppValidators.phoneOrEmailFormatters,
                   style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
                   decoration: InputDecoration(
                     prefixIcon: Icon(
@@ -244,22 +248,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return _isStaff ? 'Please enter your email' : 'Please enter your phone number or email';
-                    }
-                    final clean = value.trim();
                     if (_isStaff) {
-                      if (!RegExp(r'^[\w\.-]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(clean)) {
-                        return 'Please enter a valid staff email address';
-                      }
-                    } else {
-                      final isEmail = RegExp(r'^[\w\.-]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(clean);
-                      final isPhone = RegExp(r'^(?:0|94|\+94)?[0-9]{9,10}$').hasMatch(clean.replaceAll(RegExp(r'[\s\-]'), ''));
-                      if (!isEmail && !isPhone) {
-                        return 'Please enter a valid phone number or email address';
-                      }
+                      return AppValidators.validateEmail(value, required: true);
                     }
-                    return null;
+                    return AppValidators.validatePhoneOrEmail(value, required: true);
                   },
                 ),
 

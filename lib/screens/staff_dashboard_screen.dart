@@ -388,12 +388,13 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
                                     child: DropdownButton<String>(
                                       value: ['all', 'nhsl', 'hosp_kandy', 'hosp_karapitiya'].contains(hId) ? hId : 'all',
                                       isDense: true,
+                                      isExpanded: true,
                                       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
                                       items: const [
-                                        DropdownMenuItem(value: 'all', child: Text('All Government Hospitals')),
-                                        DropdownMenuItem(value: 'nhsl', child: Text('National Hospital of Sri Lanka (NHSL)')),
-                                        DropdownMenuItem(value: 'hosp_kandy', child: Text('Kandy General Hospital')),
-                                        DropdownMenuItem(value: 'hosp_karapitiya', child: Text('Karapitiya Teaching Hospital')),
+                                        DropdownMenuItem(value: 'all', child: Text('All Government Hospitals', overflow: TextOverflow.ellipsis)),
+                                        DropdownMenuItem(value: 'nhsl', child: Text('National Hospital of Sri Lanka (NHSL)', overflow: TextOverflow.ellipsis)),
+                                        DropdownMenuItem(value: 'hosp_kandy', child: Text('Kandy General Hospital', overflow: TextOverflow.ellipsis)),
+                                        DropdownMenuItem(value: 'hosp_karapitiya', child: Text('Karapitiya Teaching Hospital', overflow: TextOverflow.ellipsis)),
                                       ],
                                       onChanged: (val) {
                                         if (val != null) {
@@ -419,14 +420,15 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
                                     child: DropdownButton<String>(
                                       value: ['all', 'gen_med', 'ortho', 'ent', 'derma', 'pedia', 'dept_pediatrics', 'dept_cardiology', 'dept_ent'].contains(dId) ? dId : 'gen_med',
                                       isDense: true,
+                                      isExpanded: true,
                                       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
                                       items: const [
-                                        DropdownMenuItem(value: 'gen_med', child: Text('General Medicine OPD')),
-                                        DropdownMenuItem(value: 'ortho', child: Text('Orthopedics (Bone)')),
-                                        DropdownMenuItem(value: 'ent', child: Text('ENT Clinic')),
-                                        DropdownMenuItem(value: 'derma', child: Text('Dermatology (Skin)')),
-                                        DropdownMenuItem(value: 'pedia', child: Text('Pediatrics (Children)')),
-                                        DropdownMenuItem(value: 'all', child: Text('All OPD Clinics')),
+                                        DropdownMenuItem(value: 'gen_med', child: Text('General Medicine OPD', overflow: TextOverflow.ellipsis)),
+                                        DropdownMenuItem(value: 'ortho', child: Text('Orthopedics (Bone)', overflow: TextOverflow.ellipsis)),
+                                        DropdownMenuItem(value: 'ent', child: Text('ENT Clinic', overflow: TextOverflow.ellipsis)),
+                                        DropdownMenuItem(value: 'derma', child: Text('Dermatology (Skin)', overflow: TextOverflow.ellipsis)),
+                                        DropdownMenuItem(value: 'pedia', child: Text('Pediatrics (Children)', overflow: TextOverflow.ellipsis)),
+                                        DropdownMenuItem(value: 'all', child: Text('All OPD Clinics', overflow: TextOverflow.ellipsis)),
                                       ],
                                       onChanged: (val) {
                                         if (val != null) {
