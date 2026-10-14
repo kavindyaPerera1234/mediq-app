@@ -1,5 +1,4 @@
 import 'package:flutter/services.dart';
-import 'nic_helper.dart';
 
 /// Centralized validation suite for MediQ.
 /// Enforces Sri Lankan healthcare standards at both the UI (Form) and Service layers.
@@ -57,35 +56,17 @@ class AppValidators {
 
   // ── Field Validators (UI & Service Layer) ───────────────────────────────────
 
-  /// Validates Sri Lankan National Identity Card (NIC):
-  /// - Old format: exactly 9 digits + 'V' or 'X' (10 chars, e.g. 951234567V)
-  /// - New format: exactly 12 digits (12 chars, e.g. 200212345678)
+  /// Validates National Identity Card (NIC):
+  /// - Enforces maximum 12 digits limit
   static String? validateNic(String? value, {bool required = false}) {
     if (value == null || value.trim().isEmpty) {
-      if (required) return 'National ID (NIC) is required';
+      if (required) return 'NIC is required';
       return null;
     }
 
-    final nic = value.trim().toUpperCase();
-
-    // Check character length limit (Old NIC = 10 chars, New NIC = 12 chars)
-    if (nic.length != 10 && nic.length != 12) {
-      return 'NIC must be either 10 characters (Old) or 12 digits (New)';
-    }
-
-    // Old format: 9 digits + V or X
-    final oldPattern = RegExp(r'^[0-9]{9}[VX]$');
-    // New format: 12 digits
-    final newPattern = RegExp(r'^[0-9]{12}$');
-
-    if (!oldPattern.hasMatch(nic) && !newPattern.hasMatch(nic)) {
-      return 'Invalid Sri Lankan NIC format (e.g. 199912345678 or 951234567V)';
-    }
-
-    // Verify calendar date and birth year logic
-    final decoded = SriLankanNicHelper.decode(nic);
-    if (!decoded.isValid) {
-      return 'Invalid NIC number: date of birth or checksum failed';
+    final nic = value.trim();
+    if (nic.length > 12) {
+      return 'NIC cannot exceed 12 digits';
     }
 
     return null;
