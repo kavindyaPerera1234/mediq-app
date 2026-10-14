@@ -439,11 +439,6 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
         : (lang == 'ta'
             ? 'சந்திப்பு டோக்கன் மற்றும் வரிசை SMS உங்கள் தொலைபேசிக்கு அனுப்பப்படும்.'
             : 'Appointment token & queue SMS will be sent to your registered mobile number.');
-    final editHint = lang == 'si'
-        ? 'පැතිකඩ විස්තර ඔබගේ NIC ගිණුමට සම්බන්ධ කර ඇත.'
-        : (lang == 'ta'
-            ? 'சுயவிவர விவரங்கள் உங்கள் NIC உடன் இணைக்கப்பட்டுள்ளன.'
-            : 'Profile details are linked to your NIC account.');
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -463,38 +458,16 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.verified_user_rounded, color: AppColors.statusGreen, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    verifiedTitle,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.headingText,
-                    ),
-                  ),
-                ],
-              ),
-              // User Control: Change details hint
-              TextButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(editHint),
-                      duration: const Duration(seconds: 1),
-                    ),
-                  );
-                },
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  minimumSize: const Size(40, 24),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              const Icon(Icons.verified_user_rounded, color: AppColors.statusGreen, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                verifiedTitle,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.headingText,
                 ),
-                child: Text(AppTranslations.tr('editProfile'), style: TextStyle(fontSize: 12, color: AppColors.accentColor, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
