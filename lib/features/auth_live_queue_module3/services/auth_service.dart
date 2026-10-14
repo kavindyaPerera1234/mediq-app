@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/app_validators.dart';
 import '../../patient_appointment_scheduling_module1/screens/patient_main_screen.dart';
 import '../screens/auth/splash_screen.dart';
 import 'live_queue_service.dart';
@@ -202,6 +203,14 @@ class AuthService extends ChangeNotifier {
     bool isCaregiver = false,
     String preferredLanguage = 'en',
   }) async {
+    AppValidators.assertValid(
+      fullName: fullName,
+      phone: phoneNumber,
+      nic: nic,
+      age: age,
+      email: email,
+    );
+
     try {
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email.trim(),
