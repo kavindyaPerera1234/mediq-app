@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/utils/app_validators.dart';
 import '../../services/auth_service.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -285,7 +286,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 const SizedBox(height: 6),
                 TextField(
                   controller: _inputController,
-                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9@\.\+\-_]'))],
+                  inputFormatters: AppValidators.phoneOrEmailFormatters,
                   style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600),
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.contact_support_outlined, color: AppColors.primary),

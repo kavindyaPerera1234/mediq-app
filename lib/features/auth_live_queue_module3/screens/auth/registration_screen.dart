@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/utils/app_validators.dart';
 import '../../services/auth_service.dart';
 import '../../../../core/localization/app_strings.dart';
 import '../../../../core/localization/app_language.dart' as core_lang;
@@ -148,44 +149,29 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 TextFormField(
                   controller: _nameController,
                   textCapitalization: TextCapitalization.words,
-                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r"[a-zA-Z\s\.\-']"))],
+                  inputFormatters: AppValidators.nameFormatters,
                   style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
                   decoration: _buildInputDecoration(
                     hint: 'e.g. Kamal Gunaratne',
                     icon: Icons.person_outline_rounded,
                   ),
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Please enter your full name';
-                    final trimmed = v.trim();
-                    if (trimmed.length < 2) return 'Name must be at least 2 characters';
-                    if (!RegExp(r"^[a-zA-Z\s\.\-']+$").hasMatch(trimmed)) {
-                      return 'Name cannot contain special characters or numbers';
-                    }
-                    return null;
-                  },
+                  validator: AppValidators.validateFullName,
                 ),
 
                 const SizedBox(height: 18),
 
-                // Mobile Phone Number
-                _buildFieldLabel('${S.labelPhone} *'),
+                // Mobile Phone Number (10 digits limit)
+                _buildFieldLabel('${S.labelPhone} * (10 Digits)'),
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
-                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9+]'))],
+                  inputFormatters: AppValidators.phoneFormatters,
                   style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
                   decoration: _buildInputDecoration(
                     hint: '07X XXX XXXX',
                     icon: Icons.phone_android_rounded,
                   ),
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Please enter your phone number';
-                    final clean = v.replaceAll(RegExp(r'[\s\-]'), '');
-                    if (!RegExp(r'^(?:0|94|\+94)?[0-9]{9,10}$').hasMatch(clean)) {
-                      return 'Please enter a valid 10-digit phone number (e.g. 0771234567)';
-                    }
-                    return null;
-                  },
+                  validator: AppValidators.validatePhone,
                 ),
 
                 const SizedBox(height: 18),
@@ -203,13 +189,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     hint: 'e.g. name@example.com (or leave empty)',
                     icon: Icons.email_outlined,
                   ),
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return null;
-                    if (!RegExp(r'^[\w\.-]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(v.trim())) {
-                      return 'Please enter a valid email address';
-                    }
-                    return null;
-                  },
+                  validator: (v) => AppValidators.validateEmail(v, required: false),
                 ),
 
                 const SizedBox(height: 18),
@@ -236,7 +216,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
                 const SizedBox(height: 18),
 
-                // Row for NIC and Age
+                // Row for NIC (Max 12 chars) and Age (Max 2 digits)
                 Row(
                   children: [
                     // NIC Number
@@ -245,23 +225,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildFieldLabel('NIC / Passport (Optional)'),
+                          _buildFieldLabel('NIC / ID (Max 12 Chars)'),
                           TextFormField(
                             controller: _nicController,
-                            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]'))],
+                            inputFormatters: AppValidators.nicFormatters,
                             style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600),
                             decoration: _buildInputDecoration(
-                              hint: 'e.g. 198012345V',
+                              hint: '199912345678 or 951234567V',
                               icon: Icons.badge_outlined,
                             ),
-                            validator: (v) {
-                              if (v == null || v.trim().isEmpty) return null;
-                              final clean = v.trim();
-                              if (!RegExp(r'^(?:[0-9]{9}[vVxX]|[0-9]{12}|[A-Za-z0-9]{6,12})$').hasMatch(clean)) {
-                                return 'Invalid NIC/Passport format';
-                              }
-                              return null;
-                            },
+                            validator: (v) => AppValidators.validateNic(v, required: false),
                           ),
                         ],
                       ),
@@ -273,24 +246,17 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildFieldLabel('Age *'),
+                          _buildFieldLabel('Age * (1-99)'),
                           TextFormField(
                             controller: _ageController,
                             keyboardType: TextInputType.number,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            inputFormatters: AppValidators.ageFormatters,
                             style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600),
                             decoration: _buildInputDecoration(
-                              hint: 'e.g. 62',
+                              hint: 'e.g. 45',
                               icon: Icons.cake_outlined,
                             ),
-                            validator: (v) {
-                              if (v == null || v.trim().isEmpty) return 'Required';
-                              final age = int.tryParse(v.trim());
-                              if (age == null || age < 1 || age > 125) {
-                                return 'Valid age (1-125)';
-                              }
-                              return null;
-                            },
+                            validator: (v) => AppValidators.validateAge(v, required: true),
                           ),
                         ],
                       ),

@@ -9,6 +9,7 @@ import '../../patient_appointment_scheduling_module1/screens/patient_main_screen
 import '../screens/auth/splash_screen.dart';
 import 'live_queue_service.dart';
 import '../../../core/utils/nic_helper.dart';
+import '../../../core/utils/app_validators.dart';
 
 class AuthService extends ChangeNotifier {
   static final AuthService _instance = AuthService._internal();
@@ -281,6 +282,15 @@ class AuthService extends ChangeNotifier {
     bool isCaregiver = false,
     String preferredLanguage = 'en',
   }) async {
+    // 🛡️ Backend / Service layer validation
+    AppValidators.assertValid(
+      fullName: fullName,
+      phone: phoneNumber,
+      nic: nic,
+      age: age,
+      email: email,
+    );
+
     try {
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email.trim(),
@@ -355,6 +365,14 @@ class AuthService extends ChangeNotifier {
     int? age,
     bool isCaregiver = false,
   }) async {
+    // 🛡️ Backend / Service layer validation
+    AppValidators.assertValid(
+      fullName: fullName,
+      phone: phoneNumber,
+      nic: nic,
+      age: age,
+    );
+
     try {
       final uid = _auth.currentUser?.uid ?? 'user_${DateTime.now().millisecondsSinceEpoch}';
       final newUser = UserModel(
