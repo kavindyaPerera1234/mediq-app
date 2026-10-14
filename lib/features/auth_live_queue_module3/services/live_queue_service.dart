@@ -647,8 +647,8 @@ class LiveQueueService extends ChangeNotifier {
           if (prev == PatientQueueStatus.waiting || prev == PatientQueueStatus.delayed) {
             _pushNotification(
               type: 'near_turn',
-              title: 'Your turn is near',
-              message: 'Only ${entry.peopleAhead} patient(s) ahead of token ${entry.tokenCode}. '
+              title: 'Your Turn is Approaching',
+              message: 'Only ${entry.peopleAhead} patient(s) are ahead of token ${entry.tokenCode}. '
                   'Please return to the waiting area near ${session.roomNumber}.',
             );
           }
@@ -662,9 +662,10 @@ class LiveQueueService extends ChangeNotifier {
           break;
         case PatientQueueStatus.missed:
           _pushNotification(
-            type: 'missed_turn',
-            title: 'You missed your turn',
-            message: 'Token ${entry.tokenCode} was called but not present. You can rejoin the queue from the app.',
+            type: 'missed_token',
+            title: 'You Missed Your Turn',
+            message: 'Token ${entry.tokenCode} was called while you were away. '
+                'You can request to rejoin the queue from the app.',
           );
           break;
         case PatientQueueStatus.completed:
@@ -701,33 +702,162 @@ class LiveQueueService extends ChangeNotifier {
   }) async {
     final entry = _entry;
     if (entry == null) return;
+
     final id = '${entry.appointmentId}_$type${uniqueSuffix != null ? '_$uniqueSuffix' : ''}';
+
     try {
+      // Existing patient notification
       final ref = _firestore.collection('notifications').doc(id);
       final existing = await ref.get();
-      if (existing.exists) return; // don't reset isRead on repeat events
-      await ref.set({
-        'id': id,
-        'type': type,
-        'title': title,
-        'message': message,
+
+      if (!existing.exists) {
+        await ref.set({
+          'id': id,
+          'type': type,
+          'title': title,
+          'message': message,
+          'status': 'unread',
+          'isRead': false,
+          'tokenNumber': entry.tokenCode,
+          'hospitalName': session.hospitalName,
+          'clinicName': session.departmentName,
+          'dateTime': DateTime.now().toIso8601String(),
+          'nowServing': session.currentTokenServing,
+          'peopleAhead': '${entry.peopleAhead}',
+          'estimatedWait': '~${entry.estimatedWaitMinutes} mins',
+          'affectedOPD': session.departmentName,
+          'delayTime': session.delayMinutes > 0 ? '${session.delayMinutes} mins' : null,
+          'patientId': entry.patientId,
+          'patientNic': currentPatientNic,
+          'appointmentId': entry.appointmentId,
+          'source': 'module3_live_queue',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      // Caregiver notifications are only needed for these queue events.
+      if (type != 'near_turn' &&
+          type != 'your_turn' &&
+          type != 'missed_token') {
+        return;
+      }
+
+      final appointmentDoc = await _firestore
+          .collection('appointments')
+          .doc(entry.appointmentId)
+          .get();
+
+      if (!appointmentDoc.exists || appointmentDoc.data() == null) {
+        return;
+      }
+
+      final appointmentData = appointmentDoc.data()!;
+      final assistedQueue = appointmentData['assistedQueue'];
+
+      if (assistedQueue is! Map) {
+        return;
+      }
+
+      final assistedQueueEnabled =
+          assistedQueue['enabled'] == true ||
+          appointmentData['assistedQueueEnabled'] == true;
+
+      if (!assistedQueueEnabled) {
+        return;
+      }
+
+      final caregiverValue = assistedQueue['caregiver'];
+
+      if (caregiverValue is! Map) {
+        return;
+      }
+
+      final caregiver = Map<String, dynamic>.from(caregiverValue);
+      final caregiverUid = (caregiver['uid'] ?? '').toString().trim();
+      final appNotifications = caregiver['appNotifications'] == true;
+
+      if (caregiverUid.isEmpty || !appNotifications) {
+        return;
+      }
+
+      String caregiverType;
+      String caregiverTitle;
+      String caregiverMessage;
+
+      switch (type) {
+        case 'near_turn':
+          caregiverType = 'caregiver_queue_approaching';
+          caregiverTitle = "Patient's Turn is Approaching";
+          caregiverMessage =
+              'Only ${entry.peopleAhead} patient(s) are ahead of token ${entry.tokenCode}. '
+              'Please be ready to assist the patient.';
+          break;
+
+        case 'your_turn':
+          caregiverType = 'caregiver_your_turn';
+          caregiverTitle = 'Patient Turn Alert';
+          caregiverMessage =
+              'Token ${entry.tokenCode} has been called. '
+              'Please assist the patient to proceed to ${session.roomNumber}.';
+          break;
+
+        case 'missed_token':
+          caregiverType = 'caregiver_missed_turn';
+          caregiverTitle = 'Patient Missed Their Turn';
+          caregiverMessage =
+              'Token ${entry.tokenCode} was called while the patient was away. '
+              'Please help the patient rejoin the queue.';
+          break;
+
+        default:
+          return;
+      }
+
+      final caregiverNotificationId =
+          '${entry.appointmentId}_${caregiverType}_$caregiverUid';
+
+      final caregiverRef = _firestore
+          .collection('notifications')
+          .doc(caregiverNotificationId);
+
+      final caregiverExisting = await caregiverRef.get();
+
+      if (caregiverExisting.exists) {
+        return;
+      }
+
+      await caregiverRef.set({
+        'id': caregiverNotificationId,
+        'userId': caregiverUid,
+        'type': caregiverType,
+        'title': caregiverTitle,
+        'message': caregiverMessage,
         'status': 'unread',
         'isRead': false,
+        'isCaregiverNotification': true,
+        'caregiverName': caregiver['name'] ?? '',
+        'caregiverPhone': caregiver['phone'] ?? '',
+        'patientId': appointmentData['patientId'] ?? entry.patientId,
+        'patientNic': appointmentData['patientNic'] ?? '',
+        'patientName': appointmentData['patientName'] ?? entry.patientName,
+        'appointmentId': entry.appointmentId,
         'tokenNumber': entry.tokenCode,
+        'tokenCode': entry.tokenCode,
         'hospitalName': session.hospitalName,
         'clinicName': session.departmentName,
-        'dateTime': DateTime.now().toIso8601String(),
+        'departmentName': session.departmentName,
+        'roomNumber': session.roomNumber,
         'nowServing': session.currentTokenServing,
         'peopleAhead': '${entry.peopleAhead}',
         'estimatedWait': '~${entry.estimatedWaitMinutes} mins',
-        'affectedOPD': session.departmentName,
-        'delayTime': session.delayMinutes > 0 ? '${session.delayMinutes} mins' : null,
-        'patientId': entry.patientId,
-        'patientNic': currentPatientNic,
-        'appointmentId': entry.appointmentId,
-        'source': 'module3_live_queue',
+        'dateTime': DateTime.now().toIso8601String(),
+        'source': 'module2_assisted_queue',
         'createdAt': FieldValue.serverTimestamp(),
       });
+
+      debugPrint(
+        'Caregiver notification created: $caregiverType -> $caregiverUid',
+      );
     } catch (e) {
       debugPrint('LiveQueueService notification write notice: $e');
     }
@@ -967,29 +1097,75 @@ class LiveQueueService extends ChangeNotifier {
   Future<void> simulateCompleted() => _updateMyStatus('completed', {'completedAt': FieldValue.serverTimestamp()});
   Future<void> simulateResetToWaiting() => _updateMyStatus('confirmed', {});
 
-  /// Doctor finishes the current patient and calls the next one.
+  /// Doctor/staff moves to the next patient.
+  ///
+  /// If the currently called patient has not completed the consultation yet,
+  /// that patient is marked as missed before the next patient is called.
   Future<void> simulateAdvanceQueue() async {
-    final batch = _firestore.batch();
-    final called = _queue.where((e) => e.status == PatientQueueStatus.called).toList();
-    final next = _queue.where((e) =>
-        e.status == PatientQueueStatus.waiting ||
-        e.status == PatientQueueStatus.approaching ||
-        e.status == PatientQueueStatus.delayed);
-    for (final c in called) {
-      batch.update(_firestore.collection('appointments').doc(c.appointmentId), {
-        'status': 'completed',
-        'completedAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-    }
-    if (next.isNotEmpty) {
-      batch.update(_firestore.collection('appointments').doc(next.first.appointmentId), {
-        'status': 'called',
-        'calledAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-    }
     try {
+      final batch = _firestore.batch();
+      final now = FieldValue.serverTimestamp();
+
+      final currentlyCalled = _queue
+          .where((entry) => entry.status == PatientQueueStatus.called)
+          .toList();
+
+      final waitingPatients = _queue
+          .where((entry) =>
+              entry.status == PatientQueueStatus.waiting ||
+              entry.status == PatientQueueStatus.approaching ||
+              entry.status == PatientQueueStatus.delayed)
+          .toList();
+
+      // The current token was called, but the patient did not attend before
+      // staff moved to the next token. Mark it as missed in both collections.
+      for (final current in currentlyCalled) {
+        batch.update(
+          _firestore.collection('appointments').doc(current.appointmentId),
+          {
+            'status': 'missed',
+            'missedAt': now,
+            'updatedAt': now,
+          },
+        );
+
+        batch.set(
+          _firestore.collection('queue_entries').doc(current.appointmentId),
+          {
+            'appointmentId': current.appointmentId,
+            'status': 'missed',
+            'missedAt': now,
+            'updatedAt': now,
+          },
+          SetOptions(merge: true),
+        );
+      }
+
+      // Call the next waiting patient.
+      if (waitingPatients.isNotEmpty) {
+        final next = waitingPatients.first;
+
+        batch.update(
+          _firestore.collection('appointments').doc(next.appointmentId),
+          {
+            'status': 'called',
+            'calledAt': now,
+            'updatedAt': now,
+          },
+        );
+
+        batch.set(
+          _firestore.collection('queue_entries').doc(next.appointmentId),
+          {
+            'appointmentId': next.appointmentId,
+            'status': 'called',
+            'calledAt': now,
+            'updatedAt': now,
+          },
+          SetOptions(merge: true),
+        );
+      }
+
       await batch.commit();
     } catch (e) {
       debugPrint('simulateAdvanceQueue error: $e');

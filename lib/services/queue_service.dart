@@ -804,7 +804,7 @@ class QueueService {
       }
 
       // 3. Record queue event
-      createQueueEvent(
+      await createQueueEvent(
         queueSessionId: queueSessionId,
         performedBy: staffUserId,
         eventType: 'queue_delayed',
@@ -813,173 +813,163 @@ class QueueService {
         reason: reason,
       );
 
-      // 4. Gather all affected patients from queue_entries, appointments, and seed/user accounts
+      // 4. Notify only affected active patients
       final notifiedUserIds = <String>{};
 
-      // 4a. From queue_entries
-      try {
-        final entriesSnapshot = await _db
-            .collection(AppConstants.queueEntriesCollection)
-            .get();
+      bool isActiveStatus(String status) {
+        final value = status.toLowerCase();
+        return value != 'cancelled' &&
+            value != 'completed' &&
+            value != 'done' &&
+            value != 'missed' &&
+            value != 'no_show';
+      }
 
-        for (var doc in entriesSnapshot.docs) {
+      bool hospitalMatches(String value) {
+        final current = value.toLowerCase().trim();
+        final target = hospitalId.toLowerCase().trim();
+        return current == target ||
+            (current == 'hosp-001' && target == 'nhsl') ||
+            (current == 'nhsl' && target == 'hosp-001');
+      }
+
+      bool departmentMatches(String value) {
+        final current = value.toLowerCase().trim();
+        final target = departmentId.toLowerCase().trim();
+
+        if (current == target) return true;
+
+        if ((current == 'dept-001' || current.contains('gen_med')) && target == 'gen_med') {
+          return true;
+        }
+
+        if ((target == 'dept-001' || target.contains('gen_med')) && current == 'gen_med') {
+          return true;
+        }
+
+        return false;
+      }
+
+      // 4A. Queue entries from this exact active queue session
+      try {
+        final entriesSnapshot = await _db.collection(AppConstants.queueEntriesCollection).get();
+
+        for (final doc in entriesSnapshot.docs) {
           final data = doc.data();
-          final entrySessionId = (data['queueSessionId'] ?? '').toString();
-          final entryDept = (data['departmentId'] ?? '').toString();
+          final entrySessionId = (data['queueSessionId'] ?? '').toString().trim();
+          final entryHospital = (data['hospitalId'] ?? '').toString().trim();
+          final entryDepartment = (data['departmentId'] ?? '').toString().trim();
           final status = (data['status'] ?? '').toString().toLowerCase();
 
-          final isRelevant = entrySessionId == queueSessionId ||
+          final sameSession = entrySessionId == queueSessionId ||
               entrySessionId == standardSessionId ||
-              entryDept == departmentId ||
-              entrySessionId.contains(departmentId) ||
-              entrySessionId == 'QS-001';
+              entrySessionId == '${hospitalId}_${departmentId}_$dateStr' ||
+              entrySessionId == 'sess_${hospitalId}_${departmentId}_$dateStr';
 
-          if (isRelevant && status != 'cancelled') {
-            final patientId = (data['patientId'] ?? data['userId'] ?? '').toString().trim();
-            final token = (data['tokenCode'] ?? data['tokenNumber'] ?? '').toString();
-            final apptId = (data['appointmentId'] ?? '').toString();
+          final sameLocation = (entryHospital.isEmpty || hospitalMatches(entryHospital)) &&
+              (entryDepartment.isEmpty || departmentMatches(entryDepartment));
 
-            if (patientId.isNotEmpty && !notifiedUserIds.contains(patientId)) {
-              notifiedUserIds.add(patientId);
-              await _db.collection(AppConstants.notificationsCollection).add({
-                'userId': patientId,
-                'patientId': patientId,
-                'type': 'delay',
-                'eventType': 'queue_delayed',
-                'title': 'OPD Queue Delayed',
-                'message': 'General Medicine OPD delayed by ~$additionalMinutes mins. Reason: $reason',
-                'affectedOPD': 'General Medicine',
-                'clinicName': 'General Medicine OPD',
-                'hospitalName': 'National Hospital Sri Lanka',
-                'delayTime': '$additionalMinutes mins',
-                'delayMinutes': additionalMinutes,
-                'additionalMinutes': additionalMinutes,
-                'reason': reason,
-                'delayReason': reason,
-                'tokenNumber': token,
-                'appointmentId': apptId,
-                'queueEntryId': doc.id,
-                'queueSessionId': queueSessionId,
-                'status': 'NEW',
-                'isRead': false,
-                'createdAt': now,
-              });
-            }
-
-            // Update queue entry with delay
-            await doc.reference.set({
-              'delayMinutes': additionalMinutes,
-              'delayReason': reason,
-              'updatedAt': now,
-            }, SetOptions(merge: true));
+          if (!sameSession || !sameLocation || !isActiveStatus(status)) {
+            continue;
           }
-        }
-      } catch (_) {}
 
-      // 4b. From appointments (Module 1 / Module 3 bookings)
-      try {
-        final apptSnapshot = await _db
-            .collection(AppConstants.appointmentsCollection)
-            .where('departmentId', isEqualTo: departmentId)
-            .get();
+          final patientId = (data['patientId'] ?? data['userId'] ?? '').toString().trim();
+          if (patientId.isEmpty || notifiedUserIds.contains(patientId)) {
+            continue;
+          }
 
-        for (var doc in apptSnapshot.docs) {
-          final data = doc.data();
-          final patientId = (data['patientId'] ?? data['userId'] ?? data['patientNic'] ?? '').toString().trim();
+          notifiedUserIds.add(patientId);
+
           final token = (data['tokenCode'] ?? data['tokenNumber'] ?? '').toString();
+          final appointmentId = (data['appointmentId'] ?? '').toString();
 
-          if (patientId.isNotEmpty && !notifiedUserIds.contains(patientId)) {
-            notifiedUserIds.add(patientId);
-            await _db.collection(AppConstants.notificationsCollection).add({
-              'userId': patientId,
-              'patientId': patientId,
-              'type': 'delay',
-              'eventType': 'queue_delayed',
-              'title': 'OPD Queue Delayed',
-              'message': 'General Medicine OPD delayed by ~$additionalMinutes mins. Reason: $reason',
-              'affectedOPD': 'General Medicine',
-              'clinicName': 'General Medicine OPD',
-              'hospitalName': 'National Hospital Sri Lanka',
-              'delayTime': '$additionalMinutes mins',
-              'delayMinutes': additionalMinutes,
-              'additionalMinutes': additionalMinutes,
-              'reason': reason,
-              'delayReason': reason,
-              'tokenNumber': token,
-              'appointmentId': doc.id,
-              'queueSessionId': queueSessionId,
-              'status': 'NEW',
-              'isRead': false,
-              'createdAt': now,
-            });
-          }
-        }
-      } catch (_) {}
-
-      // 4c. Broadcast notification for all patients and fallback accounts
-      final knownPatientIds = [
-        'pat-018',
-        'pat-019',
-        'pat-020',
-        'pat-021',
-        'pat-022',
-        'pat-025',
-        '200164801234',
-      ];
-
-      for (final pId in knownPatientIds) {
-        if (!notifiedUserIds.contains(pId)) {
-          notifiedUserIds.add(pId);
           await _db.collection(AppConstants.notificationsCollection).add({
-            'userId': pId,
-            'patientId': pId,
+            'userId': patientId,
+            'patientId': patientId,
             'type': 'delay',
             'eventType': 'queue_delayed',
             'title': 'OPD Queue Delayed',
-            'message': 'General Medicine OPD delayed by ~$additionalMinutes mins. Reason: $reason',
-            'affectedOPD': 'General Medicine',
-            'clinicName': 'General Medicine OPD',
-            'hospitalName': 'National Hospital Sri Lanka',
+            'message': 'Your OPD queue is delayed by ~$additionalMinutes mins. Reason: $reason',
             'delayTime': '$additionalMinutes mins',
             'delayMinutes': additionalMinutes,
             'additionalMinutes': additionalMinutes,
             'reason': reason,
             'delayReason': reason,
-            'tokenNumber': 'Active Queue',
+            'hospitalId': hospitalId,
+            'departmentId': departmentId,
+            'tokenNumber': token,
+            'appointmentId': appointmentId,
+            'queueEntryId': doc.id,
+            'queueSessionId': queueSessionId,
+            'status': 'NEW',
+            'isRead': false,
+            'createdAt': now,
+          });
+
+          await doc.reference.set({
+            'delayMinutes': additionalMinutes,
+            'delayReason': reason,
+            'updatedAt': now,
+          }, SetOptions(merge: true));
+        }
+      } catch (e) {
+        debugPrint('Queue entry delay notification error: $e');
+      }
+
+      // 4B. Same hospital + OPD + date appointments
+      // Covers patients who do not yet have a queue_entries document.
+      try {
+        final appointmentSnapshot = await _db.collection(AppConstants.appointmentsCollection).get();
+
+        for (final doc in appointmentSnapshot.docs) {
+          final data = doc.data();
+          final appointmentHospital = (data['hospitalId'] ?? '').toString().trim();
+          final appointmentDepartment = (data['departmentId'] ?? data['clinicId'] ?? '').toString().trim();
+          final appointmentDate = (data['appointmentDate'] ?? '').toString().trim();
+          final status = (data['status'] ?? '').toString().toLowerCase();
+
+          if (!hospitalMatches(appointmentHospital)) continue;
+          if (!departmentMatches(appointmentDepartment)) continue;
+          if (appointmentDate != dateStr) continue;
+          if (!isActiveStatus(status)) continue;
+
+          final patientId = (data['patientId'] ?? data['userId'] ?? data['patientNic'] ?? '').toString().trim();
+          if (patientId.isEmpty || notifiedUserIds.contains(patientId)) {
+            continue;
+          }
+
+          notifiedUserIds.add(patientId);
+          final token = (data['tokenCode'] ?? data['tokenNumber'] ?? '').toString();
+
+          await _db.collection(AppConstants.notificationsCollection).add({
+            'userId': patientId,
+            'patientId': patientId,
+            'type': 'delay',
+            'eventType': 'queue_delayed',
+            'title': 'OPD Queue Delayed',
+            'message': 'Your OPD queue is delayed by ~$additionalMinutes mins. Reason: $reason',
+            'delayTime': '$additionalMinutes mins',
+            'delayMinutes': additionalMinutes,
+            'additionalMinutes': additionalMinutes,
+            'reason': reason,
+            'delayReason': reason,
+            'hospitalId': hospitalId,
+            'departmentId': departmentId,
+            'tokenNumber': token,
+            'appointmentId': doc.id,
             'queueSessionId': queueSessionId,
             'status': 'NEW',
             'isRead': false,
             'createdAt': now,
           });
         }
+      } catch (e) {
+        debugPrint('Appointment delay notification error: $e');
       }
-
-      // Universal Broadcast notification
-      await _db.collection(AppConstants.notificationsCollection).add({
-        'userId': 'all',
-        'isBroadcast': true,
-        'broadcast': true,
-        'departmentId': departmentId,
-        'type': 'delay',
-        'eventType': 'queue_delayed',
-        'title': 'OPD Queue Delayed',
-        'message': 'General Medicine OPD delayed by ~$additionalMinutes mins. Reason: $reason',
-        'affectedOPD': 'General Medicine',
-        'clinicName': 'General Medicine OPD',
-        'hospitalName': 'National Hospital Sri Lanka',
-        'delayTime': '$additionalMinutes mins',
-        'delayMinutes': additionalMinutes,
-        'additionalMinutes': additionalMinutes,
-        'reason': reason,
-        'delayReason': reason,
-        'status': 'NEW',
-        'isRead': false,
-        'createdAt': now,
-      });
 
       return QueueActionResult.success(
         null,
-        'Delay update broadcasted to ${notifiedUserIds.length} patients.',
+        'Delay notification sent to ${notifiedUserIds.length} affected patient(s).',
       );
     } catch (e) {
       return QueueActionResult.failure('Failed to send delay update: $e');
