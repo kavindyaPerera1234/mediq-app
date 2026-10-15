@@ -129,19 +129,7 @@ class _CallNextPatientScreenState extends State<CallNextPatientScreen> {
                   return a.queuePosition.compareTo(b.queuePosition);
                 });
 
-                final QueueEntry nextInLine = waitingList.isNotEmpty
-                    ? waitingList.first
-                    : QueueEntry(
-                        queueEntryId: 'QE-pat-021',
-                        queueSessionId: widget.queueSessionId,
-                        appointmentId: 'APT-021',
-                        patientId: 'pat-021',
-                        tokenNumber: 'A-021',
-                        tokenCode: 'A-021',
-                        status: 'waiting',
-                        queuePosition: 1,
-                        patientName: 'Kasun Perera',
-                      );
+                final QueueEntry? nextInLine = waitingList.isNotEmpty ? waitingList.first : null;
 
                 return SingleChildScrollView(
                   padding: const EdgeInsets.all(20.0),
@@ -269,71 +257,101 @@ class _CallNextPatientScreenState extends State<CallNextPatientScreen> {
                       const SizedBox(height: 20),
 
                       // Section 2: Next in Line Card
-                      Card(
-                        color: (nextInLine.priority == 'emergency')
-                            ? AppColors.errorLight
-                            : AppColors.primaryLight,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          side: BorderSide(
-                            color: (nextInLine.priority == 'emergency')
-                                ? AppColors.error
-                                : AppColors.primary,
-                            width: 1.5,
+                      // Section 2: Next in Line Card
+                      if (nextInLine != null) ...[
+                        Card(
+                          color: (nextInLine.priority == 'emergency')
+                              ? AppColors.errorLight
+                              : AppColors.primaryLight,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(
+                              color: (nextInLine.priority == 'emergency')
+                                  ? AppColors.error
+                                  : AppColors.primary,
+                              width: 1.5,
+                            ),
                           ),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(20.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text(
-                                    'NEXT IN LINE',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.textSecondary,
-                                      letterSpacing: 1.0,
+                          child: Padding(
+                            padding: const EdgeInsets.all(20.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text(
+                                      'NEXT IN LINE',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.textSecondary,
+                                        letterSpacing: 1.0,
+                                      ),
                                     ),
+                                    if (nextInLine.priority == 'emergency') const EmergencyBadge(compact: true),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  nextInLine.tokenNumber,
+                                  style: TextStyle(
+                                    fontSize: 40,
+                                    fontWeight: FontWeight.w800,
+                                    color: (nextInLine.priority == 'emergency')
+                                        ? AppColors.error
+                                        : AppColors.primaryDark,
                                   ),
-                                  if (nextInLine.priority == 'emergency') const EmergencyBadge(compact: true),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                nextInLine.tokenNumber,
-                                style: TextStyle(
-                                  fontSize: 40,
-                                  fontWeight: FontWeight.w800,
-                                  color: (nextInLine.priority == 'emergency')
-                                      ? AppColors.error
-                                      : AppColors.primaryDark,
                                 ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                nextInLine.patientName ?? 'Kasun Perera',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.textPrimary,
+                                const SizedBox(height: 4),
+                                Text(
+                                  nextInLine.patientName ?? 'Patient',
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textPrimary,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'General Medicine OPD • Position #${nextInLine.queuePosition}',
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  color: AppColors.textSecondary,
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Position #${nextInLine.queuePosition}',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.textSecondary,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
-                      ),
+                      ] else ...[
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: const Center(
+                            child: Column(
+                              children: [
+                                Icon(Icons.people_outline_rounded, size: 40, color: AppColors.textSecondary),
+                                SizedBox(height: 10),
+                                Text(
+                                  'No Patients Waiting in Queue',
+                                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'All booked and waiting tokens have been attended to.',
+                                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 32),
 
                       // Call Next Patient Primary Button
@@ -341,7 +359,7 @@ class _CallNextPatientScreenState extends State<CallNextPatientScreen> {
                         label: 'CALL NEXT PATIENT',
                         icon: Icons.campaign_rounded,
                         height: 54,
-                        onPressed: (isPaused || _isCalling)
+                        onPressed: (isPaused || _isCalling || nextInLine == null)
                             ? null
                             : _handleCallNext,
                         isLoading: _isCalling,

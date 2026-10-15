@@ -5,7 +5,7 @@ import '../../../../core/constants/app_translations.dart';
 import '../backend/backend.dart';
 import 'date_selection_screen.dart';
 
-class ClinicSelectionScreen extends StatelessWidget {
+class ClinicSelectionScreen extends StatefulWidget {
   final GovernmentHospital hospital;
   final bool isCaregiverBooking;
   final String patientName;
@@ -24,6 +24,34 @@ class ClinicSelectionScreen extends StatelessWidget {
   });
 
   @override
+  State<ClinicSelectionScreen> createState() => _ClinicSelectionScreenState();
+}
+
+class _ClinicSelectionScreenState extends State<ClinicSelectionScreen> {
+  String? _selectedClinicId;
+  OpdClinic? _selectedClinic;
+
+  void _proceedToDateSelection() {
+    if (_selectedClinic == null) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        settings: const RouteSettings(name: 'DateSelection'),
+        builder: (context) => DateSelectionScreen(
+          hospital: widget.hospital,
+          clinic: _selectedClinic!,
+          isCaregiverBooking: widget.isCaregiverBooking,
+          patientName: widget.patientName,
+          patientNic: widget.patientNic,
+          relationship: widget.relationship,
+          priority: widget.priority,
+        ),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: Listenable.merge([
@@ -32,12 +60,16 @@ class ClinicSelectionScreen extends StatelessWidget {
       ]),
       builder: (context, _) {
         final isDark = AppAccessibility.isHighContrastMode.value;
+
         return Scaffold(
           backgroundColor: AppColors.pageBg,
           appBar: AppBar(
             title: Text(
               AppTranslations.tr('availableDepartments'),
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
             ),
             backgroundColor: AppColors.appBarBg,
             foregroundColor: Colors.white,
@@ -58,7 +90,10 @@ class ClinicSelectionScreen extends StatelessWidget {
 
                   Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20.0,
+                        vertical: 16.0,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -75,24 +110,78 @@ class ClinicSelectionScreen extends StatelessWidget {
                               color: AppColors.headingText,
                             ),
                           ),
+
                           const SizedBox(height: 4),
+
                           Text(
-                            AppTranslations.tr('availableDepartmentsSubtitle'),
-                            style: TextStyle(fontSize: 13, color: AppColors.bodyText, height: 1.3),
+                            AppTranslations.tr(
+                              'availableDepartmentsSubtitle',
+                            ),
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.bodyText,
+                              height: 1.3,
+                            ),
                           ),
+
                           const SizedBox(height: 16),
 
                           // Clinics List
                           Expanded(
-                            child: ListView.separated(
-                              padding: const EdgeInsets.only(bottom: 24),
-                              itemCount: hospital.clinics.length,
-                              separatorBuilder: (context, index) => const SizedBox(height: 12),
-                              itemBuilder: (context, index) {
-                                final clinic = hospital.clinics[index];
-                                return _buildClinicCard(context, clinic, index);
-                              },
-                            ),
+                            child: widget.hospital.clinics.isEmpty
+                                ? Center(
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(24.0),
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.local_hospital_outlined,
+                                            size: 56,
+                                            color: AppColors.bodyText
+                                                .withValues(alpha: 0.5),
+                                          ),
+                                          const SizedBox(height: 14),
+                                          Text(
+                                            'No OPD Clinics Registered',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppColors.headingText,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            'No clinics have been added for this hospital in Firestore yet.',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: AppColors.bodyText,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  )
+                                : ListView.separated(
+                                    padding:
+                                        const EdgeInsets.only(bottom: 24),
+                                    itemCount:
+                                        widget.hospital.clinics.length,
+                                    separatorBuilder: (context, index) =>
+                                        const SizedBox(height: 12),
+                                    itemBuilder: (context, index) {
+                                      final clinic =
+                                          widget.hospital.clinics[index];
+
+                                      return _buildClinicCard(
+                                        context,
+                                        clinic,
+                                        index,
+                                      );
+                                    },
+                                  ),
                           ),
                         ],
                       ),
@@ -102,6 +191,7 @@ class ClinicSelectionScreen extends StatelessWidget {
               ),
             ),
           ),
+          bottomNavigationBar: _buildBottomContinueBar(),
         );
       },
     );
@@ -113,7 +203,12 @@ class ClinicSelectionScreen extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
       decoration: BoxDecoration(
         color: AppColors.cardSurface,
-        border: Border(bottom: BorderSide(color: AppColors.cardBorder, width: 1)),
+        border: Border(
+          bottom: BorderSide(
+            color: AppColors.cardBorder,
+            width: 1,
+          ),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -139,6 +234,7 @@ class ClinicSelectionScreen extends StatelessWidget {
               ),
             ],
           ),
+
           const SizedBox(height: 10),
 
           // 5 Segments with interactive navigation
@@ -150,10 +246,16 @@ class ClinicSelectionScreen extends StatelessWidget {
                 isActive: false,
                 isCompleted: true,
                 onTap: () {
-                  Navigator.of(context).popUntil((route) => route.settings.name == 'CaregiverSetup' || route.isFirst);
+                  Navigator.of(context).popUntil(
+                    (route) =>
+                        route.settings.name == 'CaregiverSetup' ||
+                        route.isFirst,
+                  );
                 },
               ),
+
               const SizedBox(width: 6),
+
               _buildStepSegment(
                 step: 2,
                 label: 'Hospital',
@@ -163,7 +265,9 @@ class ClinicSelectionScreen extends StatelessWidget {
                   Navigator.of(context).pop();
                 },
               ),
+
               const SizedBox(width: 6),
+
               _buildStepSegment(
                 step: 3,
                 label: 'Clinic',
@@ -171,7 +275,9 @@ class ClinicSelectionScreen extends StatelessWidget {
                 isCompleted: false,
                 onTap: null,
               ),
+
               const SizedBox(width: 6),
+
               _buildStepSegment(
                 step: 4,
                 label: 'Date',
@@ -179,7 +285,9 @@ class ClinicSelectionScreen extends StatelessWidget {
                 isCompleted: false,
                 onTap: null,
               ),
+
               const SizedBox(width: 6),
+
               _buildStepSegment(
                 step: 5,
                 label: 'Slot',
@@ -209,7 +317,8 @@ class ClinicSelectionScreen extends StatelessWidget {
 
     return Expanded(
       child: Tooltip(
-        message: 'Step $step: $label${isCompleted ? ' (Tap to edit)' : ''}',
+        message:
+            'Step $step: $label${isCompleted ? ' (Tap to edit)' : ''}',
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(4),
@@ -224,13 +333,21 @@ class ClinicSelectionScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(3),
                   ),
                 ),
+
                 const SizedBox(height: 4),
+
                 Text(
                   '$step. $label',
                   style: TextStyle(
                     fontSize: 10,
-                    fontWeight: isActive || isCompleted ? FontWeight.bold : FontWeight.normal,
-                    color: isActive ? AppColors.accentColor : (isCompleted ? AppColors.headingText : AppColors.bodyText),
+                    fontWeight: isActive || isCompleted
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                    color: isActive
+                        ? AppColors.accentColor
+                        : isCompleted
+                            ? AppColors.headingText
+                            : AppColors.bodyText,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -250,10 +367,15 @@ class ClinicSelectionScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.cardSurface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.cardBorder, width: 1.5),
+        border: Border.all(
+          color: AppColors.cardBorder,
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.isDark ? Colors.black26 : AppColors.primary.withValues(alpha: 0.04),
+            color: AppColors.isDark
+                ? Colors.black26
+                : AppColors.primary.withValues(alpha: 0.04),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -273,7 +395,9 @@ class ClinicSelectionScreen extends StatelessWidget {
               size: 22,
             ),
           ),
+
           const SizedBox(width: 12),
+
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -281,7 +405,10 @@ class ClinicSelectionScreen extends StatelessWidget {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.chipBg,
                         borderRadius: BorderRadius.circular(4),
@@ -298,9 +425,11 @@ class ClinicSelectionScreen extends StatelessWidget {
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 3),
+
                 Text(
-                  hospital.name,
+                  widget.hospital.name,
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -309,71 +438,93 @@ class ClinicSelectionScreen extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
+
                 Text(
-                  hospital.location,
-                  style: TextStyle(fontSize: 12, color: AppColors.bodyText),
+                  widget.hospital.location,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.bodyText,
+                  ),
                 ),
               ],
             ),
           ),
-          const Icon(Icons.check_circle_rounded, color: AppColors.statusGreen, size: 20),
+
+          const Icon(
+            Icons.check_circle_rounded,
+            color: AppColors.statusGreen,
+            size: 20,
+          ),
         ],
       ),
     );
   }
 
   // Polished Clinic Card
-  Widget _buildClinicCard(BuildContext context, OpdClinic clinic, int index) {
-    final roomNumber = 'OPD Room 0${index + 1}';
+  Widget _buildClinicCard(
+    BuildContext context,
+    OpdClinic clinic,
+    int index,
+  ) {
+    final isSelected = _selectedClinicId == clinic.id;
+
+    final roomNumber = clinic.roomNumber.isNotEmpty
+        ? clinic.roomNumber
+        : 'OPD Room ${index + 1}';
 
     return InkWell(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            settings: const RouteSettings(name: 'DateSelection'),
-            builder: (context) => DateSelectionScreen(
-              hospital: hospital,
-              clinic: clinic,
-              isCaregiverBooking: isCaregiverBooking,
-              patientName: patientName,
-              patientNic: patientNic,
-              relationship: relationship,
-              priority: priority,
-            ),
-          ),
-        );
+        setState(() {
+          _selectedClinicId = clinic.id;
+          _selectedClinic = clinic;
+        });
       },
       borderRadius: BorderRadius.circular(16),
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.cardSurface,
+          color: isSelected
+              ? const Color(0xFFF4F8FC)
+              : AppColors.cardSurface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.cardBorder),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.primary
+                : AppColors.cardBorder,
+            width: isSelected ? 1.8 : 1.0,
+          ),
           boxShadow: [
             BoxShadow(
-              color: AppColors.isDark ? Colors.black26 : AppColors.textDark.withValues(alpha: 0.03),
-              blurRadius: 6,
+              color: isSelected
+                  ? AppColors.primary.withValues(alpha: 0.08)
+                  : (AppColors.isDark
+                      ? Colors.black26
+                      : AppColors.textDark.withValues(alpha: 0.02)),
+              blurRadius: isSelected ? 6 : 4,
               offset: const Offset(0, 2),
             ),
           ],
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Specialty Medical Icon
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.chipBg,
+                color: isSelected
+                    ? AppColors.primary.withValues(alpha: 0.1)
+                    : AppColors.chipBg,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 clinic.icon,
-                color: AppColors.accentColor,
+                color: AppColors.primary,
                 size: 24,
               ),
             ),
+
             const SizedBox(width: 14),
 
             // Clinic Details
@@ -386,35 +537,56 @@ class ClinicSelectionScreen extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.headingText,
+                      color: isSelected
+                          ? AppColors.primary
+                          : AppColors.headingText,
                     ),
                   ),
+
                   const SizedBox(height: 4),
+
                   Row(
                     children: [
-                      Icon(Icons.access_time_rounded, size: 13, color: AppColors.bodyText),
+                      Icon(
+                        Icons.access_time_rounded,
+                        size: 13,
+                        color: AppColors.bodyText,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         clinic.hours,
-                        style: TextStyle(fontSize: 12, color: AppColors.bodyText),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.bodyText,
+                        ),
                       ),
                     ],
                   ),
+
                   const SizedBox(height: 8),
 
                   // Status Badges
-                  Row(
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.statusGreenLight,
                           borderRadius: BorderRadius.circular(5),
                         ),
-                        child: Row(
+                        child: const Row(
                           mainAxisSize: MainAxisSize.min,
-                          children: const [
-                            Icon(Icons.fiber_manual_record_rounded, size: 8, color: AppColors.statusGreen),
+                          children: [
+                            Icon(
+                              Icons.fiber_manual_record_rounded,
+                              size: 8,
+                              color: AppColors.statusGreen,
+                            ),
                             SizedBox(width: 4),
                             Text(
                               'Open Today',
@@ -427,13 +599,18 @@ class ClinicSelectionScreen extends StatelessWidget {
                           ],
                         ),
                       ),
-                      const SizedBox(width: 6),
+
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.innerCardBg,
                           borderRadius: BorderRadius.circular(5),
-                          border: Border.all(color: AppColors.cardBorder),
+                          border: Border.all(
+                            color: AppColors.cardBorder,
+                          ),
                         ),
                         child: Text(
                           roomNumber,
@@ -450,11 +627,164 @@ class ClinicSelectionScreen extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(width: 8),
-            Icon(
-              Icons.arrow_forward_ios_rounded,
-              color: AppColors.bodyText,
-              size: 15,
+            const SizedBox(width: 10),
+
+            // Subtle & Clean Selection Indicator Badge
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 6,
+              ),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppColors.statusGreenLight
+                    : AppColors.background,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: isSelected
+                      ? AppColors.statusGreen.withValues(alpha: 0.5)
+                      : AppColors.cardBorder,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isSelected
+                        ? Icons.check_circle_rounded
+                        : Icons.radio_button_unchecked_rounded,
+                    size: 14,
+                    color: isSelected
+                        ? AppColors.statusGreen
+                        : AppColors.bodyText,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    isSelected ? 'Selected' : 'Select',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.w500,
+                      color: isSelected
+                          ? AppColors.statusGreen
+                          : AppColors.bodyText,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Sticky Bottom Navigation Bar for deliberate user-controlled step navigation
+  Widget _buildBottomContinueBar() {
+    final hasSelection = _selectedClinic != null;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 20,
+        vertical: 12,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.cardSurface,
+        border: Border(
+          top: BorderSide(
+            color: AppColors.cardBorder,
+            width: 1,
+          ),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, -3),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (hasSelection)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.check_circle_rounded,
+                      size: 14,
+                      color: AppColors.statusGreen,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Selected: ${_selectedClinic!.name}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.headingText,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed:
+                    hasSelection ? _proceedToDateSelection : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: hasSelection
+                      ? AppColors.accentColor
+                      : AppColors.cardBorder,
+                  foregroundColor: hasSelection
+                      ? Colors.white
+                      : AppColors.bodyText,
+                  disabledBackgroundColor:
+                      AppColors.cardBorder.withValues(alpha: 0.5),
+                  disabledForegroundColor:
+                      AppColors.bodyText.withValues(alpha: 0.6),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      hasSelection
+                          ? 'Continue to Date Selection'
+                          : 'Select a Clinic to Continue',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: hasSelection
+                            ? Colors.white
+                            : AppColors.bodyText,
+                      ),
+                    ),
+                    if (hasSelection) ...[
+                      const SizedBox(width: 8),
+                      const Icon(
+                        Icons.arrow_forward_rounded,
+                        size: 16,
+                        color: Colors.white,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
           ],
         ),

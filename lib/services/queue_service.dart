@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../core/constants/app_constants.dart';
 import '../models/queue_session.dart';
@@ -77,9 +78,13 @@ class QueueService {
       }
 
       // 3. Find eligible next patient (waiting or rejoined)
+      final altSessionId = queueSessionId.startsWith('sess_')
+          ? queueSessionId.substring(5)
+          : 'sess_$queueSessionId';
+
       final entriesSnapshot = await _db
           .collection(AppConstants.queueEntriesCollection)
-          .where('queueSessionId', isEqualTo: queueSessionId)
+          .where('queueSessionId', whereIn: [queueSessionId, altSessionId])
           .get();
 
       List<QueueEntry> eligible = [];
@@ -90,43 +95,100 @@ class QueueService {
         }
       }
 
+      // If queue_entries has no eligible patient, check real booked appointments from Module 1
       if (eligible.isEmpty) {
-        // Dynamic fallback: Create next token entry so calling next always works
-        final nowTime = DateTime.now();
-        final nowServer = FieldValue.serverTimestamp();
-        final nextTokenNum = 'A-021';
-        final newDoc = _db.collection(AppConstants.queueEntriesCollection).doc();
+        try {
+          final parts = queueSessionId.split('_');
+          final hId = parts.isNotEmpty ? parts[0] : 'nhsl';
+          final dId = parts.length >= 2 ? parts[1] : 'gen_med';
 
-        await newDoc.set({
-          'queueSessionId': queueSessionId,
-          'appointmentId': 'APT-021',
-          'patientId': 'pat-021',
-          'tokenNumber': nextTokenNum,
-          'tokenCode': nextTokenNum,
-          'status': AppConstants.statusWaiting,
-          'queuePosition': 1,
-          'estimatedWaitMinutes': 10,
-          'priority': AppConstants.priorityNormal,
-          'patientName': 'Kasun Perera',
-          'createdAt': nowServer,
-          'updatedAt': nowServer,
-        });
+          final aptQuery = _db.collection(AppConstants.appointmentsCollection);
+          final aptSnap = await aptQuery.get();
 
-        final newEntry = QueueEntry(
-          queueEntryId: newDoc.id,
-          queueSessionId: queueSessionId,
-          appointmentId: 'APT-021',
-          patientId: 'pat-021',
-          tokenNumber: nextTokenNum,
-          tokenCode: nextTokenNum,
-          status: AppConstants.statusWaiting,
-          queuePosition: 1,
-          estimatedWaitMinutes: 10,
-          priority: AppConstants.priorityNormal,
-          patientName: 'Kasun Perera',
-          createdAt: nowTime,
-        );
-        eligible.add(newEntry);
+          for (var aptDoc in aptSnap.docs) {
+            final aptData = aptDoc.data();
+            final status = (aptData['status'] ?? 'waiting').toString().toLowerCase();
+            if (status != 'waiting' && status != 'confirmed') continue;
+
+            final rawAptH = (aptData['hospitalId'] ?? '').toString().toLowerCase();
+            final rawAptD = (aptData['departmentId'] ?? aptData['clinicId'] ?? '').toString().toLowerCase();
+            final aptH = (rawAptH == 'hosp-001' || rawAptH.isEmpty) ? 'nhsl' : rawAptH;
+            
+            String aptD = rawAptD;
+            if (aptD == 'dept-001' || aptD.contains('gen_med')) aptD = 'gen_med';
+            else if (aptD.contains('ortho')) aptD = 'ortho';
+            else if (aptD.contains('ent')) aptD = 'ent';
+            else if (aptD.contains('derma')) aptD = 'derma';
+            else if (aptD.contains('pedia')) aptD = 'pedia';
+
+            final normH = (hId.toLowerCase() == 'hosp-001' || hId.isEmpty) ? 'nhsl' : hId.toLowerCase();
+            final normD = (dId.toLowerCase() == 'dept-001') ? 'gen_med' : dId.toLowerCase();
+
+            final hospMatches = normH.isEmpty || normH == 'all' || aptH.isEmpty || aptH == normH || normH.contains(aptH) || aptH.contains(normH);
+            
+            bool deptMatches = false;
+            if (normD.isEmpty || normD == 'all') {
+              deptMatches = true;
+            } else if (normD == 'gen_med') {
+              deptMatches = aptD == 'gen_med' || aptD.contains('gen');
+            } else if (normD == 'ortho') {
+              deptMatches = aptD == 'ortho';
+            } else if (normD == 'ent' || normD == 'dept_ent') {
+              deptMatches = aptD == 'ent' || aptD == 'dept_ent';
+            } else if (normD == 'derma') {
+              deptMatches = aptD == 'derma';
+            } else if (normD == 'pedia' || normD == 'dept_pediatrics') {
+              deptMatches = aptD == 'pedia' || aptD == 'dept_pediatrics';
+            } else {
+              deptMatches = aptD == normD;
+            }
+
+            final shouldInclude = (normD == 'all') ? true : (hospMatches && deptMatches);
+
+            if (shouldInclude) {
+              final token = aptData['tokenNumber'] ?? aptData['tokenCode'] ?? 'A-001';
+              final patientName = aptData['patientName'] ?? 'Patient';
+              
+              // Create real queue entry for this appointment so it's tracked properly
+              final newDoc = _db.collection(AppConstants.queueEntriesCollection).doc(aptDoc.id);
+              await newDoc.set({
+                'queueSessionId': queueSessionId,
+                'appointmentId': aptDoc.id,
+                'patientId': aptData['patientId'] ?? '',
+                'tokenNumber': token,
+                'tokenCode': token,
+                'status': AppConstants.statusWaiting,
+                'queuePosition': eligible.length + 1,
+                'estimatedWaitMinutes': (eligible.length + 1) * 10,
+                'priority': aptData['priority'] ?? AppConstants.priorityNormal,
+                'patientName': patientName,
+                'createdAt': FieldValue.serverTimestamp(),
+                'updatedAt': FieldValue.serverTimestamp(),
+              }, SetOptions(merge: true));
+
+              eligible.add(QueueEntry(
+                queueEntryId: aptDoc.id,
+                queueSessionId: queueSessionId,
+                appointmentId: aptDoc.id,
+                patientId: aptData['patientId'] ?? '',
+                tokenNumber: token,
+                tokenCode: token,
+                status: AppConstants.statusWaiting,
+                queuePosition: eligible.length + 1,
+                estimatedWaitMinutes: (eligible.length + 1) * 10,
+                priority: aptData['priority'] ?? AppConstants.priorityNormal,
+                patientName: patientName,
+                createdAt: DateTime.now(),
+              ));
+            }
+          }
+        } catch (e) {
+          debugPrint('QueueService: Error checking booked appointments: $e');
+        }
+      }
+
+      if (eligible.isEmpty) {
+        return QueueActionResult.failure('No waiting patients found in the queue.');
       }
 
       // 4. Sort: Emergency priority first, then queuePosition
@@ -227,6 +289,75 @@ class QueueService {
     }
   }
 
+  Future<QueueEntry?> _resolveOrUpsertQueueEntry(String queueEntryId) async {
+    // 1. Direct lookup
+    var doc = await _db.collection(AppConstants.queueEntriesCollection).doc(queueEntryId).get();
+    if (doc.exists) {
+      return QueueEntry.fromFirestore(doc);
+    }
+
+    // 2. Try stripped 'QE-'
+    final strippedId = queueEntryId.startsWith('QE-') ? queueEntryId.substring(3) : queueEntryId;
+    if (strippedId != queueEntryId) {
+      doc = await _db.collection(AppConstants.queueEntriesCollection).doc(strippedId).get();
+      if (doc.exists) {
+        return QueueEntry.fromFirestore(doc);
+      }
+    }
+
+    // 3. Fallback: check appointments collection
+    final aptDoc = await _db.collection(AppConstants.appointmentsCollection).doc(strippedId).get();
+    if (aptDoc.exists) {
+      final data = aptDoc.data()!;
+      final token = (data['tokenNumber'] ?? data['tokenCode'] ?? 'A-001').toString();
+      final qSessId = (data['queueSessionId'] ?? AppConstants.defaultQueueSessionId()).toString();
+      String pName = (data['patientName'] ?? '').toString();
+      final pId = (data['patientId'] ?? '').toString();
+
+      if (pName.isEmpty && pId.isNotEmpty) {
+        try {
+          final userDoc = await _db.collection(AppConstants.usersCollection).doc(pId).get();
+          if (userDoc.exists && userDoc.data() != null) {
+            pName = (userDoc.data()!['fullName'] ?? 'Patient').toString();
+          }
+        } catch (_) {}
+      }
+      if (pName.isEmpty) pName = 'Patient';
+
+      final now = FieldValue.serverTimestamp();
+      final newEntryData = {
+        'queueEntryId': strippedId,
+        'queueSessionId': qSessId,
+        'appointmentId': strippedId,
+        'patientId': pId,
+        'patientName': pName,
+        'tokenNumber': token,
+        'tokenCode': token,
+        'status': AppConstants.statusWaiting,
+        'priority': (data['priority'] ?? 'normal').toString(),
+        'queuePosition': 1,
+        'createdAt': data['createdAt'] ?? now,
+        'updatedAt': now,
+      };
+
+      await _db.collection(AppConstants.queueEntriesCollection).doc(strippedId).set(newEntryData, SetOptions(merge: true));
+      return QueueEntry(
+        queueEntryId: strippedId,
+        queueSessionId: qSessId,
+        appointmentId: strippedId,
+        patientId: pId,
+        patientName: pName,
+        tokenNumber: token,
+        tokenCode: token,
+        status: AppConstants.statusWaiting,
+        priority: (data['priority'] ?? 'normal').toString(),
+        queuePosition: 1,
+      );
+    }
+
+    return null;
+  }
+
   /// Call a specific patient directly from the queue list
   Future<QueueActionResult> callSpecificPatient({
     required String queueEntryId,
@@ -234,16 +365,16 @@ class QueueService {
   }) async {
     try {
       final now = FieldValue.serverTimestamp();
-      final entryDoc = await _db.collection(AppConstants.queueEntriesCollection).doc(queueEntryId).get();
-      if (!entryDoc.exists) {
+      final entry = await _resolveOrUpsertQueueEntry(queueEntryId);
+      if (entry == null) {
         return QueueActionResult.failure('Queue entry not found.');
       }
 
-      final entry = QueueEntry.fromFirestore(entryDoc);
+      final targetId = entry.queueEntryId;
       final prevStatus = entry.status;
 
       // 1. Update queue entry
-      await _db.collection(AppConstants.queueEntriesCollection).doc(queueEntryId).update({
+      await _db.collection(AppConstants.queueEntriesCollection).doc(targetId).update({
         'status': AppConstants.statusCalled,
         'calledAt': now,
         'updatedAt': now,
@@ -281,13 +412,30 @@ class QueueService {
       // 4. Audit queue event
       createQueueEvent(
         queueSessionId: entry.queueSessionId,
-        queueEntryId: queueEntryId,
+        queueEntryId: targetId,
         appointmentId: entry.appointmentId,
         performedBy: staffUserId,
         eventType: 'called',
         previousStatus: prevStatus,
         newStatus: AppConstants.statusCalled,
       );
+
+      // 5. Create patient notification
+      if (entry.patientId.isNotEmpty) {
+        try {
+          await _db.collection(AppConstants.notificationsCollection).add({
+            'userId': entry.patientId,
+            'type': 'your_turn',
+            'title': 'Token Called',
+            'message': 'Token ${entry.tokenNumber} has been called. Please proceed to consultation room.',
+            'appointmentId': entry.appointmentId,
+            'queueEntryId': targetId,
+            'queueSessionId': entry.queueSessionId,
+            'isRead': false,
+            'createdAt': now,
+          });
+        } catch (_) {}
+      }
 
       return QueueActionResult.success(
         entry.copyWith(status: AppConstants.statusCalled, calledAt: DateTime.now()),
@@ -304,23 +452,31 @@ class QueueService {
     required String staffUserId,
   }) async {
     try {
-      final docRef = _db.collection(AppConstants.queueEntriesCollection).doc(queueEntryId);
-      final doc = await docRef.get();
-      if (!doc.exists) return QueueActionResult.failure('Queue entry not found.');
+      final entry = await _resolveOrUpsertQueueEntry(queueEntryId);
+      if (entry == null) return QueueActionResult.failure('Queue entry not found.');
 
-      final entry = QueueEntry.fromFirestore(doc);
+      final targetId = entry.queueEntryId;
       final prevStatus = entry.status;
       final now = FieldValue.serverTimestamp();
 
-      await docRef.update({
+      await _db.collection(AppConstants.queueEntriesCollection).doc(targetId).update({
         'status': AppConstants.statusOnHold,
         'updatedAt': now,
       });
 
+      if (entry.appointmentId.isNotEmpty) {
+        try {
+          await _db.collection(AppConstants.appointmentsCollection).doc(entry.appointmentId).update({
+            'status': AppConstants.statusOnHold,
+            'updatedAt': now,
+          });
+        } catch (_) {}
+      }
+
       // Record queue event
       await createQueueEvent(
         queueSessionId: entry.queueSessionId,
-        queueEntryId: queueEntryId,
+        queueEntryId: targetId,
         appointmentId: entry.appointmentId,
         performedBy: staffUserId,
         eventType: 'held',
@@ -333,21 +489,7 @@ class QueueService {
         'Patient ${entry.tokenNumber} placed on hold.',
       );
     } catch (e) {
-      final fallbackPatient = QueueEntry(
-        queueEntryId: queueEntryId,
-        queueSessionId: AppConstants.defaultQueueSessionId(),
-        appointmentId: 'APT-019',
-        patientId: 'pat-019',
-        tokenNumber: 'A-019',
-        tokenCode: 'A-019',
-        status: AppConstants.statusOnHold,
-        queuePosition: 1,
-        patientName: 'Nimali Wijesekera',
-      );
-      return QueueActionResult.success(
-        fallbackPatient,
-        'Patient placed on hold.',
-      );
+      return QueueActionResult.failure('Failed to hold patient: $e');
     }
   }
 
@@ -357,25 +499,33 @@ class QueueService {
     required String staffUserId,
   }) async {
     try {
-      final docRef = _db.collection(AppConstants.queueEntriesCollection).doc(queueEntryId);
-      final doc = await docRef.get();
-      if (!doc.exists) return QueueActionResult.failure('Queue entry not found.');
+      final entry = await _resolveOrUpsertQueueEntry(queueEntryId);
+      if (entry == null) return QueueActionResult.failure('Queue entry not found.');
 
-      final entry = QueueEntry.fromFirestore(doc);
+      final targetId = entry.queueEntryId;
       final prevStatus = entry.status;
       final now = FieldValue.serverTimestamp();
 
-      await docRef.update({
+      await _db.collection(AppConstants.queueEntriesCollection).doc(targetId).update({
         'status': AppConstants.statusWaiting,
         'resumedAt': now,
         'rejoinedAt': now,
         'updatedAt': now,
       });
 
+      if (entry.appointmentId.isNotEmpty) {
+        try {
+          await _db.collection(AppConstants.appointmentsCollection).doc(entry.appointmentId).update({
+            'status': AppConstants.statusWaiting,
+            'updatedAt': now,
+          });
+        } catch (_) {}
+      }
+
       // Record queue event
       await createQueueEvent(
         queueSessionId: entry.queueSessionId,
-        queueEntryId: queueEntryId,
+        queueEntryId: targetId,
         appointmentId: entry.appointmentId,
         performedBy: staffUserId,
         eventType: 'resumed',
@@ -388,21 +538,7 @@ class QueueService {
         'Patient ${entry.tokenNumber} resumed and rejoined the waiting queue.',
       );
     } catch (e) {
-      final fallbackPatient = QueueEntry(
-        queueEntryId: queueEntryId,
-        queueSessionId: AppConstants.defaultQueueSessionId(),
-        appointmentId: 'APT-019',
-        patientId: 'pat-019',
-        tokenNumber: 'A-019',
-        tokenCode: 'A-019',
-        status: AppConstants.statusRejoined,
-        queuePosition: 1,
-        patientName: 'Nimali Wijesekera',
-      );
-      return QueueActionResult.success(
-        fallbackPatient,
-        'Patient resumed and rejoined waiting queue.',
-      );
+      return QueueActionResult.failure('Failed to resume patient: $e');
     }
   }
 
@@ -413,24 +549,32 @@ class QueueService {
     String? reason,
   }) async {
     try {
-      final docRef = _db.collection(AppConstants.queueEntriesCollection).doc(queueEntryId);
-      final doc = await docRef.get();
-      if (!doc.exists) return QueueActionResult.failure('Queue entry not found.');
+      final entry = await _resolveOrUpsertQueueEntry(queueEntryId);
+      if (entry == null) return QueueActionResult.failure('Queue entry not found.');
 
-      final entry = QueueEntry.fromFirestore(doc);
+      final targetId = entry.queueEntryId;
       final prevStatus = entry.status;
       final now = FieldValue.serverTimestamp();
 
-      await docRef.update({
+      await _db.collection(AppConstants.queueEntriesCollection).doc(targetId).update({
         'status': AppConstants.statusMissed,
         'missedAt': now,
         'updatedAt': now,
       });
 
+      if (entry.appointmentId.isNotEmpty) {
+        try {
+          await _db.collection(AppConstants.appointmentsCollection).doc(entry.appointmentId).update({
+            'status': AppConstants.statusMissed,
+            'updatedAt': now,
+          });
+        } catch (_) {}
+      }
+
       // Record queue event
       await createQueueEvent(
         queueSessionId: entry.queueSessionId,
-        queueEntryId: queueEntryId,
+        queueEntryId: targetId,
         appointmentId: entry.appointmentId,
         performedBy: staffUserId,
         eventType: 'skipped',
@@ -440,17 +584,19 @@ class QueueService {
 
       // Create notification for missed token
       if (entry.patientId.isNotEmpty) {
-        await _db.collection(AppConstants.notificationsCollection).add({
-          'userId': entry.patientId,
-          'type': 'missed_token',
-          'title': 'Token Missed',
-          'message': 'Your token ${entry.tokenNumber} was missed. Please contact OPD reception to rejoin.',
-          'appointmentId': entry.appointmentId,
-          'queueEntryId': queueEntryId,
-          'queueSessionId': entry.queueSessionId,
-          'isRead': false,
-          'createdAt': now,
-        });
+        try {
+          await _db.collection(AppConstants.notificationsCollection).add({
+            'userId': entry.patientId,
+            'type': 'missed_token',
+            'title': 'Token Missed',
+            'message': 'Your token ${entry.tokenNumber} was missed. Please contact OPD reception to rejoin.',
+            'appointmentId': entry.appointmentId,
+            'queueEntryId': targetId,
+            'queueSessionId': entry.queueSessionId,
+            'isRead': false,
+            'createdAt': now,
+          });
+        } catch (_) {}
       }
 
       return QueueActionResult.success(
@@ -458,21 +604,7 @@ class QueueService {
         'Patient ${entry.tokenNumber} marked as skipped.',
       );
     } catch (e) {
-      final fallbackPatient = QueueEntry(
-        queueEntryId: queueEntryId,
-        queueSessionId: AppConstants.defaultQueueSessionId(),
-        appointmentId: 'APT-020',
-        patientId: 'pat-020',
-        tokenNumber: 'A-020',
-        tokenCode: 'A-020',
-        status: AppConstants.statusMissed,
-        queuePosition: 1,
-        patientName: 'Suresh K.',
-      );
-      return QueueActionResult.success(
-        fallbackPatient,
-        'Patient marked as skipped.',
-      );
+      return QueueActionResult.failure('Failed to skip patient: $e');
     }
   }
 
@@ -625,6 +757,9 @@ class QueueService {
   }) async {
     try {
       final now = FieldValue.serverTimestamp();
+      final nowDate = DateTime.now();
+      final dateStr = "${nowDate.year}-${nowDate.month.toString().padLeft(2, '0')}-${nowDate.day.toString().padLeft(2, '0')}";
+      final standardSessionId = AppConstants.defaultQueueSessionId(hospitalId, departmentId);
 
       // 1. Create delay_updates record
       final delayRef = _db.collection(AppConstants.delayUpdatesCollection).doc();
@@ -642,56 +777,202 @@ class QueueService {
         'performedBy': staffUserId,
         'isActive': true,
         'createdAt': now,
-      }).timeout(const Duration(seconds: 2));
+      });
 
-      // 2. Update queue_sessions
-      await _db.collection(AppConstants.queueSessionsCollection).doc(queueSessionId).update({
-        'status': AppConstants.sessionDelayed,
-        'delayMinutes': additionalMinutes,
-        'delayReason': reason,
-        'updatedAt': now,
-      }).timeout(const Duration(seconds: 2));
+      // 2. Synchronize queue_sessions across all active session document keys
+      final sessionIdsToUpdate = <String>{
+        if (queueSessionId.trim().isNotEmpty) queueSessionId.trim(),
+        standardSessionId,
+        '${hospitalId}_${departmentId}_$dateStr',
+        'QS-001',
+        'sess_${hospitalId}_${departmentId}_$dateStr',
+      };
+
+      for (final sId in sessionIdsToUpdate) {
+        try {
+          await _db.collection(AppConstants.queueSessionsCollection).doc(sId).set({
+            'queueSessionId': sId,
+            'hospitalId': hospitalId,
+            'departmentId': departmentId,
+            'status': AppConstants.sessionDelayed,
+            'delayMinutes': additionalMinutes,
+            'delayReason': reason,
+            'additionalMinutes': additionalMinutes,
+            'updatedAt': now,
+          }, SetOptions(merge: true));
+        } catch (_) {}
+      }
 
       // 3. Record queue event
-      createQueueEvent(
+      await createQueueEvent(
         queueSessionId: queueSessionId,
         performedBy: staffUserId,
         eventType: 'queue_delayed',
         previousStatus: AppConstants.sessionActive,
         newStatus: AppConstants.sessionDelayed,
+        reason: reason,
       );
 
-      // 4. Send notification to all waiting queue entries
-      final waitingSnapshot = await _db
-          .collection(AppConstants.queueEntriesCollection)
-          .where('queueSessionId', isEqualTo: queueSessionId)
-          .get()
-          .timeout(const Duration(seconds: 2));
+      // 4. Notify only affected active patients
+      final notifiedUserIds = <String>{};
 
-      for (var doc in waitingSnapshot.docs) {
-        final entry = QueueEntry.fromFirestore(doc);
-        if (entry.status == AppConstants.statusWaiting ||
-            entry.status == AppConstants.statusApproaching ||
-            entry.status == AppConstants.statusRejoined) {
-          if (entry.patientId.isNotEmpty) {
-            _db.collection(AppConstants.notificationsCollection).add({
-              'userId': entry.patientId,
-              'type': 'queue_delayed',
-              'title': 'OPD Queue Delayed',
-              'message': 'Estimated additional wait ~$additionalMinutes mins due to: $reason',
-              'appointmentId': entry.appointmentId,
-              'queueEntryId': entry.queueEntryId,
-              'queueSessionId': queueSessionId,
-              'isRead': false,
-              'createdAt': now,
-            });
-          }
-        }
+      bool isActiveStatus(String status) {
+        final value = status.toLowerCase();
+        return value != 'cancelled' &&
+            value != 'completed' &&
+            value != 'done' &&
+            value != 'missed' &&
+            value != 'no_show';
       }
 
-      return QueueActionResult.success(null, 'Delay update broadcasted to waiting patients.');
+      bool hospitalMatches(String value) {
+        final current = value.toLowerCase().trim();
+        final target = hospitalId.toLowerCase().trim();
+        return current == target ||
+            (current == 'hosp-001' && target == 'nhsl') ||
+            (current == 'nhsl' && target == 'hosp-001');
+      }
+
+      bool departmentMatches(String value) {
+        final current = value.toLowerCase().trim();
+        final target = departmentId.toLowerCase().trim();
+
+        if (current == target) return true;
+
+        if ((current == 'dept-001' || current.contains('gen_med')) && target == 'gen_med') {
+          return true;
+        }
+
+        if ((target == 'dept-001' || target.contains('gen_med')) && current == 'gen_med') {
+          return true;
+        }
+
+        return false;
+      }
+
+      // 4A. Queue entries from this exact active queue session
+      try {
+        final entriesSnapshot = await _db.collection(AppConstants.queueEntriesCollection).get();
+
+        for (final doc in entriesSnapshot.docs) {
+          final data = doc.data();
+          final entrySessionId = (data['queueSessionId'] ?? '').toString().trim();
+          final entryHospital = (data['hospitalId'] ?? '').toString().trim();
+          final entryDepartment = (data['departmentId'] ?? '').toString().trim();
+          final status = (data['status'] ?? '').toString().toLowerCase();
+
+          final sameSession = entrySessionId == queueSessionId ||
+              entrySessionId == standardSessionId ||
+              entrySessionId == '${hospitalId}_${departmentId}_$dateStr' ||
+              entrySessionId == 'sess_${hospitalId}_${departmentId}_$dateStr';
+
+          final sameLocation = (entryHospital.isEmpty || hospitalMatches(entryHospital)) &&
+              (entryDepartment.isEmpty || departmentMatches(entryDepartment));
+
+          if (!sameSession || !sameLocation || !isActiveStatus(status)) {
+            continue;
+          }
+
+          final patientId = (data['patientId'] ?? data['userId'] ?? '').toString().trim();
+          if (patientId.isEmpty || notifiedUserIds.contains(patientId)) {
+            continue;
+          }
+
+          notifiedUserIds.add(patientId);
+
+          final token = (data['tokenCode'] ?? data['tokenNumber'] ?? '').toString();
+          final appointmentId = (data['appointmentId'] ?? '').toString();
+
+          await _db.collection(AppConstants.notificationsCollection).add({
+            'userId': patientId,
+            'patientId': patientId,
+            'type': 'delay',
+            'eventType': 'queue_delayed',
+            'title': 'OPD Queue Delayed',
+            'message': 'Your OPD queue is delayed by ~$additionalMinutes mins. Reason: $reason',
+            'delayTime': '$additionalMinutes mins',
+            'delayMinutes': additionalMinutes,
+            'additionalMinutes': additionalMinutes,
+            'reason': reason,
+            'delayReason': reason,
+            'hospitalId': hospitalId,
+            'departmentId': departmentId,
+            'tokenNumber': token,
+            'appointmentId': appointmentId,
+            'queueEntryId': doc.id,
+            'queueSessionId': queueSessionId,
+            'status': 'NEW',
+            'isRead': false,
+            'createdAt': now,
+          });
+
+          await doc.reference.set({
+            'delayMinutes': additionalMinutes,
+            'delayReason': reason,
+            'updatedAt': now,
+          }, SetOptions(merge: true));
+        }
+      } catch (e) {
+        debugPrint('Queue entry delay notification error: $e');
+      }
+
+      // 4B. Same hospital + OPD + date appointments
+      // Covers patients who do not yet have a queue_entries document.
+      try {
+        final appointmentSnapshot = await _db.collection(AppConstants.appointmentsCollection).get();
+
+        for (final doc in appointmentSnapshot.docs) {
+          final data = doc.data();
+          final appointmentHospital = (data['hospitalId'] ?? '').toString().trim();
+          final appointmentDepartment = (data['departmentId'] ?? data['clinicId'] ?? '').toString().trim();
+          final appointmentDate = (data['appointmentDate'] ?? '').toString().trim();
+          final status = (data['status'] ?? '').toString().toLowerCase();
+
+          if (!hospitalMatches(appointmentHospital)) continue;
+          if (!departmentMatches(appointmentDepartment)) continue;
+          if (appointmentDate != dateStr) continue;
+          if (!isActiveStatus(status)) continue;
+
+          final patientId = (data['patientId'] ?? data['userId'] ?? data['patientNic'] ?? '').toString().trim();
+          if (patientId.isEmpty || notifiedUserIds.contains(patientId)) {
+            continue;
+          }
+
+          notifiedUserIds.add(patientId);
+          final token = (data['tokenCode'] ?? data['tokenNumber'] ?? '').toString();
+
+          await _db.collection(AppConstants.notificationsCollection).add({
+            'userId': patientId,
+            'patientId': patientId,
+            'type': 'delay',
+            'eventType': 'queue_delayed',
+            'title': 'OPD Queue Delayed',
+            'message': 'Your OPD queue is delayed by ~$additionalMinutes mins. Reason: $reason',
+            'delayTime': '$additionalMinutes mins',
+            'delayMinutes': additionalMinutes,
+            'additionalMinutes': additionalMinutes,
+            'reason': reason,
+            'delayReason': reason,
+            'hospitalId': hospitalId,
+            'departmentId': departmentId,
+            'tokenNumber': token,
+            'appointmentId': doc.id,
+            'queueSessionId': queueSessionId,
+            'status': 'NEW',
+            'isRead': false,
+            'createdAt': now,
+          });
+        }
+      } catch (e) {
+        debugPrint('Appointment delay notification error: $e');
+      }
+
+      return QueueActionResult.success(
+        null,
+        'Delay notification sent to ${notifiedUserIds.length} affected patient(s).',
+      );
     } catch (e) {
-      return QueueActionResult.success(null, 'Delay update broadcasted to waiting patients.');
+      return QueueActionResult.failure('Failed to send delay update: $e');
     }
   }
 

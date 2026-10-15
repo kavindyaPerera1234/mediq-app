@@ -217,7 +217,7 @@ class _StaffDelayCommunicationScreenState extends State<StaffDelayCommunicationS
 
                 // Submit Buttons
                 PrimaryButton(
-                  label: 'Send Notification to All Patients',
+                  label: 'Notify Affected Patients',
                   icon: Icons.send_rounded,
                   height: 52,
                   onPressed: _isLoading ? null : _handleSendDelayNotification,

@@ -133,17 +133,21 @@ class QueueCompletedScreen extends StatelessWidget {
 
               // Return to Dashboard Button
               ElevatedButton(
-                onPressed: () async {
-                  await LiveQueueService().completeCurrentConsultation();
-                  if (context.mounted) {
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const PatientMainScreen(initialIndex: 0),
-                      ),
-                      (route) => false,
-                    );
-                  }
+                onPressed: () {
+                  try {
+                    LiveQueueService().dismissCompletedConsultation();
+                  } catch (_) {}
+                  // Non-blocking background sync
+                  LiveQueueService().completeCurrentConsultation().catchError((e) {
+                    debugPrint('Background consultation complete sync error: $e');
+                  });
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const PatientMainScreen(initialIndex: 0),
+                    ),
+                    (route) => false,
+                  );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
@@ -174,11 +178,13 @@ class QueueCompletedScreen extends StatelessWidget {
                   foregroundColor: AppColors.primary,
                   side: const BorderSide(color: AppColors.primary, width: 1.5),
                   minimumSize: const Size.fromHeight(52),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
                 child: Text(
                   'Book Another / Follow-up OPD Appointment',
-                  style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700),
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700),
                 ),
               ),
               const SizedBox(height: 16),
@@ -191,15 +197,19 @@ class QueueCompletedScreen extends StatelessWidget {
 
   Widget _buildSummaryRow(String label, String value) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
           style: GoogleFonts.inter(fontSize: 14, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
         ),
-        Text(
-          value,
-          style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+          ),
         ),
       ],
     );

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../core/constants/app_colors.dart';
-import '../core/constants/app_constants.dart';
 import '../models/queue_entry.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
@@ -39,15 +38,14 @@ class _PatientQueueListScreenState extends State<PatientQueueListScreen>
   String _selectedPriority = 'All';
   int _currentBottomNavIndex = 1;
   String? _selectedHospitalId;
-  String? _selectedDepartmentId;
+  String? _selectedDepartmentId = 'all';
+  DateTime _selectedDate = DateTime.now();
 
   String get effectiveSessionId {
-    final hId = _selectedHospitalId ?? widget.authService.currentStaffProfile?.hospitalId ?? '';
-    final dId = _selectedDepartmentId ?? widget.authService.currentStaffProfile?.departmentId ?? '';
-    if (widget.queueSessionId.isNotEmpty && _selectedHospitalId == null && _selectedDepartmentId == null) {
-      return widget.queueSessionId;
-    }
-    return AppConstants.defaultQueueSessionId(hId, dId);
+    final hId = _selectedHospitalId ?? 'all';
+    final dId = _selectedDepartmentId ?? 'all';
+    final dateStr = "${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}";
+    return '${hId.isNotEmpty ? hId : 'all'}_${dId.isNotEmpty ? dId : 'all'}_$dateStr';
   }
 
   @override
@@ -63,8 +61,36 @@ class _PatientQueueListScreenState extends State<PatientQueueListScreen>
       final parts = widget.queueSessionId.split('_');
       if (parts.length >= 2) {
         _selectedHospitalId = parts[0];
-        _selectedDepartmentId = parts[1];
+        if (parts[1] != 'gen_med') {
+          _selectedDepartmentId = parts[1];
+        }
       }
+      if (parts.length >= 3) {
+        try {
+          final dateParts = parts[2].split('-');
+          if (dateParts.length == 3) {
+            _selectedDate = DateTime(
+              int.parse(dateParts[0]),
+              int.parse(dateParts[1]),
+              int.parse(dateParts[2]),
+            );
+          }
+        } catch (_) {}
+      }
+    }
+  }
+
+  Future<void> _pickQueueDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2025),
+      lastDate: DateTime(2030),
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+      });
     }
   }
 
@@ -78,16 +104,24 @@ class _PatientQueueListScreenState extends State<PatientQueueListScreen>
   @override
   Widget build(BuildContext context) {
     final currentH = _selectedHospitalId ?? widget.authService.currentStaffProfile?.hospitalId ?? 'nhsl';
-    final currentD = _selectedDepartmentId ?? widget.authService.currentStaffProfile?.departmentId ?? 'gen_med';
+    final currentD = _selectedDepartmentId ?? 'all';
+    final now = DateTime.now();
+    final isToday = _selectedDate.year == now.year && _selectedDate.month == now.month && _selectedDate.day == now.day;
+    final dateLabel = isToday
+        ? "Today (${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')})"
+        : "${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}";
 
     String hospLabel = 'NHSL Colombo';
     if (currentH == 'hosp_kandy') hospLabel = 'Kandy General';
     if (currentH == 'hosp_karapitiya') hospLabel = 'Karapitiya Teaching';
 
-    String deptLabel = 'General Medicine OPD';
-    if (currentD == 'dept_pediatrics') deptLabel = 'Pediatrics OPD';
+    String deptLabel = 'All OPD Clinics';
+    if (currentD == 'gen_med') deptLabel = 'General Medicine OPD';
+    if (currentD == 'ortho') deptLabel = 'Orthopedics';
+    if (currentD == 'ent' || currentD == 'dept_ent') deptLabel = 'ENT Clinic';
+    if (currentD == 'derma') deptLabel = 'Dermatology';
+    if (currentD == 'pedia' || currentD == 'dept_pediatrics') deptLabel = 'Pediatrics OPD';
     if (currentD == 'dept_cardiology') deptLabel = 'Cardiology OPD';
-    if (currentD == 'dept_ent') deptLabel = 'ENT Clinic';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -95,7 +129,7 @@ class _PatientQueueListScreenState extends State<PatientQueueListScreen>
         title: Column(
           children: [
             const Text(
-              "Today's Queue",
+              "OPD Patient Queue",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             Text(
@@ -106,6 +140,11 @@ class _PatientQueueListScreenState extends State<PatientQueueListScreen>
         ),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.calendar_month_rounded, color: AppColors.primary),
+            tooltip: 'Select OPD Date ($dateLabel)',
+            onPressed: _pickQueueDate,
+          ),
           IconButton(
             icon: const Icon(Icons.warning_amber_rounded, color: AppColors.error),
             tooltip: 'Emergency Priority',
@@ -225,7 +264,7 @@ class _PatientQueueListScreenState extends State<PatientQueueListScreen>
                             MaterialPageRoute(
                               builder: (context) => CallNextPatientScreen(
                                 authService: widget.authService,
-                                queueSessionId: widget.queueSessionId,
+                                queueSessionId: effectiveSessionId,
                               ),
                             ),
                           );
@@ -267,14 +306,16 @@ class _PatientQueueListScreenState extends State<PatientQueueListScreen>
                             Expanded(
                               child: DropdownButtonHideUnderline(
                                 child: DropdownButton<String>(
-                                  value: ['gen_med', 'dept_pediatrics', 'dept_cardiology', 'dept_ent'].contains(currentD) ? currentD : 'gen_med',
+                                  value: ['all', 'gen_med', 'ortho', 'ent', 'derma', 'pedia', 'dept_pediatrics', 'dept_cardiology', 'dept_ent'].contains(currentD) ? currentD : 'gen_med',
                                   isDense: true,
                                   style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
                                   items: const [
                                     DropdownMenuItem(value: 'gen_med', child: Text('General Medicine OPD')),
-                                    DropdownMenuItem(value: 'dept_pediatrics', child: Text('Pediatrics OPD')),
-                                    DropdownMenuItem(value: 'dept_cardiology', child: Text('Cardiology OPD')),
-                                    DropdownMenuItem(value: 'dept_ent', child: Text('ENT Clinic')),
+                                    DropdownMenuItem(value: 'ortho', child: Text('Orthopedics (Bone)')),
+                                    DropdownMenuItem(value: 'ent', child: Text('ENT Clinic')),
+                                    DropdownMenuItem(value: 'derma', child: Text('Dermatology (Skin)')),
+                                    DropdownMenuItem(value: 'pedia', child: Text('Pediatrics (Children)')),
+                                    DropdownMenuItem(value: 'all', child: Text('All OPD Clinics')),
                                   ],
                                   onChanged: (val) {
                                     if (val != null) {

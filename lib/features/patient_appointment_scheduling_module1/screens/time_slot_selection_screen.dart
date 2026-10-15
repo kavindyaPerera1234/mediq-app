@@ -15,6 +15,7 @@ class OpdTimeSlot {
   final int bookedCount;
   final int maxCapacity;
   final bool isClosed;
+  final bool isPast;
 
   const OpdTimeSlot({
     required this.id,
@@ -23,10 +24,11 @@ class OpdTimeSlot {
     required this.bookedCount,
     this.maxCapacity = 25,
     this.isClosed = false,
+    this.isPast = false,
   });
 
   bool get isFull => bookedCount >= maxCapacity;
-  bool get isSelectable => !isFull && !isClosed;
+  bool get isSelectable => !isFull && !isClosed && !isPast;
   int get remainingSlots => (maxCapacity - bookedCount).clamp(0, maxCapacity);
 }
 
@@ -150,10 +152,38 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
   }
 
   List<OpdTimeSlot> get _slots {
+    final now = DateTime.now();
+    final isToday = widget.selectedDate.year == now.year &&
+        widget.selectedDate.month == now.month &&
+        widget.selectedDate.day == now.day;
+
     return _baseSlots.map((base) {
       final count = _realBookedCounts[base.id] ?? 0;
       final capacity = _slotCapacities[base.id] ?? _slotCapacities[base.displayTime] ?? base.maxCapacity;
       final isClosed = _closedSlots[base.id] == true || _closedSlots[base.displayTime] == true || base.isClosed;
+
+      // Check if this time slot has already passed for today
+      bool isPast = false;
+      if (isToday) {
+        int slotStartHour = 8;
+        if (base.id == 'slot_1') {
+          slotStartHour = 8;
+        } else if (base.id == 'slot_2') {
+          slotStartHour = 9;
+        } else if (base.id == 'slot_3') {
+          slotStartHour = 10;
+        } else if (base.id == 'slot_4') {
+          slotStartHour = 11;
+        } else if (base.id == 'slot_5') {
+          slotStartHour = 12;
+        } else if (base.id == 'slot_6') {
+          slotStartHour = 13;
+        }
+
+        if (now.hour >= slotStartHour) {
+          isPast = true;
+        }
+      }
 
       return OpdTimeSlot(
         id: base.id,
@@ -162,6 +192,7 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
         bookedCount: count,
         maxCapacity: capacity,
         isClosed: isClosed,
+        isPast: isPast,
       );
     }).toList();
   }
@@ -169,6 +200,7 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
   @override
   void initState() {
     super.initState();
+    _recomputeSelection();
     _startRealtimeListeners();
   }
 
@@ -316,20 +348,70 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
     });
   }
 
+  bool _isSlotWithinOperatingHours(OpdTimeSlot slot, String operatingHours) {
+    final clean = operatingHours.toLowerCase().replaceAll(' ', '');
+    if (clean.isEmpty) return true;
+
+    int clinicStartHour = 8;
+    int clinicEndHour = 14; // Default to 2:00 PM (14:00)
+
+    if (clean.contains('12:00pm') || clean.contains('12pm') || clean.contains('-12:00') || clean.contains('-12pm') || clean.contains('-12')) {
+      clinicEndHour = 12;
+    } else if (clean.contains('1:00pm') || clean.contains('01:00pm') || clean.contains('1pm') || clean.contains('01pm') || clean.contains('-1:00') || clean.contains('-01:00') || clean.contains('13:00')) {
+      clinicEndHour = 13;
+    } else if (clean.contains('2:00pm') || clean.contains('02:00pm') || clean.contains('2pm') || clean.contains('02pm') || clean.contains('-2:00') || clean.contains('14:00')) {
+      clinicEndHour = 14;
+    } else if (clean.contains('4:00pm') || clean.contains('04:00pm') || clean.contains('4pm') || clean.contains('16:00')) {
+      clinicEndHour = 16;
+    }
+
+    if (clean.startsWith('12:') || clean.startsWith('12pm') || clean.startsWith('1:') || clean.startsWith('01:')) {
+      clinicStartHour = 12;
+    }
+
+    int slotStartHour = 8;
+    int slotEndHour = 9;
+    if (slot.id == 'slot_1') {
+      slotStartHour = 8; slotEndHour = 9;
+    } else if (slot.id == 'slot_2') {
+      slotStartHour = 9; slotEndHour = 10;
+    } else if (slot.id == 'slot_3') {
+      slotStartHour = 10; slotEndHour = 11;
+    } else if (slot.id == 'slot_4') {
+      slotStartHour = 11; slotEndHour = 12;
+    } else if (slot.id == 'slot_5') {
+      slotStartHour = 12; slotEndHour = 13;
+    } else if (slot.id == 'slot_6') {
+      slotStartHour = 13; slotEndHour = 14;
+    }
+
+    return slotStartHour >= clinicStartHour && slotEndHour <= clinicEndHour;
+  }
+
+  List<OpdTimeSlot> get _visibleSlots {
+    final list = _slots.where((s) => _isSlotWithinOperatingHours(s, widget.clinic.hours)).toList();
+    return list.isNotEmpty ? list : _slots;
+  }
+
   void _recomputeSelection() {
-    if (!_currentSelectedSlot.isSelectable) {
-      final firstAvailable = _slots.firstWhere(
+    final visible = _visibleSlots;
+    if (visible.isEmpty) return;
+
+    if (!visible.any((s) => s.id == _selectedSlotId && s.isSelectable)) {
+      final firstAvailable = visible.firstWhere(
         (s) => s.isSelectable,
-        orElse: () => _slots.first,
+        orElse: () => visible.first,
       );
       _selectedSlotId = firstAvailable.id;
     }
   }
 
   OpdTimeSlot get _currentSelectedSlot {
-    return _slots.firstWhere(
+    final visible = _visibleSlots;
+    if (visible.isEmpty) return _slots.first;
+    return visible.firstWhere(
       (s) => s.id == _selectedSlotId,
-      orElse: () => _slots.first,
+      orElse: () => visible.first,
     );
   }
 
@@ -359,8 +441,8 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
   Widget build(BuildContext context) {
     final formattedDate = DateFormat('EEEE, d MMMM yyyy').format(widget.selectedDate);
 
-    final morningSlots = _slots.where((s) => s.session == 'morning').toList();
-    final afternoonSlots = _slots.where((s) => s.session == 'afternoon').toList();
+    final morningSlots = _visibleSlots.where((s) => s.session == 'morning').toList();
+    final afternoonSlots = _visibleSlots.where((s) => s.session == 'afternoon').toList();
 
     return AnimatedBuilder(
       animation: Listenable.merge([
@@ -426,33 +508,31 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
                           ),
                           const SizedBox(height: 20),
 
-                          // 1. Morning Session Header
-                          _buildSessionHeader(
-                            icon: Icons.wb_sunny_rounded,
-                            title: AppTranslations.tr('morningSession'),
-                            subtitle: '08:00 AM - 12:00 PM',
-                            color: Colors.orange.shade700,
-                          ),
-                          const SizedBox(height: 10),
+                          // 1. Morning Session Header & Grid
+                          if (morningSlots.isNotEmpty) ...[
+                            _buildSessionHeader(
+                              icon: Icons.wb_sunny_rounded,
+                              title: AppTranslations.tr('morningSession'),
+                              subtitle: '08:00 AM - 12:00 PM',
+                              color: Colors.orange.shade700,
+                            ),
+                            const SizedBox(height: 10),
+                            _buildSlotGrid(morningSlots),
+                            const SizedBox(height: 24),
+                          ],
 
-                          // Morning Slots Grid (2 Columns)
-                          _buildSlotGrid(morningSlots),
-
-                          const SizedBox(height: 24),
-
-                          // 2. Afternoon Session Header
-                          _buildSessionHeader(
-                            icon: Icons.wb_twilight_rounded,
-                            title: AppTranslations.tr('afternoonSession'),
-                            subtitle: '12:00 PM - 02:00 PM',
-                            color: Colors.blueGrey.shade700,
-                          ),
-                          const SizedBox(height: 10),
-
-                          // Afternoon Slots Grid (2 Columns)
-                          _buildSlotGrid(afternoonSlots),
-
-                          const SizedBox(height: 20),
+                          // 2. Afternoon Session Header & Grid
+                          if (afternoonSlots.isNotEmpty) ...[
+                            _buildSessionHeader(
+                              icon: Icons.wb_twilight_rounded,
+                              title: AppTranslations.tr('afternoonSession'),
+                              subtitle: '12:00 PM - 02:00 PM',
+                              color: Colors.blueGrey.shade700,
+                            ),
+                            const SizedBox(height: 10),
+                            _buildSlotGrid(afternoonSlots),
+                            const SizedBox(height: 20),
+                          ],
 
                           // Clean Legend
                           Container(
@@ -519,7 +599,7 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
         crossAxisCount: 2,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
-        childAspectRatio: 2.1,
+        childAspectRatio: 1.95,
       ),
       itemCount: slots.length,
       itemBuilder: (context, index) {
@@ -531,9 +611,10 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
   Widget _buildModernSlotCard(OpdTimeSlot slot) {
     final isSelected = _selectedSlotId == slot.id && slot.isSelectable;
     final isClosed = slot.isClosed;
+    final isPast = slot.isPast;
     final isFull = slot.isFull;
-    final isAlmostFull = !isFull && !isClosed && slot.remainingSlots <= 5;
-    final isDisabled = isClosed || isFull;
+    final isAlmostFull = !isFull && !isClosed && !isPast && slot.remainingSlots <= 5;
+    final isDisabled = isClosed || isFull || isPast;
 
     return InkWell(
       onTap: slot.isSelectable
@@ -546,7 +627,7 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
       borderRadius: BorderRadius.circular(12),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(
           color: isDisabled
               ? (AppColors.isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9))
@@ -586,29 +667,31 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
                     children: [
                       Icon(
                         Icons.access_time_rounded,
-                        size: 14,
+                        size: 13,
                         color: isDisabled
                             ? AppColors.bodyText
                             : isSelected
                                 ? AppColors.accentColor
                                 : AppColors.bodyText,
                       ),
-                      const SizedBox(width: 5),
+                      const SizedBox(width: 4),
                       Expanded(
-                        child: Text(
-                          slot.displayTime,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            decoration: isClosed ? TextDecoration.lineThrough : null,
-                            color: isDisabled
-                                ? AppColors.bodyText
-                                : isSelected
-                                    ? AppColors.accentColor
-                                    : AppColors.headingText,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            slot.displayTime,
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.bold,
+                              decoration: null,
+                              color: isDisabled
+                                  ? AppColors.bodyText.withValues(alpha: 0.7)
+                                  : isSelected
+                                      ? AppColors.accentColor
+                                      : AppColors.headingText,
+                            ),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -616,6 +699,8 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
                 ),
                 if (isSelected)
                   Icon(Icons.check_circle_rounded, size: 16, color: AppColors.accentColor)
+                else if (isPast)
+                  Icon(Icons.schedule_rounded, size: 14, color: AppColors.bodyText.withValues(alpha: 0.6))
                 else if (isClosed)
                   const Icon(Icons.block_rounded, size: 14, color: AppColors.error)
                 else if (isFull)
@@ -625,7 +710,23 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
             const SizedBox(height: 6),
 
             // Availability Badge
-            if (isClosed)
+            if (isPast)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                decoration: BoxDecoration(
+                  color: AppColors.cardBorder.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  'ENDED (Time Passed)',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.bodyText.withValues(alpha: 0.8),
+                  ),
+                ),
+              )
+            else if (isClosed)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
@@ -670,10 +771,10 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
                 ),
                 child: Text(
                   isSelected
-                      ? 'Selected Slot'
+                      ? 'Selected (${slot.remainingSlots}/${slot.maxCapacity} left)'
                       : isAlmostFull
-                          ? 'Only ${slot.remainingSlots} left'
-                          : '${slot.remainingSlots} spots left',
+                          ? 'Only ${slot.remainingSlots}/${slot.maxCapacity} left'
+                          : '${slot.remainingSlots}/${slot.maxCapacity} spots left',
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
@@ -919,6 +1020,8 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
   // Bottom Action Button with Arrow Icon
   Widget _buildBottomActionBar() {
     final canProceed = _currentSelectedSlot.isSelectable;
+    final allSlotsEndedOrFull = _slots.every((s) => !s.isSelectable);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -952,9 +1055,11 @@ class _TimeSlotSelectionScreenState extends State<TimeSlotSelectionScreen> {
                 Text(
                   canProceed
                       ? AppTranslations.tr('reviewAppointment')
-                      : (_currentSelectedSlot.isClosed
-                          ? 'Selected Slot Closed'
-                          : 'Selected Slot Full'),
+                      : (_currentSelectedSlot.isPast
+                          ? (allSlotsEndedOrFull ? "OPD Sessions Ended • Change Date" : 'Selected Slot Ended')
+                          : (_currentSelectedSlot.isClosed
+                              ? 'Selected Slot Closed'
+                              : 'Selected Slot Full')),
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/utils/app_validators.dart';
 import '../../services/auth_service.dart';
-import 'verification_code_screen.dart';
 import '../../../../core/localization/app_strings.dart';
 import '../../../../core/localization/app_language.dart' as core_lang;
 
@@ -69,15 +70,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       setState(() => _isLoading = false);
 
       if (mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => VerificationCodeScreen(
-              phoneNumber: rawPhone,
-              isRegistration: true,
-            ),
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Registration successful! Welcome to MediQ.'),
+            backgroundColor: AppColors.statusGreen,
           ),
         );
+        AuthService().routeUserByRole(context);
       }
     } on FirebaseAuthException catch (e) {
       setState(() => _isLoading = false);
@@ -150,31 +149,29 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 TextFormField(
                   controller: _nameController,
                   textCapitalization: TextCapitalization.words,
+                  inputFormatters: AppValidators.nameFormatters,
                   style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
                   decoration: _buildInputDecoration(
                     hint: 'e.g. Kamal Gunaratne',
                     icon: Icons.person_outline_rounded,
                   ),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Please enter your full name' : null,
+                  validator: AppValidators.validateFullName,
                 ),
 
                 const SizedBox(height: 18),
 
-                // Mobile Phone Number
-                _buildFieldLabel('${S.labelPhone} *'),
+                // Mobile Phone Number (10 digits limit)
+                _buildFieldLabel('${S.labelPhone} * (10 Digits)'),
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
+                  inputFormatters: AppValidators.phoneFormatters,
                   style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
                   decoration: _buildInputDecoration(
                     hint: '07X XXX XXXX',
                     icon: Icons.phone_android_rounded,
                   ),
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Please enter your phone number';
-                    if (v.trim().length < 10) return 'Please enter a valid 10-digit number';
-                    return null;
-                  },
+                  validator: AppValidators.validatePhone,
                 ),
 
                 const SizedBox(height: 18),
@@ -184,11 +181,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9@\.\+\-_]')),
+                  ],
                   style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
                   decoration: _buildInputDecoration(
                     hint: 'e.g. name@example.com (or leave empty)',
                     icon: Icons.email_outlined,
                   ),
+                  validator: (v) => AppValidators.validateEmail(v, required: false),
                 ),
 
                 const SizedBox(height: 18),
@@ -215,7 +216,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
                 const SizedBox(height: 18),
 
-                // Row for NIC and Age
+                // Row for NIC (Max 12 chars) and Age (Max 2 digits)
                 Row(
                   children: [
                     // NIC Number
@@ -224,14 +225,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildFieldLabel('NIC / Passport (Optional)'),
+                          _buildFieldLabel('NIC / ID (Max 12 Chars)'),
                           TextFormField(
                             controller: _nicController,
+                            inputFormatters: AppValidators.nicFormatters,
                             style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600),
                             decoration: _buildInputDecoration(
-                              hint: 'e.g. 198012345V',
+                              hint: '199912345678 or 951234567V',
                               icon: Icons.badge_outlined,
                             ),
+                            validator: (v) => AppValidators.validateNic(v, required: false),
                           ),
                         ],
                       ),
@@ -243,16 +246,17 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildFieldLabel('Age *'),
+                          _buildFieldLabel('Age * (1-99)'),
                           TextFormField(
                             controller: _ageController,
                             keyboardType: TextInputType.number,
+                            inputFormatters: AppValidators.ageFormatters,
                             style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600),
                             decoration: _buildInputDecoration(
-                              hint: 'e.g. 62',
+                              hint: 'e.g. 45',
                               icon: Icons.cake_outlined,
                             ),
-                            validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                            validator: (v) => AppValidators.validateAge(v, required: true),
                           ),
                         ],
                       ),

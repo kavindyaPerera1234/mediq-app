@@ -603,6 +603,10 @@ class _AddCaregiverScreenState extends State<AddCaregiverScreen> {
                     return 'Please enter a valid name.';
                   }
 
+                  if (!RegExp(r"^[a-zA-Z\s\.\-']+$").hasMatch(value.trim())) {
+                    return 'Name cannot contain special characters or numbers.';
+                  }
+
                   return null;
                 },
               ),

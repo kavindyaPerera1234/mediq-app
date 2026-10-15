@@ -11,6 +11,8 @@ class PrimaryButton extends StatelessWidget {
   final bool fullWidth;
   final ButtonType type;
   final double height;
+  final double? fontSize;
+  final EdgeInsetsGeometry? padding;
 
   const PrimaryButton({
     super.key,
@@ -21,6 +23,8 @@ class PrimaryButton extends StatelessWidget {
     this.fullWidth = true,
     this.type = ButtonType.primary,
     this.height = 50.0,
+    this.fontSize,
+    this.padding,
   });
 
   @override
@@ -67,12 +71,16 @@ class PrimaryButton extends StatelessWidget {
             Icon(icon, size: 20, color: fg),
             const SizedBox(width: 8),
           ],
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: fg,
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: fontSize ?? 15,
+                fontWeight: FontWeight.w600,
+                color: fg,
+              ),
             ),
           ),
         ],
@@ -87,6 +95,7 @@ class PrimaryButton extends StatelessWidget {
           backgroundColor: bg,
           foregroundColor: fg,
           elevation: 0,
+          padding: padding ?? const EdgeInsets.symmetric(horizontal: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
             side: border,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../core/constants/app_colors.dart';
 import 'manage_hospitals_screen.dart';
 import 'manage_departments_screen.dart';
@@ -75,38 +76,18 @@ class HospitalAdminDashboard extends StatelessWidget {
                                   'Ministry of Health Sri Lanka',
                                   style: TextStyle(
                                     color: Colors.white,
-                                    fontSize: 14,
+                                    fontSize: 15,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
                                 Text(
-                                  'Module 1: Hospital & OPD Slot Configuration',
+                                  'Hospital & OPD Slot Configuration Console',
                                   style: TextStyle(color: Colors.white70, fontSize: 12),
                                 ),
                               ],
                             ),
                           ),
                         ],
-                      ),
-                      const SizedBox(height: 14),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: AppColors.statusGreen.withValues(alpha: 0.25),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.statusGreen.withValues(alpha: 0.4)),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.check_circle_rounded, size: 14, color: AppColors.statusGreen),
-                            SizedBox(width: 6),
-                            Text(
-                              'SLIIT IT3060 Evaluation Admin Mode Active',
-                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
-                            ),
-                          ],
-                        ),
                       ),
                     ],
                   ),
@@ -122,21 +103,56 @@ class HospitalAdminDashboard extends StatelessWidget {
 
                 Row(
                   children: [
+                    // 1. Registered Hospitals (Live Stream)
                     Expanded(
-                      child: _buildMetricCard(
-                        icon: Icons.local_hospital_rounded,
-                        label: 'Hospitals',
-                        value: '4 Registered',
-                        color: AppColors.primary,
+                      child: StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance.collection('hospitals').snapshots(),
+                        builder: (context, snap) {
+                          int count = 4;
+                          if (snap.hasData) {
+                            final Set<String> hospIds = {'nhsl', 'csth', 'lrh', 'cnth'};
+                            for (var doc in snap.data!.docs) {
+                              final data = doc.data() as Map<String, dynamic>;
+                              final id = doc.id.toLowerCase();
+                              final name = (data['name'] ?? '').toString().trim();
+                              final isActive = data['isActive'] != false && data['isOpdAvailable'] != false;
+                              if (isActive && name.isNotEmpty) {
+                                hospIds.add(id);
+                              }
+                            }
+                            count = hospIds.length;
+                          }
+                          return _buildMetricCard(
+                            icon: Icons.local_hospital_rounded,
+                            label: 'Hospitals',
+                            value: '$count Registered',
+                            color: AppColors.primary,
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(width: 12),
+
+                    // 2. Active OPD Clinics (Live Stream)
                     Expanded(
-                      child: _buildMetricCard(
-                        icon: Icons.medical_services_rounded,
-                        label: 'OPD Clinics',
-                        value: '24 Active',
-                        color: AppColors.statusOrange,
+                      child: StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance.collection('departments').snapshots(),
+                        builder: (context, snap) {
+                          int count = 5;
+                          if (snap.hasData && snap.data!.docs.isNotEmpty) {
+                            final activeCount = snap.data!.docs.where((d) {
+                              final data = d.data() as Map<String, dynamic>;
+                              return data['isActive'] != false;
+                            }).length;
+                            count = activeCount > 0 ? activeCount : 5;
+                          }
+                          return _buildMetricCard(
+                            icon: Icons.medical_services_rounded,
+                            label: 'OPD Clinics',
+                            value: '$count Active',
+                            color: AppColors.statusOrange,
+                          );
+                        },
                       ),
                     ),
                   ],
@@ -144,21 +160,57 @@ class HospitalAdminDashboard extends StatelessWidget {
                 const SizedBox(height: 12),
                 Row(
                   children: [
+                    // 3. Slot Capping Config (Live Stream)
                     Expanded(
-                      child: _buildMetricCard(
-                        icon: Icons.groups_rounded,
-                        label: 'Slot Capping',
-                        value: '25 Limit / Slot',
-                        color: AppColors.statusGreen,
+                      child: StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance.collection('appointment_slots').snapshots(),
+                        builder: (context, snap) {
+                          int cap = 25;
+                          if (snap.hasData && snap.data!.docs.isNotEmpty) {
+                            int sum = 0;
+                            int numCaps = 0;
+                            for (var doc in snap.data!.docs) {
+                              final data = doc.data() as Map<String, dynamic>;
+                              if (data['capacity'] is num) {
+                                sum += (data['capacity'] as num).toInt();
+                                numCaps++;
+                              }
+                            }
+                            if (numCaps > 0) {
+                              cap = (sum / numCaps).round();
+                            }
+                          }
+                          return _buildMetricCard(
+                            icon: Icons.groups_rounded,
+                            label: 'Slot Capping',
+                            value: '$cap Limit / Slot',
+                            color: AppColors.statusGreen,
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(width: 12),
+
+                    // 4. Daily Active Time Slots (Live Stream)
                     Expanded(
-                      child: _buildMetricCard(
-                        icon: Icons.event_available_rounded,
-                        label: 'Active Slots',
-                        value: '6 Daily Slots',
-                        color: Colors.purple,
+                      child: StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance.collection('appointment_slots').snapshots(),
+                        builder: (context, snap) {
+                          int openSlots = 6;
+                          if (snap.hasData && snap.data!.docs.isNotEmpty) {
+                            final closedCount = snap.data!.docs.where((d) {
+                              final data = d.data() as Map<String, dynamic>;
+                              return data['isClosed'] == true;
+                            }).length;
+                            openSlots = (6 - closedCount).clamp(0, 6);
+                          }
+                          return _buildMetricCard(
+                            icon: Icons.event_available_rounded,
+                            label: 'Active Slots',
+                            value: '$openSlots Daily Slots',
+                            color: Colors.purple,
+                          );
+                        },
                       ),
                     ),
                   ],

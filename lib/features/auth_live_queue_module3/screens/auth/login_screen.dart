@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/utils/app_validators.dart';
 import '../../services/auth_service.dart';
 import 'registration_screen.dart';
 import 'forgot_password_screen.dart';
@@ -216,6 +218,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 TextFormField(
                   controller: _phoneOrEmailController,
                   keyboardType: _isStaff ? TextInputType.emailAddress : TextInputType.text,
+                  inputFormatters: _isStaff
+                      ? [
+                          FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9@\.\+\-_]')),
+                          LengthLimitingTextInputFormatter(60),
+                        ]
+                      : AppValidators.phoneOrEmailFormatters,
                   style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
                   decoration: InputDecoration(
                     prefixIcon: Icon(
@@ -240,13 +248,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return _isStaff ? 'Please enter your email' : 'Please enter your phone number or email';
+                    if (_isStaff) {
+                      return AppValidators.validateEmail(value, required: true);
                     }
-                    if (_isStaff && !value.contains('@')) {
-                      return 'Please enter a valid email address';
-                    }
-                    return null;
+                    return AppValidators.validatePhoneOrEmail(value, required: true);
                   },
                 ),
 

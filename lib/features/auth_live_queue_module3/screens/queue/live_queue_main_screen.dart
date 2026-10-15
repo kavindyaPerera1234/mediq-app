@@ -41,10 +41,12 @@ class _LiveQueueMainScreenState extends State<LiveQueueMainScreen> {
           MaterialPageRoute(builder: (_) => const RejoinQueueScreen()),
         );
       } else if (status == PatientQueueStatus.completed) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const QueueCompletedScreen()),
-        );
+        if (!_queueService.isCompletedScreenDismissed) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const QueueCompletedScreen()),
+          );
+        }
       }
     });
   }

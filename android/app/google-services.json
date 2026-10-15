@@ -7,6 +7,25 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:350459297702:android:694f509e530ce994",
+        "android_client_info": {
+          "package_name": "com.mediq.mediq_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCYqOjRDQAV0vZ4BxOPFRbz69EhpMyMgMQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:350459297702:android:a78cd9cfab6755cb9e1967",
         "android_client_info": {
           "package_name": "com.example.mediq_app"

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_accessibility.dart';
 import '../../../../core/constants/app_translations.dart';
+import '../../auth_live_queue_module3/services/auth_service.dart';
 import 'hospital_selection_screen.dart';
-import '../admin/screens/hospital_admin_dashboard.dart';
 import '../backend/backend.dart';
 
 class CaregiverSetupScreen extends StatefulWidget {
@@ -31,6 +31,12 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
   String get _currentPatientNic => ProfileService.activeProfileNotifier.value.nic;
 
   @override
+  void initState() {
+    super.initState();
+    ProfileService().syncWithCurrentUser();
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _nicController.dispose();
@@ -56,8 +62,13 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
     }
 
     final activeProfile = ProfileService.activeProfileNotifier.value;
-    final selfName = activeProfile.fullName.isNotEmpty ? activeProfile.fullName : 'Patient';
-    final selfNic = (activeProfile.nic.isNotEmpty && activeProfile.nic != 'N/A') ? activeProfile.nic : '';
+    final authUser = AuthService().currentUser;
+    final selfName = activeProfile.fullName.isNotEmpty
+        ? activeProfile.fullName
+        : ((authUser != null && authUser.fullName.isNotEmpty) ? authUser.fullName : 'Patient');
+    final selfNic = (activeProfile.nic.isNotEmpty && activeProfile.nic != 'N/A')
+        ? activeProfile.nic
+        : ((authUser != null && authUser.nic != null && authUser.nic!.isNotEmpty) ? authUser.nic! : '');
 
     Navigator.push(
       context,
@@ -94,18 +105,6 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
             foregroundColor: Colors.white,
             centerTitle: true,
             elevation: isDark ? 1 : 0,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.admin_panel_settings_outlined),
-                tooltip: 'Module 1 Hospital Admin Console',
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const HospitalAdminDashboard()),
-                  );
-                },
-              ),
-            ],
           ),
           body: Center(
             child: ConstrainedBox(
@@ -440,11 +439,6 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
         : (lang == 'ta'
             ? 'சந்திப்பு டோக்கன் மற்றும் வரிசை SMS உங்கள் தொலைபேசிக்கு அனுப்பப்படும்.'
             : 'Appointment token & queue SMS will be sent to your registered mobile number.');
-    final editHint = lang == 'si'
-        ? 'පැතිකඩ විස්තර ඔබගේ NIC ගිණුමට සම්බන්ධ කර ඇත.'
-        : (lang == 'ta'
-            ? 'சுயவிவர விவரங்கள் உங்கள் NIC உடன் இணைக்கப்பட்டுள்ளன.'
-            : 'Profile details are linked to your NIC account.');
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -464,38 +458,16 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.verified_user_rounded, color: AppColors.statusGreen, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    verifiedTitle,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.headingText,
-                    ),
-                  ),
-                ],
-              ),
-              // User Control: Change details hint
-              TextButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(editHint),
-                      duration: const Duration(seconds: 1),
-                    ),
-                  );
-                },
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  minimumSize: const Size(40, 24),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              const Icon(Icons.verified_user_rounded, color: AppColors.statusGreen, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                verifiedTitle,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.headingText,
                 ),
-                child: Text(AppTranslations.tr('editProfile'), style: TextStyle(fontSize: 12, color: AppColors.accentColor, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -693,7 +665,15 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
               controller: _nameController,
               style: TextStyle(fontSize: 14, color: AppColors.headingText),
               decoration: _inputDecoration('e.g., Sunil Perera', Icons.person_outline),
-              validator: (val) => val == null || val.trim().isEmpty ? 'Please enter patient name' : null,
+              validator: (val) {
+                if (val == null || val.trim().isEmpty) return 'Please enter patient name';
+                final clean = val.trim();
+                if (clean.length < 2) return 'Name must be at least 2 characters';
+                if (!RegExp(r"^[a-zA-Z\s\.\-']+$").hasMatch(clean)) {
+                  return 'Name cannot contain special characters or numbers';
+                }
+                return null;
+              },
             ),
             const SizedBox(height: 14),
 
@@ -703,7 +683,14 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
               controller: _nicController,
               style: TextStyle(fontSize: 14, color: AppColors.headingText),
               decoration: _inputDecoration('e.g., 195812345678', Icons.badge_outlined),
-              validator: (val) => val == null || val.trim().isEmpty ? 'Please enter NIC or Birth Cert No' : null,
+              validator: (val) {
+                if (val == null || val.trim().isEmpty) return 'Please enter NIC or Birth Cert No';
+                final clean = val.trim();
+                if (!RegExp(r'^[a-zA-Z0-9]{5,15}$').hasMatch(clean)) {
+                  return 'Only letters and numbers allowed (no special characters)';
+                }
+                return null;
+              },
             ),
             const SizedBox(height: 14),
 

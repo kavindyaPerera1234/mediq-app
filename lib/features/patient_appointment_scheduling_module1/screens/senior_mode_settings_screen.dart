@@ -36,13 +36,12 @@ class _SeniorModeSettingsScreenState extends State<SeniorModeSettingsScreen> {
       AppAccessibility.setVoiceGuidance(voice);
       if (voice) {
         VoiceGuidanceService.speak(
-          AppAccessibility.currentLanguage.value == 'si'
-              ? "හඬ මඟපෙන්වීම සක්‍රිය කරන ලදී"
-              : "Voice Guidance is activated. OPD tokens and screen navigation will be announced aloud.",
+          "Voice Guidance is activated. OPD tokens and screen navigation will be announced aloud.",
           context: context,
+          force: true,
         );
       } else {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        VoiceGuidanceService.stop(context: context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("Voice Guidance disabled."),

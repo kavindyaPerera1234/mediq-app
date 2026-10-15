@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_accessibility.dart';
 import '../../../../core/constants/app_translations.dart';
@@ -26,15 +28,200 @@ class HospitalSelectionScreen extends StatefulWidget {
 }
 
 class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
-  late List<GovernmentHospital> _allHospitals;
-  late List<GovernmentHospital> _filteredHospitals;
+  List<GovernmentHospital> _allHospitals = [];
+  List<GovernmentHospital> _filteredHospitals = [];
   final TextEditingController _searchController = TextEditingController();
+
+  StreamSubscription<QuerySnapshot>? _hospitalsSub;
+  StreamSubscription<QuerySnapshot>? _departmentsSub;
+  final Map<String, List<OpdClinic>> _hospitalClinics = {};
+  List<QueryDocumentSnapshot<Map<String, dynamic>>> _lastHospitalDocs = [];
+  bool _isLoading = true;
+  String? _selectedHospitalId;
+  GovernmentHospital? _selectedHospital;
+
+  void _proceedToClinicSelection() {
+    if (_selectedHospital == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        settings: const RouteSettings(name: 'ClinicSelection'),
+        builder: (context) => ClinicSelectionScreen(
+          hospital: _selectedHospital!,
+          isCaregiverBooking: widget.isCaregiverBooking,
+          patientName: widget.patientName,
+          patientNic: widget.patientNic,
+          relationship: widget.relationship,
+          priority: widget.priority,
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
     super.initState();
-    _allHospitals = GovernmentHospital.getSampleHospitals();
-    _filteredHospitals = List.from(_allHospitals);
+    _startRealtimeListeners();
+  }
+
+  void _startRealtimeListeners() {
+    // 1. Listen to departments collection for custom clinics
+    _departmentsSub = FirebaseFirestore.instance
+        .collection('departments')
+        .snapshots()
+        .listen((snapshot) {
+      final Map<String, List<OpdClinic>> clinicMap = {};
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        if (data['isActive'] == false) continue;
+
+        final hospName = (data['hospitalName'] ?? '').toString().trim().toLowerCase();
+        final hospId = (data['hospitalId'] ?? '').toString().trim().toLowerCase();
+        final deptId = doc.id;
+        final name = (data['name'] ?? 'OPD Clinic').toString();
+        final room = (data['roomNumber'] ?? 'OPD Room 01').toString();
+        final hours = (data['operatingHours'] ?? '8:00 AM - 12:00 PM').toString();
+
+        IconData icon = Icons.medical_services_outlined;
+        final lowerName = name.toLowerCase();
+        if (lowerName.contains('pediatric') || lowerName.contains('child') || lowerName.contains('baby')) {
+          icon = Icons.child_care_outlined;
+        } else if (lowerName.contains('ortho') || lowerName.contains('bone') || lowerName.contains('fracture')) {
+          icon = Icons.accessibility_new_outlined;
+        } else if (lowerName.contains('ent') || lowerName.contains('ear') || lowerName.contains('audio') || lowerName.contains('throat')) {
+          icon = Icons.hearing_outlined;
+        } else if (lowerName.contains('derma') || lowerName.contains('skin')) {
+          icon = Icons.healing_outlined;
+        } else if (lowerName.contains('cardio') || lowerName.contains('heart')) {
+          icon = Icons.favorite_outline_rounded;
+        } else if (lowerName.contains('dental') || lowerName.contains('teeth') || lowerName.contains('tooth') || lowerName.contains('oral')) {
+          icon = Icons.clean_hands_outlined;
+        } else if (lowerName.contains('eye') || lowerName.contains('ophthal') || lowerName.contains('vision')) {
+          icon = Icons.visibility_outlined;
+        } else if (lowerName.contains('gyn') || lowerName.contains('antenatal') || lowerName.contains('maternity') || lowerName.contains('women')) {
+          icon = Icons.pregnant_woman_rounded;
+        } else if (lowerName.contains('neuro') || lowerName.contains('brain') || lowerName.contains('psych')) {
+          icon = Icons.psychology_outlined;
+        }
+
+        final clinic = OpdClinic(
+          id: deptId,
+          name: name,
+          hours: hours,
+          icon: icon,
+          isOpen: true,
+          roomNumber: room,
+        );
+
+        final cleanHospName = hospName.replaceAll(RegExp(r'[^a-z0-9]'), '');
+        final cleanHospId = hospId.replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+        if (hospName.isNotEmpty) {
+          clinicMap.putIfAbsent(hospName, () => []).add(clinic);
+        }
+        if (cleanHospName.isNotEmpty) {
+          clinicMap.putIfAbsent(cleanHospName, () => []).add(clinic);
+        }
+        if (hospId.isNotEmpty) {
+          clinicMap.putIfAbsent(hospId, () => []).add(clinic);
+        }
+        if (cleanHospId.isNotEmpty) {
+          clinicMap.putIfAbsent(cleanHospId, () => []).add(clinic);
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _hospitalClinics.clear();
+          _hospitalClinics.addAll(clinicMap);
+          _mergeHospitals();
+        });
+      }
+    });
+
+    // 2. Listen to hospitals collection for dynamic government hospitals
+    _hospitalsSub = FirebaseFirestore.instance
+        .collection('hospitals')
+        .snapshots()
+        .listen((snapshot) {
+      if (mounted) {
+        setState(() {
+          _lastHospitalDocs = snapshot.docs;
+          _mergeHospitals();
+        });
+      }
+    });
+  }
+
+  void _mergeHospitals([List<QueryDocumentSnapshot<Map<String, dynamic>>>? firestoreDocs]) {
+    if (firestoreDocs != null) {
+      _lastHospitalDocs = firestoreDocs;
+    }
+
+    final Map<String, GovernmentHospital> map = {};
+    final Set<String> disabledHospitalKeys = {};
+
+    for (var doc in _lastHospitalDocs) {
+      final data = doc.data();
+      final id = doc.id.toLowerCase();
+      final name = (data['name'] ?? '').toString().trim();
+      if (name.isEmpty) continue;
+
+      final cleanName = name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+      final cleanId = id.replaceAll(RegExp(r'[^a-z0-9]'), '');
+      final rawHospId = (data['hospitalId'] ?? '').toString().toLowerCase().trim();
+      final cleanRawHospId = rawHospId.replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+      final bool isActive;
+      if (data['isActive'] is bool) {
+        isActive = data['isActive'] as bool;
+      } else if (data['isOpdAvailable'] is bool) {
+        isActive = data['isOpdAvailable'] as bool;
+      } else {
+        isActive = true;
+      }
+
+      if (!isActive) {
+        disabledHospitalKeys.add(id);
+        disabledHospitalKeys.add(cleanName);
+        continue;
+      }
+
+      // Check for attached custom clinics with fuzzy/clean lookups
+      List<OpdClinic>? customClinics = _hospitalClinics[name.toLowerCase()] ??
+          _hospitalClinics[cleanName] ??
+          _hospitalClinics[id] ??
+          _hospitalClinics[cleanId] ??
+          (rawHospId.isNotEmpty ? _hospitalClinics[rawHospId] : null) ??
+          (cleanRawHospId.isNotEmpty ? _hospitalClinics[cleanRawHospId] : null);
+
+      if (customClinics == null) {
+        for (final entry in _hospitalClinics.entries) {
+          final k = entry.key;
+          if (cleanName.isNotEmpty && (k.contains(cleanName) || cleanName.contains(k))) {
+            customClinics = entry.value;
+            break;
+          }
+        }
+      }
+
+      map[id] = GovernmentHospital.fromMap(
+        data,
+        doc.id,
+        customClinics: customClinics,
+      );
+    }
+
+    // Only fallback to hardcoded samples if Firestore had 0 hospital records
+    if (_lastHospitalDocs.isEmpty) {
+      for (var def in GovernmentHospital.getSampleHospitals()) {
+        map[def.id.toLowerCase()] = def;
+      }
+    }
+
+    _isLoading = false;
+    _allHospitals = map.values.where((h) => h.isOpdAvailable).toList();
+    _filterHospitals(_searchController.text);
   }
 
   void _filterHospitals(String query) {
@@ -42,10 +229,12 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
       if (query.isEmpty) {
         _filteredHospitals = List.from(_allHospitals);
       } else {
+        final q = query.toLowerCase().trim();
         _filteredHospitals = _allHospitals
             .where((h) =>
-                h.name.toLowerCase().contains(query.toLowerCase()) ||
-                h.location.toLowerCase().contains(query.toLowerCase()))
+                h.name.toLowerCase().contains(q) ||
+                h.location.toLowerCase().contains(q) ||
+                h.district.toLowerCase().contains(q))
             .toList();
       }
     });
@@ -53,6 +242,8 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
 
   @override
   void dispose() {
+    _hospitalsSub?.cancel();
+    _departmentsSub?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -123,17 +314,21 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
 
                           // Hospitals List
                           Expanded(
-                            child: _filteredHospitals.isEmpty
-                                ? _buildEmptyState()
-                                : ListView.separated(
-                                    padding: const EdgeInsets.only(bottom: 24),
-                                    itemCount: _filteredHospitals.length,
-                                    separatorBuilder: (context, index) => const SizedBox(height: 12),
-                                    itemBuilder: (context, index) {
-                                      final hospital = _filteredHospitals[index];
-                                      return _buildHospitalCard(hospital);
-                                    },
-                                  ),
+                            child: _isLoading
+                                ? Center(
+                                    child: CircularProgressIndicator(color: AppColors.accentColor),
+                                  )
+                                : _filteredHospitals.isEmpty
+                                    ? _buildEmptyState()
+                                    : ListView.separated(
+                                        padding: const EdgeInsets.only(bottom: 24),
+                                        itemCount: _filteredHospitals.length,
+                                        separatorBuilder: (context, index) => const SizedBox(height: 12),
+                                        itemBuilder: (context, index) {
+                                          final hospital = _filteredHospitals[index];
+                                          return _buildHospitalCard(hospital);
+                                        },
+                                      ),
                           ),
                         ],
                       ),
@@ -143,6 +338,7 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
               ),
             ),
           ),
+          bottomNavigationBar: _buildBottomContinueBar(),
         );
       },
     );
@@ -375,52 +571,53 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
 
   // Polished Hospital Card
   Widget _buildHospitalCard(GovernmentHospital hospital) {
+    final isSelected = _selectedHospitalId == hospital.id;
+
     return InkWell(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            settings: const RouteSettings(name: 'ClinicSelection'),
-            builder: (context) => ClinicSelectionScreen(
-              hospital: hospital,
-              isCaregiverBooking: widget.isCaregiverBooking,
-              patientName: widget.patientName,
-              patientNic: widget.patientNic,
-              relationship: widget.relationship,
-              priority: widget.priority,
-            ),
-          ),
-        );
+        setState(() {
+          _selectedHospitalId = hospital.id;
+          _selectedHospital = hospital;
+        });
       },
       borderRadius: BorderRadius.circular(16),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.cardSurface,
+          color: isSelected
+              ? const Color(0xFFF4F8FC)
+              : AppColors.cardSurface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.cardBorder),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.cardBorder,
+            width: isSelected ? 1.8 : 1.0,
+          ),
           boxShadow: [
             BoxShadow(
-              color: AppColors.isDark ? Colors.black26 : AppColors.textDark.withValues(alpha: 0.03),
-              blurRadius: 6,
+              color: isSelected
+                  ? AppColors.primary.withValues(alpha: 0.08)
+                  : (AppColors.isDark ? Colors.black26 : AppColors.textDark.withValues(alpha: 0.02)),
+              blurRadius: isSelected ? 6 : 4,
               offset: const Offset(0, 2),
             ),
           ],
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Medical Icon Badge
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.chipBg,
+                color: isSelected
+                    ? AppColors.primary.withValues(alpha: 0.1)
+                    : AppColors.chipBg,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 Icons.local_hospital_rounded,
-                color: AppColors.accentColor,
+                color: AppColors.primary,
                 size: 24,
               ),
             ),
@@ -436,7 +633,7 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.headingText,
+                      color: isSelected ? AppColors.primary : AppColors.headingText,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -505,13 +702,116 @@ class _HospitalSelectionScreenState extends State<HospitalSelectionScreen> {
             ),
 
             const SizedBox(width: 10),
-            // Forward Chevron Arrow
-            Padding(
-              padding: const EdgeInsets.only(top: 8.0),
-              child: Icon(
-                Icons.arrow_forward_ios_rounded,
-                color: AppColors.bodyText,
-                size: 15,
+
+            // Subtle & Clean Selection Indicator Badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppColors.statusGreenLight
+                    : AppColors.background,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: isSelected
+                      ? AppColors.statusGreen.withValues(alpha: 0.5)
+                      : AppColors.cardBorder,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                    size: 14,
+                    color: isSelected ? AppColors.statusGreen : AppColors.bodyText,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    isSelected ? 'Selected' : 'Select',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      color: isSelected ? AppColors.statusGreen : AppColors.bodyText,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Sticky Bottom Navigation Bar for deliberate user-controlled step navigation
+  Widget _buildBottomContinueBar() {
+    final hasSelection = _selectedHospital != null;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.cardSurface,
+        border: Border(top: BorderSide(color: AppColors.cardBorder, width: 1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, -3),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (hasSelection)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle_rounded, size: 14, color: AppColors.statusGreen),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Selected: ${_selectedHospital!.name}',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.headingText),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: hasSelection ? _proceedToClinicSelection : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: hasSelection ? AppColors.accentColor : AppColors.cardBorder,
+                  foregroundColor: hasSelection ? Colors.white : AppColors.bodyText,
+                  disabledBackgroundColor: AppColors.cardBorder.withValues(alpha: 0.5),
+                  disabledForegroundColor: AppColors.bodyText.withValues(alpha: 0.6),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      hasSelection ? 'Continue to OPD Clinic' : 'Select a Hospital to Continue',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: hasSelection ? Colors.white : AppColors.bodyText,
+                      ),
+                    ),
+                    if (hasSelection) ...[
+                      const SizedBox(width: 8),
+                      const Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white),
+                    ],
+                  ],
+                ),
               ),
             ),
           ],

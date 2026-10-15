@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/patient_profile_model.dart';
 import '../../../auth_live_queue_module3/services/auth_service.dart';
 import '../../../../core/constants/app_accessibility.dart';
+import '../../../../core/utils/nic_helper.dart';
 
 class ProfileService {
   final FirebaseFirestore _firestore;
@@ -34,13 +35,20 @@ class ProfileService {
           }
         } catch (_) {}
 
+        final effectiveNic = (nic.isNotEmpty && nic != 'N/A')
+            ? nic
+            : (authUser.userId.length > 8 ? authUser.userId.substring(0, 8).toUpperCase() : authUser.userId);
+        final nicInfo = SriLankanNicHelper.decode(effectiveNic);
+
         final newProfile = PatientProfileModel(
           patientId: profileDocId,
           fullName: authUser.fullName,
-          nic: (nic.isNotEmpty && nic != 'N/A') ? nic : (authUser.userId.length > 8 ? authUser.userId.substring(0, 8).toUpperCase() : authUser.userId),
+          nic: effectiveNic,
           phone: authUser.phoneNumber,
           email: authUser.email ?? '',
-          bloodGroup: 'O+',
+          bloodGroup: 'Not Set',
+          dateOfBirth: nicInfo.isValid ? nicInfo.dateOfBirth : '',
+          gender: nicInfo.isValid ? nicInfo.gender : 'Not Specified',
         );
         activeProfileNotifier.value = newProfile;
         return newProfile;
@@ -66,28 +74,49 @@ class ProfileService {
           }
 
           if (fullName.isNotEmpty) {
+            final effectiveNic = (nic.isNotEmpty && nic != 'N/A') ? nic : user.uid.substring(0, 8).toUpperCase();
+            final nicInfo = SriLankanNicHelper.decode(effectiveNic);
+
+            String dob = (data['dateOfBirth'] ?? '').toString().trim();
+            if (dob.isEmpty || dob == '1995-01-01') {
+              dob = nicInfo.isValid ? nicInfo.dateOfBirth : '';
+            }
+
+            String gender = (data['gender'] ?? '').toString().trim();
+            if (gender.isEmpty || gender == 'Not Specified') {
+              gender = nicInfo.isValid ? nicInfo.gender : 'Not Specified';
+            }
+
+            String blood = (data['bloodGroup'] ?? '').toString().trim();
+            if (blood.isEmpty) {
+              blood = 'Not Set';
+            }
+
             final newProfile = PatientProfileModel(
               patientId: profileDocId,
               fullName: fullName,
-              nic: (nic.isNotEmpty && nic != 'N/A') ? nic : user.uid.substring(0, 8).toUpperCase(),
+              nic: effectiveNic,
               phone: phone,
               email: email,
-              bloodGroup: (data['bloodGroup'] ?? 'O+').toString(),
-              gender: (data['gender'] ?? 'Not Specified').toString(),
-              dateOfBirth: (data['dateOfBirth'] ?? '1995-01-01').toString(),
+              bloodGroup: blood,
+              gender: gender,
+              dateOfBirth: dob,
               photoUrl: (data['photoUrl'] ?? user.photoURL ?? '').toString(),
             );
             activeProfileNotifier.value = newProfile;
             return newProfile;
           }
         } else if (user.displayName != null && user.displayName!.isNotEmpty) {
+          final effectiveNic = user.uid.substring(0, 8).toUpperCase();
           final newProfile = PatientProfileModel(
             patientId: user.uid,
             fullName: user.displayName!,
-            nic: user.uid.substring(0, 8).toUpperCase(),
+            nic: effectiveNic,
             phone: user.phoneNumber ?? '',
             email: user.email ?? '',
-            bloodGroup: 'O+',
+            bloodGroup: 'Not Set',
+            dateOfBirth: '',
+            gender: 'Not Specified',
             photoUrl: user.photoURL ?? '',
           );
           activeProfileNotifier.value = newProfile;

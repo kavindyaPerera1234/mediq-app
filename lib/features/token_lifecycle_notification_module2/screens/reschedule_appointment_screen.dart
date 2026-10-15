@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -29,50 +31,81 @@ class RescheduleAppointmentScreen extends StatefulWidget {
 
 class _RescheduleAppointmentScreenState
     extends State<RescheduleAppointmentScreen> {
+  // ============================================================
+  // STATE
+  // ============================================================
+
   late DateTime selectedDate;
-  late String selectedTime;
+
+  String selectedTime = '';
 
   bool isSaving = false;
 
-  // Same time slots used by the existing Module 2 rescheduling UI.
+  Map<String, int> bookedCounts = {};
+
+  Map<String, int> capacities = {};
+
+  Map<String, bool> closedSlots = {};
+
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>?
+      appointmentsSubscription;
+
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>?
+      slotsSubscription;
+
+  // ============================================================
+  // TIME SLOTS
+  // SAME SLOTS AS THE ORIGINAL TIME SLOT SCREEN
+  // ============================================================
+
   final List<Map<String, String>> timeSlots = [
     {
       'id': 'slot_1',
-      'startTime': '08:00',
-      'endTime': '09:00',
-      'displayTime': '08:00 - 09:00 AM',
+      'start': '08:00',
+      'end': '09:00',
+      'display': '08:00 AM - 09:00 AM',
+      'session': 'morning',
     },
     {
       'id': 'slot_2',
-      'startTime': '09:00',
-      'endTime': '10:00',
-      'displayTime': '09:00 - 10:00 AM',
+      'start': '09:00',
+      'end': '10:00',
+      'display': '09:00 AM - 10:00 AM',
+      'session': 'morning',
     },
     {
       'id': 'slot_3',
-      'startTime': '10:00',
-      'endTime': '11:00',
-      'displayTime': '10:00 - 11:00 AM',
+      'start': '10:00',
+      'end': '11:00',
+      'display': '10:00 AM - 11:00 AM',
+      'session': 'morning',
     },
     {
       'id': 'slot_4',
-      'startTime': '11:00',
-      'endTime': '12:00',
-      'displayTime': '11:00 - 12:00 PM',
+      'start': '11:00',
+      'end': '12:00',
+      'display': '11:00 AM - 12:00 PM',
+      'session': 'morning',
     },
     {
       'id': 'slot_5',
-      'startTime': '12:00',
-      'endTime': '13:00',
-      'displayTime': '12:00 - 01:00 PM',
+      'start': '12:00',
+      'end': '13:00',
+      'display': '12:00 PM - 01:00 PM',
+      'session': 'afternoon',
     },
     {
       'id': 'slot_6',
-      'startTime': '13:00',
-      'endTime': '14:00',
-      'displayTime': '01:00 - 02:00 PM',
+      'start': '13:00',
+      'end': '14:00',
+      'display': '01:00 PM - 02:00 PM',
+      'session': 'afternoon',
     },
   ];
+
+  // ============================================================
+  // INIT
+  // ============================================================
 
   @override
   void initState() {
@@ -80,38 +113,58 @@ class _RescheduleAppointmentScreenState
 
     selectedDate = _parseDate(widget.date);
 
-    selectedTime = widget.time.isNotEmpty
-        ? widget.time
-        : timeSlots.first['displayTime']!;
+    selectedTime = _findMatchingDisplayTime(widget.time);
+
+    _loadAvailability();
+  }
+
+  @override
+  void dispose() {
+    appointmentsSubscription?.cancel();
+    slotsSubscription?.cancel();
+
+    super.dispose();
   }
 
   // ============================================================
-  // DATE
+  // DATE HELPERS
   // ============================================================
 
   DateTime _parseDate(String value) {
     final parsed = DateTime.tryParse(value);
 
     if (parsed != null) {
-      return parsed;
+      return DateTime(
+        parsed.year,
+        parsed.month,
+        parsed.day,
+      );
     }
 
-    final parts = value.split(RegExp(r'[/\\\-. ]'));
+    final match = RegExp(
+      r'(\d{1,2})[\/\-. ](\d{1,2})[\/\-. ](\d{4})',
+    ).firstMatch(value);
 
-    if (parts.length == 3) {
-      final day = int.tryParse(parts[0]);
-      final month = int.tryParse(parts[1]);
-      final year = int.tryParse(parts[2]);
+    if (match != null) {
+      final first = int.tryParse(match.group(1)!);
+      final second = int.tryParse(match.group(2)!);
+      final year = int.tryParse(match.group(3)!);
 
-      if (day != null && month != null && year != null) {
-        return DateTime(year, month, day);
+      if (first != null &&
+          second != null &&
+          year != null) {
+        return DateTime(
+          year,
+          second,
+          first,
+        );
       }
     }
 
     return DateTime.now();
   }
 
-  String _formatDate(DateTime date) {
+  String _dateKey(DateTime date) {
     return '${date.year}-'
         '${date.month.toString().padLeft(2, '0')}-'
         '${date.day.toString().padLeft(2, '0')}';
@@ -133,7 +186,7 @@ class _RescheduleAppointmentScreenState
       'December',
     ];
 
-    const days = [
+    const weekdays = [
       'Monday',
       'Tuesday',
       'Wednesday',
@@ -143,125 +196,640 @@ class _RescheduleAppointmentScreenState
       'Sunday',
     ];
 
-    return '${days[date.weekday - 1]}, '
+    return '${weekdays[date.weekday - 1]}, '
         '${date.day} '
         '${months[date.month - 1]} '
         '${date.year}';
   }
 
   // ============================================================
-  // DATE PICKER
+  // TIME HELPERS
   // ============================================================
 
-  Future<void> _chooseDate() async {
-    final today = DateTime.now();
+  String _findMatchingDisplayTime(String value) {
+    final clean = value
+        .toLowerCase()
+        .replaceAll(' ', '');
 
-    final todayOnly = DateTime(
+    for (final slot in timeSlots) {
+      final display = slot['display']!
+          .toLowerCase()
+          .replaceAll(' ', '');
+
+      final id = slot['id']!
+          .toLowerCase()
+          .replaceAll(' ', '');
+
+      final start = slot['start']!
+          .replaceAll(':', '');
+
+      final end = slot['end']!
+          .replaceAll(':', '');
+
+      if (clean == display ||
+          clean == id ||
+          (clean.contains(start) &&
+              clean.contains(end))) {
+        return slot['display']!;
+      }
+    }
+
+    return '';
+  }
+
+  int? _slotIndex(String value) {
+    final clean = value
+        .toLowerCase()
+        .replaceAll(' ', '');
+
+    for (int i = 0; i < timeSlots.length; i++) {
+      final slot = timeSlots[i];
+
+      final display = slot['display']!
+          .toLowerCase()
+          .replaceAll(' ', '');
+
+      final id = slot['id']!
+          .toLowerCase()
+          .replaceAll(' ', '');
+
+      if (clean == display ||
+          clean == id) {
+        return i;
+      }
+    }
+
+    if (clean.contains('08:') &&
+        clean.contains('09:')) {
+      return 0;
+    }
+
+    if (clean.contains('09:') &&
+        clean.contains('10:')) {
+      return 1;
+    }
+
+    if (clean.contains('10:') &&
+        clean.contains('11:')) {
+      return 2;
+    }
+
+    if (clean.contains('11:') &&
+        clean.contains('12:')) {
+      return 3;
+    }
+
+    if (clean.contains('12:') &&
+        (clean.contains('13:') ||
+            clean.contains('01:'))) {
+      return 4;
+    }
+
+    if ((clean.contains('13:') ||
+            clean.contains('01:')) &&
+        (clean.contains('14:') ||
+            clean.contains('02:'))) {
+      return 5;
+    }
+
+    return null;
+  }
+
+  // ============================================================
+  // CLINIC OPERATING HOURS
+  //
+  // General Medicine in your screenshot:
+  // 08:00 AM - 12:00 PM
+  //
+  // If clinic name contains afternoon / 2 PM clinics,
+  // 2 PM slots can also be shown.
+  // ============================================================
+
+  int _clinicEndHour() {
+    final clinic =
+        widget.clinic.toLowerCase();
+
+    // General Medicine screenshot:
+    // 08:00 AM - 12:00 PM
+    if (clinic.contains('general medicine') ||
+        clinic.contains('general opd') ||
+        clinic.contains('general')) {
+      return 12;
+    }
+
+    // Clinics that normally continue until 2 PM.
+    return 14;
+  }
+
+  bool _withinClinicHours(
+    Map<String, String> slot,
+  ) {
+    final startHour =
+        int.parse(slot['start']!.split(':')[0]);
+
+    final endHour =
+        int.parse(slot['end']!.split(':')[0]);
+
+    final clinicEnd =
+        _clinicEndHour();
+
+    return startHour >= 8 &&
+        endHour <= clinicEnd;
+  }
+
+  List<Map<String, String>> get visibleSlots {
+    return timeSlots
+        .where(_withinClinicHours)
+        .toList();
+  }
+
+  // ============================================================
+  // REAL-TIME AVAILABILITY
+  // ============================================================
+
+  void _loadAvailability() {
+    appointmentsSubscription?.cancel();
+    slotsSubscription?.cancel();
+
+    final date = _dateKey(selectedDate);
+
+    // ----------------------------------------------------------
+    // APPOINTMENTS
+    // ----------------------------------------------------------
+
+    appointmentsSubscription =
+        FirebaseFirestore.instance
+            .collection('appointments')
+            .where(
+              'appointmentDate',
+              isEqualTo: date,
+            )
+            .snapshots()
+            .listen(
+      (snapshot) {
+        final counts =
+            <String, int>{};
+
+        for (final doc in snapshot.docs) {
+          final data = doc.data();
+
+          final status =
+              (data['status'] ?? '')
+                  .toString()
+                  .toLowerCase();
+
+          // Cancelled appointments do not occupy slots.
+          if (status == 'cancelled') {
+            continue;
+          }
+
+          // Match the same hospital.
+          final hospitalId =
+              (data['hospitalId'] ?? '')
+                  .toString()
+                  .toLowerCase();
+
+          final hospitalName =
+              (data['hospitalName'] ?? '')
+                  .toString()
+                  .toLowerCase();
+
+          final currentHospital =
+              widget.hospital.toLowerCase();
+
+          final hospitalMatches =
+              hospitalId.isEmpty ||
+                  hospitalName.isEmpty ||
+                  hospitalId ==
+                      currentHospital ||
+                  hospitalName ==
+                      currentHospital ||
+                  hospitalId.contains(
+                    currentHospital,
+                  ) ||
+                  hospitalName.contains(
+                    currentHospital,
+                  ) ||
+                  currentHospital.contains(
+                    hospitalId,
+                  ) ||
+                  currentHospital.contains(
+                    hospitalName,
+                  );
+
+          if (!hospitalMatches) {
+            continue;
+          }
+
+          // Match the same clinic.
+          final departmentId =
+              (data['departmentId'] ??
+                      data['clinicId'] ??
+                      '')
+                  .toString()
+                  .toLowerCase();
+
+          final departmentName =
+              (data['departmentName'] ??
+                      data['clinicName'] ??
+                      '')
+                  .toString()
+                  .toLowerCase();
+
+          final currentClinic =
+              widget.clinic.toLowerCase();
+
+          final clinicMatches =
+              departmentId.isEmpty ||
+                  departmentName.isEmpty ||
+                  departmentId ==
+                      currentClinic ||
+                  departmentName ==
+                      currentClinic ||
+                  departmentId.contains(
+                    currentClinic,
+                  ) ||
+                  departmentName.contains(
+                    currentClinic,
+                  ) ||
+                  currentClinic.contains(
+                    departmentId,
+                  ) ||
+                  currentClinic.contains(
+                    departmentName,
+                  ) ||
+                  (currentClinic.contains(
+                        'general',
+                      ) &&
+                      (departmentName.contains(
+                            'general',
+                          ) ||
+                          departmentId.contains(
+                            'general',
+                          ) ||
+                          departmentId.contains(
+                            'gen_med',
+                          )));
+
+          if (!clinicMatches) {
+            continue;
+          }
+
+          // Get time slot.
+          String slotValue =
+              (data['timeSlot'] ?? '')
+                  .toString()
+                  .trim();
+
+          if (slotValue.isEmpty) {
+            final start =
+                (data['startTime'] ?? '')
+                    .toString()
+                    .trim();
+
+            final end =
+                (data['endTime'] ?? '')
+                    .toString()
+                    .trim();
+
+            if (start.isNotEmpty &&
+                end.isNotEmpty) {
+              slotValue =
+                  '$start - $end';
+            }
+          }
+
+          if (slotValue.isEmpty) {
+            slotValue =
+                (data['slotId'] ?? '')
+                    .toString();
+          }
+
+          final index =
+              _slotIndex(slotValue);
+
+          if (index == null) {
+            continue;
+          }
+
+          final slotId =
+              timeSlots[index]['id']!;
+
+          counts[slotId] =
+              (counts[slotId] ?? 0) + 1;
+        }
+
+        if (!mounted) return;
+
+        setState(() {
+          bookedCounts = counts;
+          _validateSelectedSlot();
+        });
+      },
+      onError: (error) {
+        debugPrint(
+          'Appointment availability error: $error',
+        );
+      },
+    );
+
+    // ----------------------------------------------------------
+    // APPOINTMENT SLOTS
+    // ----------------------------------------------------------
+
+    slotsSubscription =
+        FirebaseFirestore.instance
+            .collection('appointment_slots')
+            .where(
+              'date',
+              isEqualTo: date,
+            )
+            .snapshots()
+            .listen(
+      (snapshot) {
+        final newCapacities =
+            <String, int>{};
+
+        final newClosed =
+            <String, bool>{};
+
+        for (final doc in snapshot.docs) {
+          final data = doc.data();
+
+          final slotId =
+              (data['slotId'] ?? '')
+                  .toString();
+
+          final slotRange =
+              (data['slotRange'] ??
+                      '')
+                  .toString();
+
+          final startTime =
+              (data['startTime'] ?? '')
+                  .toString();
+
+          final endTime =
+              (data['endTime'] ?? '')
+                  .toString();
+
+          final capacity =
+              data['capacity'];
+
+          if (capacity is num) {
+            final value =
+                capacity.toInt();
+
+            if (slotId.isNotEmpty) {
+              newCapacities[slotId] =
+                  value;
+            }
+
+            if (slotRange.isNotEmpty) {
+              newCapacities[slotRange] =
+                  value;
+            }
+
+            if (startTime.isNotEmpty &&
+                endTime.isNotEmpty) {
+              newCapacities[
+                    '$startTime - $endTime'] =
+                  value;
+            }
+          }
+
+          final status =
+              (data['status'] ?? '')
+                  .toString()
+                  .toLowerCase();
+
+          final isClosed =
+              data['isClosed'] == true ||
+              status == 'closed';
+
+          if (isClosed) {
+            if (slotId.isNotEmpty) {
+              newClosed[slotId] =
+                  true;
+            }
+
+            if (slotRange.isNotEmpty) {
+              newClosed[slotRange] =
+                  true;
+            }
+          }
+        }
+
+        if (!mounted) return;
+
+        setState(() {
+          capacities =
+              newCapacities;
+
+          closedSlots =
+              newClosed;
+
+          _validateSelectedSlot();
+        });
+      },
+      onError: (error) {
+        debugPrint(
+          'Slot availability error: $error',
+        );
+      },
+    );
+  }
+
+  // ============================================================
+  // CAPACITY
+  // ============================================================
+
+  int _booked(
+    Map<String, String> slot,
+  ) {
+    return bookedCounts[
+            slot['id']] ??
+        0;
+  }
+
+  int _capacity(
+    Map<String, String> slot,
+  ) {
+    return capacities[
+            slot['id']] ??
+        capacities[
+            slot['display']] ??
+        25;
+  }
+
+  int _remaining(
+    Map<String, String> slot,
+  ) {
+    final result =
+        _capacity(slot) -
+            _booked(slot);
+
+    if (result < 0) {
+      return 0;
+    }
+
+    return result;
+  }
+
+  bool _isFull(
+    Map<String, String> slot,
+  ) {
+    return _remaining(slot) <= 0;
+  }
+
+  bool _isClosed(
+    Map<String, String> slot,
+  ) {
+    return closedSlots[
+              slot['id']] ==
+          true ||
+        closedSlots[
+              slot['display']] ==
+          true;
+  }
+
+  // ============================================================
+  // PAST TIME
+  // ============================================================
+
+  bool _isPast(
+    Map<String, String> slot,
+  ) {
+    final now = DateTime.now();
+
+    final selectedDay =
+        DateTime(
+      selectedDate.year,
+      selectedDate.month,
+      selectedDate.day,
+    );
+
+    final today =
+        DateTime(
+      now.year,
+      now.month,
+      now.day,
+    );
+
+    // Previous dates.
+    if (selectedDay.isBefore(today)) {
+      return true;
+    }
+
+    // Future dates.
+    if (selectedDay.isAfter(today)) {
+      return false;
+    }
+
+    final endParts =
+        slot['end']!.split(':');
+
+    final endHour =
+        int.parse(endParts[0]);
+
+    final endMinute =
+        int.parse(endParts[1]);
+
+    final end =
+        DateTime(
       today.year,
       today.month,
       today.day,
+      endHour,
+      endMinute,
     );
 
-    final initialDate = selectedDate.isBefore(todayOnly)
-        ? todayOnly
-        : selectedDate;
+    return !now.isBefore(end);
+  }
 
-    final pickedDate = await showDatePicker(
+  bool _isAvailable(
+    Map<String, String> slot,
+  ) {
+    return !_isFull(slot) &&
+        !_isClosed(slot) &&
+        !_isPast(slot);
+  }
+
+  // ============================================================
+  // VALIDATE CURRENT SELECTION
+  // ============================================================
+
+  void _validateSelectedSlot() {
+    if (selectedTime.isEmpty) {
+      return;
+    }
+
+    final slot =
+        timeSlots.where(
+      (item) =>
+          item['display'] ==
+          selectedTime,
+    );
+
+    if (slot.isEmpty) {
+      selectedTime = '';
+      return;
+    }
+
+    if (!_isAvailable(slot.first)) {
+      selectedTime = '';
+    }
+  }
+
+  // ============================================================
+  // DATE SELECTION
+  // ============================================================
+
+  Future<void> _selectDate() async {
+    final now = DateTime.now();
+
+    final today =
+        DateTime(
+      now.year,
+      now.month,
+      now.day,
+    );
+
+    final initialDate =
+        selectedDate.isBefore(today)
+            ? today
+            : selectedDate;
+
+    final picked =
+        await showDatePicker(
       context: context,
       initialDate: initialDate,
-      firstDate: todayOnly,
-      lastDate: DateTime(2027, 12, 31),
+      firstDate: today,
+      lastDate:
+          DateTime(2027, 12, 31),
     );
 
-    if (pickedDate == null) {
+    if (picked == null) {
       return;
     }
 
     setState(() {
-      selectedDate = pickedDate;
-    });
-  }
-
-  // ============================================================
-  // GENERATE NEXT TOKEN
-  //
-  // This follows the same database-based logic:
-  // 1. appointment_slots -> bookedCount
-  // 2. If slot document does not exist, count appointments
-  // 3. Generate A-001, A-002, A-003...
-  //
-  // Module 1 files are NOT modified.
-  // ============================================================
-
-  Future<String> _generateNextTokenCode({
-    required String departmentId,
-    required String appointmentDate,
-  }) async {
-    try {
-      final firestore = FirebaseFirestore.instance;
-
-      final slotDocId =
-          '${departmentId}_$appointmentDate';
-
-      final slotSnap = await firestore
-          .collection('appointment_slots')
-          .doc(slotDocId)
-          .get()
-          .timeout(
-            const Duration(seconds: 5),
-          );
-
-      int nextSeq = 1;
-
-      if (slotSnap.exists &&
-          slotSnap.data() != null) {
-        final data = slotSnap.data()!;
-
-        final bookedCount = data['bookedCount'];
-
-        if (bookedCount is num) {
-          nextSeq = bookedCount.toInt() + 1;
-        }
-      } else {
-        final querySnap = await firestore
-            .collection('appointments')
-            .where(
-              'departmentId',
-              isEqualTo: departmentId,
-            )
-            .where(
-              'appointmentDate',
-              isEqualTo: appointmentDate,
-            )
-            .get()
-            .timeout(
-              const Duration(seconds: 5),
-            );
-
-        final validDocs = querySnap.docs.where((doc) {
-          final data = doc.data();
-
-          final status =
-              (data['status'] ?? '').toString().toLowerCase();
-
-          return status != 'cancelled';
-        }).toList();
-
-        nextSeq = validDocs.length + 1;
-      }
-
-      return 'A-${nextSeq.toString().padLeft(3, '0')}';
-    } catch (e) {
-      // Do not silently break the reschedule flow.
-      // Re-throw so the user sees the actual problem.
-      throw Exception(
-        'Unable to generate the new token: $e',
+      selectedDate =
+          DateTime(
+        picked.year,
+        picked.month,
+        picked.day,
       );
-    }
+
+      // New date = new time selection.
+      selectedTime = '';
+    });
+
+    _loadAvailability();
   }
 
   // ============================================================
-  // CONFIRM RESCHEDULE
+  // RESCHEDULE
   // ============================================================
 
   Future<void> _confirmReschedule() async {
@@ -270,26 +838,30 @@ class _RescheduleAppointmentScreenState
     }
 
     if (widget.appointmentId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Appointment ID is missing.',
-          ),
-        ),
+      _showMessage(
+        'Appointment ID is missing.',
       );
-
       return;
     }
 
     if (selectedTime.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Please select a time slot.',
-          ),
-        ),
+      _showMessage(
+        'Please select an available time slot.',
       );
+      return;
+    }
 
+    final slot =
+        timeSlots.firstWhere(
+      (item) =>
+          item['display'] ==
+          selectedTime,
+    );
+
+    if (!_isAvailable(slot)) {
+      _showMessage(
+        'This time slot is no longer available.',
+      );
       return;
     }
 
@@ -298,90 +870,57 @@ class _RescheduleAppointmentScreenState
     });
 
     try {
-      final firestore = FirebaseFirestore.instance;
+      final appointmentRef =
+          FirebaseFirestore.instance
+              .collection('appointments')
+              .doc(
+                widget.appointmentId,
+              );
 
-      final appointmentRef = firestore
-          .collection('appointments')
-          .doc(widget.appointmentId);
-
-      // --------------------------------------------------------
-      // 1. Read the existing appointment from Firestore
-      // --------------------------------------------------------
-
-      final appointmentSnapshot =
+      final appointment =
           await appointmentRef.get();
 
-      if (!appointmentSnapshot.exists) {
+      if (!appointment.exists) {
         throw Exception(
           'Appointment not found.',
         );
       }
 
-      final appointmentData =
-          appointmentSnapshot.data();
+      final data =
+          appointment.data();
 
-      if (appointmentData == null) {
+      if (data == null) {
         throw Exception(
-          'Appointment data is empty.',
+          'Appointment data not found.',
         );
       }
 
       // --------------------------------------------------------
-      // 2. Get departmentId from existing appointment
-      // --------------------------------------------------------
-
-      final departmentId =
-          (appointmentData['departmentId'] ?? '')
-              .toString();
-
-      if (departmentId.isEmpty) {
-        throw Exception(
-          'Department ID is missing from the appointment.',
-        );
-      }
-
-      // --------------------------------------------------------
-      // 3. Find selected slot
-      // --------------------------------------------------------
-
-      final selectedSlot = timeSlots.firstWhere(
-        (slot) =>
-            slot['displayTime'] == selectedTime,
-        orElse: () => timeSlots.first,
-      );
-
-      final newDate = _formatDate(selectedDate);
-
-      final newTime =
-          selectedSlot['displayTime']!;
-
-      // --------------------------------------------------------
-      // 4. Generate NEW token for the new appointment date
-      // --------------------------------------------------------
-
-      final newToken =
-          await _generateNextTokenCode(
-        departmentId: departmentId,
-        appointmentDate: newDate,
-      );
-
-      // --------------------------------------------------------
-      // 5. Update SAME appointment document in Firestore
+      // SAME APPOINTMENT IS UPDATED
+      // NOT A NEW APPOINTMENT
       // --------------------------------------------------------
 
       await appointmentRef.update({
-        'appointmentDate': newDate,
-        'startTime': selectedSlot['startTime'],
-        'endTime': selectedSlot['endTime'],
-        'timeSlot': newTime,
-        'slotId': selectedSlot['id'],
+        'appointmentDate':
+            _dateKey(selectedDate),
 
-        // IMPORTANT:
-        // Replace old token with the new token.
-        'tokenCode': newToken,
+        'startTime':
+            slot['start'],
 
-        'status': 'rescheduled',
-        'updatedAt': FieldValue.serverTimestamp(),
+        'endTime':
+            slot['end'],
+
+        'timeSlot':
+            slot['display'],
+
+        'slotId':
+            slot['id'],
+
+        'status':
+            'rescheduled',
+
+        'updatedAt':
+            FieldValue.serverTimestamp(),
       });
 
       if (!mounted) {
@@ -393,24 +932,21 @@ class _RescheduleAppointmentScreenState
       });
 
       // --------------------------------------------------------
-      // 6. Go directly to Digital Token screen
-      //
-      // SAME appointmentId is passed.
-      // Digital Token screen can read the updated Firestore
-      // document and show the new token/date/time/QR.
+      // GO BACK TO DIGITAL TOKEN DETAILS
+      // NO NEW CONFIRMATION SCREEN
       // --------------------------------------------------------
 
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) =>
+          builder: (_) =>
               DigitalTokenDetailsScreen(
             appointmentId:
                 widget.appointmentId,
           ),
         ),
       );
-    } catch (e) {
+    } catch (error) {
       if (!mounted) {
         return;
       }
@@ -419,12 +955,12 @@ class _RescheduleAppointmentScreenState
         isSaving = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Unable to reschedule appointment: $e',
-          ),
-        ),
+      debugPrint(
+        'Reschedule error: $error',
+      );
+
+      _showMessage(
+        'Unable to reschedule appointment.',
       );
     }
   }
@@ -433,77 +969,170 @@ class _RescheduleAppointmentScreenState
   // SLOT CARD
   // ============================================================
 
-  Widget _buildSlotCard(
+  Widget _slotCard(
     Map<String, String> slot,
   ) {
-    final displayTime =
-        slot['displayTime']!;
+    final selected =
+        selectedTime ==
+            slot['display'];
 
-    final isSelected =
-        selectedTime == displayTime;
+    final booked =
+        _booked(slot);
+
+    final capacity =
+        _capacity(slot);
+
+    final remaining =
+        _remaining(slot);
+
+    final full =
+        _isFull(slot);
+
+    final closed =
+        _isClosed(slot);
+
+    final past =
+        _isPast(slot);
+
+    final available =
+        _isAvailable(slot);
 
     return GestureDetector(
-      onTap: isSaving
-          ? null
-          : () {
+      onTap: available
+          ? () {
               setState(() {
-                selectedTime = displayTime;
+                selectedTime =
+                    slot['display']!;
               });
-            },
-      child: AnimatedContainer(
-        duration:
-            const Duration(milliseconds: 180),
+            }
+          : null,
+
+      child: Container(
+        height: 78,
+
         padding:
-            const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 11,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected
+            const EdgeInsets.all(10),
+
+        decoration:
+            BoxDecoration(
+          color: selected
               ? AppColors.primary
                   .withOpacity(0.08)
               : Colors.white,
+
           borderRadius:
               BorderRadius.circular(12),
+
           border: Border.all(
-            color: isSelected
+            color: selected
                 ? AppColors.primary
                 : Colors.grey.shade300,
+
             width:
-                isSelected ? 2 : 1,
+                selected ? 2 : 1,
           ),
         ),
-        child: Row(
+
+        child: Column(
+          crossAxisAlignment:
+              CrossAxisAlignment.start,
+
+          mainAxisAlignment:
+              MainAxisAlignment.center,
+
           children: [
-            Icon(
-              Icons.access_time_rounded,
-              size: 16,
-              color: isSelected
-                  ? AppColors.primary
-                  : Colors.grey.shade600,
-            ),
-
-            const SizedBox(width: 7),
-
-            Expanded(
-              child: Text(
-                displayTime,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight:
-                      FontWeight.w600,
-                  color: isSelected
+            Row(
+              children: [
+                Icon(
+                  Icons.access_time_rounded,
+                  size: 13,
+                  color: selected
                       ? AppColors.primary
-                      : AppColors.textPrimary,
+                      : Colors.grey.shade700,
                 ),
-              ),
+
+                const SizedBox(
+                  width: 5,
+                ),
+
+                Expanded(
+                  child: FittedBox(
+                    fit:
+                        BoxFit.scaleDown,
+                    alignment:
+                        Alignment.centerLeft,
+
+                    child: Text(
+                      slot['display']!,
+                      style:
+                          TextStyle(
+                        fontSize: 12,
+                        fontWeight:
+                            FontWeight.w600,
+                        color: past ||
+                                closed ||
+                                full
+                            ? Colors
+                                .grey
+                            : selected
+                                ? AppColors
+                                    .primary
+                                : AppColors
+                                    .textPrimary,
+                      ),
+                    ),
+                  ),
+                ),
+
+                if (selected &&
+                    available)
+                  const Icon(
+                    Icons.check_circle,
+                    size: 15,
+                    color:
+                        AppColors.primary,
+                  ),
+              ],
             ),
 
-            if (isSelected)
-              const Icon(
-                Icons.check_circle_rounded,
-                size: 17,
-                color: AppColors.primary,
+            const SizedBox(
+              height: 7,
+            ),
+
+            // -----------------------------------------------
+            // AVAILABILITY TEXT
+            // -----------------------------------------------
+
+            if (past)
+              _badge(
+                'Time passed',
+                Colors.grey.shade200,
+                Colors.grey.shade700,
+              )
+            else if (closed)
+              _badge(
+                'Closed',
+                Colors.red.shade50,
+                Colors.red.shade700,
+              )
+            else if (full)
+              _badge(
+                'Full ($booked/$capacity)',
+                Colors.red.shade50,
+                Colors.red.shade700,
+              )
+            else if (selected)
+              _badge(
+                'Selected ($remaining/$capacity left)',
+                AppColors.primary
+                    .withOpacity(0.12),
+                AppColors.primary,
+              )
+            else
+              _badge(
+                '$remaining/$capacity spots left',
+                Colors.green.shade50,
+                Colors.green.shade700,
               ),
           ],
         ),
@@ -511,52 +1140,164 @@ class _RescheduleAppointmentScreenState
     );
   }
 
+  Widget _badge(
+    String text,
+    Color background,
+    Color foreground,
+  ) {
+    return Container(
+      padding:
+          const EdgeInsets.symmetric(
+        horizontal: 6,
+        vertical: 3,
+      ),
+
+      decoration:
+          BoxDecoration(
+        color: background,
+        borderRadius:
+            BorderRadius.circular(4),
+      ),
+
+      child: Text(
+        text,
+        maxLines: 1,
+        overflow:
+            TextOverflow.ellipsis,
+
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight:
+              FontWeight.w600,
+          color: foreground,
+        ),
+      ),
+    );
+  }
+
   // ============================================================
-  // DETAIL ROW
+  // CURRENT APPOINTMENT CARD
   // ============================================================
 
-  Widget _detail(
-    String title,
+  Widget _currentAppointmentCard() {
+    return Container(
+      width: double.infinity,
+
+      padding:
+          const EdgeInsets.all(14),
+
+      decoration:
+          BoxDecoration(
+        color: Colors.white,
+        borderRadius:
+            BorderRadius.circular(14),
+      ),
+
+      child: Column(
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
+
+        children: [
+          _detailRow(
+            'Hospital',
+            widget.hospital,
+          ),
+
+          _detailRow(
+            'Clinic',
+            widget.clinic,
+          ),
+
+          _detailRow(
+            'Doctor',
+            widget.doctor,
+          ),
+
+          _detailRow(
+            'Date',
+            widget.date,
+          ),
+
+          _detailRow(
+            'Time',
+            _findMatchingDisplayTime(
+                  widget.time,
+                ).isEmpty
+                ? widget.time
+                : _findMatchingDisplayTime(
+                    widget.time,
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _detailRow(
+    String label,
     String value,
   ) {
     return Padding(
       padding:
           const EdgeInsets.symmetric(
-        vertical: 5,
+        vertical: 4,
       ),
+
       child: Row(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 75,
+            width: 55,
+
             child: Text(
-              title,
+              label,
+
               style: const TextStyle(
                 color: Colors.grey,
-                fontSize: 13,
+                fontSize: 12,
               ),
             ),
           ),
 
-          const SizedBox(width: 10),
+          const SizedBox(
+            width: 10,
+          ),
 
           Expanded(
             child: Text(
-              value.isEmpty
-                  ? 'Not available'
-                  : value,
-              textAlign: TextAlign.right,
+              value,
+              textAlign:
+                  TextAlign.right,
+
               style: const TextStyle(
-                fontWeight:
-                    FontWeight.w600,
                 color:
                     AppColors.textPrimary,
-                fontSize: 13,
+                fontSize: 12,
+                fontWeight:
+                    FontWeight.w600,
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ============================================================
+  // MESSAGE
+  // ============================================================
+
+  void _showMessage(
+    String message,
+  ) {
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context)
+        .showSnackBar(
+      SnackBar(
+        content:
+            Text(message),
       ),
     );
   }
@@ -567,18 +1308,32 @@ class _RescheduleAppointmentScreenState
 
   @override
   Widget build(BuildContext context) {
-    final morningSlots =
-        timeSlots.sublist(0, 4);
+    final morning =
+        visibleSlots
+            .where(
+              (slot) =>
+                  slot['session'] ==
+                  'morning',
+            )
+            .toList();
 
-    final afternoonSlots =
-        timeSlots.sublist(4, 6);
+    final afternoon =
+        visibleSlots
+            .where(
+              (slot) =>
+                  slot['session'] ==
+                  'afternoon',
+            )
+            .toList();
 
     return Scaffold(
       backgroundColor:
           AppColors.background,
 
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor:
+            Colors.white,
+
         elevation: 0,
 
         leading: IconButton(
@@ -587,451 +1342,478 @@ class _RescheduleAppointmentScreenState
             color:
                 AppColors.textPrimary,
           ),
+
           onPressed: isSaving
               ? null
               : () {
-                  Navigator.pop(context);
+                  Navigator.pop(
+                    context,
+                  );
                 },
         ),
 
         title: const Text(
           'Reschedule Appointment',
+
           style: TextStyle(
             color:
                 AppColors.textPrimary,
+            fontSize: 18,
             fontWeight:
                 FontWeight.bold,
-            fontSize: 18,
           ),
         ),
       ),
 
-      body: SingleChildScrollView(
-        padding:
-            const EdgeInsets.all(16),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding:
+              const EdgeInsets.fromLTRB(
+            16,
+            8,
+            16,
+            20,
+          ),
 
-        child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          child: Column(
+            crossAxisAlignment:
+                CrossAxisAlignment.start,
 
-          children: [
-            // ==================================================
-            // CURRENT APPOINTMENT
-            // ==================================================
+            children: [
+              // =================================================
+              // CURRENT APPOINTMENT
+              // =================================================
 
-            Container(
-              width: double.infinity,
-              padding:
-                  const EdgeInsets.all(18),
-              decoration:
-                  BoxDecoration(
-                color: Colors.white,
-                borderRadius:
-                    BorderRadius.circular(18),
+              _currentAppointmentCard(),
+
+              const SizedBox(
+                height: 18,
               ),
 
-              child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+              // =================================================
+              // CHOOSE DATE
+              // =================================================
 
-                children: [
-                  const Text(
-                    'Current Appointment',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight:
-                          FontWeight.bold,
+              const Text(
+                'Choose New Date',
+
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight:
+                      FontWeight.bold,
+                  color:
+                      AppColors.textPrimary,
+                ),
+              ),
+
+              const SizedBox(
+                height: 9,
+              ),
+
+              GestureDetector(
+                onTap: isSaving
+                    ? null
+                    : _selectDate,
+
+                child: Container(
+                  width: double.infinity,
+
+                  padding:
+                      const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 13,
+                  ),
+
+                  decoration:
+                      BoxDecoration(
+                    color: Colors.white,
+                    borderRadius:
+                        BorderRadius.circular(
+                      12,
+                    ),
+
+                    border: Border.all(
                       color:
-                          AppColors.textPrimary,
+                          Colors.grey.shade200,
                     ),
                   ),
 
-                  const SizedBox(
-                    height: 14,
-                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding:
+                            const EdgeInsets.all(
+                          7,
+                        ),
 
-                  _detail(
-                    'Hospital',
-                    widget.hospital,
-                  ),
+                        decoration:
+                            BoxDecoration(
+                          color: AppColors
+                              .primary
+                              .withOpacity(
+                            0.08,
+                          ),
 
-                  _detail(
-                    'Clinic',
-                    widget.clinic,
-                  ),
+                          borderRadius:
+                              BorderRadius.circular(
+                            7,
+                          ),
+                        ),
 
-                  _detail(
-                    'Doctor',
-                    widget.doctor,
-                  ),
-
-                  _detail(
-                    'Date',
-                    widget.date,
-                  ),
-
-                  _detail(
-                    'Time',
-                    widget.time,
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(
-              height: 22,
-            ),
-
-            // ==================================================
-            // NEW DATE
-            // ==================================================
-
-            const Text(
-              'Choose New Date',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight:
-                    FontWeight.bold,
-                color:
-                    AppColors.textPrimary,
-              ),
-            ),
-
-            const SizedBox(
-              height: 10,
-            ),
-
-            GestureDetector(
-              onTap: isSaving
-                  ? null
-                  : _chooseDate,
-
-              child: Container(
-                width: double.infinity,
-                padding:
-                    const EdgeInsets.all(16),
-                decoration:
-                    BoxDecoration(
-                  color: Colors.white,
-                  borderRadius:
-                      BorderRadius.circular(14),
-                  border: Border.all(
-                    color:
-                        Colors.grey.shade200,
-                  ),
-                ),
-
-                child: Row(
-                  children: [
-                    Container(
-                      padding:
-                          const EdgeInsets.all(8),
-                      decoration:
-                          BoxDecoration(
-                        color: AppColors
-                            .primary
-                            .withOpacity(0.08),
-                        borderRadius:
-                            BorderRadius.circular(8),
+                        child: const Icon(
+                          Icons
+                              .calendar_month_rounded,
+                          size: 19,
+                          color:
+                              AppColors.primary,
+                        ),
                       ),
 
-                      child: const Icon(
+                      const SizedBox(
+                        width: 10,
+                      ),
+
+                      Expanded(
+                        child: Text(
+                          _displayDate(
+                            selectedDate,
+                          ),
+
+                          style:
+                              const TextStyle(
+                            fontSize: 13,
+                            fontWeight:
+                                FontWeight.w600,
+                            color:
+                                AppColors.textPrimary,
+                          ),
+                        ),
+                      ),
+
+                      const Icon(
                         Icons
-                            .calendar_month_rounded,
-                        size: 20,
+                            .keyboard_arrow_down_rounded,
+                        color: Colors.grey,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(
+                height: 20,
+              ),
+
+              // =================================================
+              // TIME SLOTS TITLE
+              // =================================================
+
+              const Text(
+                'Available Time Slots',
+
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight:
+                      FontWeight.bold,
+                  color:
+                      AppColors.textPrimary,
+                ),
+              ),
+
+              const SizedBox(
+                height: 4,
+              ),
+
+              const Text(
+                'Select a suitable time for your appointment',
+
+                style: TextStyle(
+                  fontSize: 11,
+                  color:
+                      AppColors.textSecondary,
+                ),
+              ),
+
+              const SizedBox(
+                height: 14,
+              ),
+
+              // =================================================
+              // MORNING SESSION
+              // =================================================
+
+              if (morning.isNotEmpty) ...[
+                Row(
+                  children: [
+                    Icon(
+                      Icons
+                          .wb_sunny_rounded,
+                      size: 17,
+                      color: Colors
+                          .orange.shade700,
+                    ),
+
+                    const SizedBox(
+                      width: 7,
+                    ),
+
+                    const Text(
+                      'Morning Session',
+
+                      style:
+                          TextStyle(
+                        fontSize: 13,
+                        fontWeight:
+                            FontWeight.bold,
                         color:
-                            AppColors.primary,
+                            AppColors.textPrimary,
                       ),
                     ),
 
                     const SizedBox(
-                      width: 12,
+                      width: 7,
                     ),
 
-                    Expanded(
-                      child: Text(
-                        _displayDate(
-                          selectedDate,
-                        ),
-                        style:
-                            const TextStyle(
-                          fontSize: 15,
-                          fontWeight:
-                              FontWeight.w600,
-                          color:
-                              AppColors.textPrimary,
-                        ),
+                    Text(
+                      '(08:00 AM - '
+                      '${morning.last['end']}'
+                      ' ${int.parse(morning.last['end']!.split(':')[0]) == 12 ? 'PM' : 'PM'})',
+
+                      style:
+                          const TextStyle(
+                        fontSize: 10,
+                        color:
+                            Colors.grey,
                       ),
-                    ),
-
-                    const Icon(
-                      Icons
-                          .keyboard_arrow_down_rounded,
-                      color: Colors.grey,
                     ),
                   ],
                 ),
-              ),
-            ),
-
-            const SizedBox(
-              height: 24,
-            ),
-
-            // ==================================================
-            // TIME SLOTS
-            // ==================================================
-
-            const Text(
-              'Available Time Slots',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight:
-                    FontWeight.bold,
-                color:
-                    AppColors.textPrimary,
-              ),
-            ),
-
-            const SizedBox(
-              height: 6,
-            ),
-
-            const Text(
-              'Select a suitable time for your appointment',
-              style: TextStyle(
-                fontSize: 12,
-                color:
-                    AppColors.textSecondary,
-              ),
-            ),
-
-            const SizedBox(
-              height: 16,
-            ),
-
-            // ==================================================
-            // MORNING
-            // ==================================================
-
-            Row(
-              children: [
-                Icon(
-                  Icons.wb_sunny_rounded,
-                  size: 18,
-                  color:
-                      Colors.orange.shade700,
-                ),
 
                 const SizedBox(
-                  width: 8,
+                  height: 9,
                 ),
 
-                const Text(
-                  'Morning Session',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight:
-                        FontWeight.bold,
-                    color:
-                        AppColors.textPrimary,
+                GridView.builder(
+                  shrinkWrap: true,
+
+                  physics:
+                      const NeverScrollableScrollPhysics(),
+
+                  itemCount:
+                      morning.length,
+
+                  gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 9,
+                    mainAxisSpacing: 9,
+                    childAspectRatio: 1.75,
                   ),
+
+                  itemBuilder:
+                      (context, index) {
+                    return _slotCard(
+                      morning[index],
+                    );
+                  },
                 ),
               ],
-            ),
 
-            const SizedBox(
-              height: 10,
-            ),
+              // =================================================
+              // AFTERNOON SESSION
+              // =================================================
 
-            GridView.builder(
-              shrinkWrap: true,
-              physics:
-                  const NeverScrollableScrollPhysics(),
-              itemCount:
-                  morningSlots.length,
-              gridDelegate:
-                  const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-                childAspectRatio: 2.2,
-              ),
-              itemBuilder:
-                  (context, index) {
-                return _buildSlotCard(
-                  morningSlots[index],
-                );
-              },
-            ),
-
-            const SizedBox(
-              height: 24,
-            ),
-
-            // ==================================================
-            // AFTERNOON
-            // ==================================================
-
-            Row(
-              children: [
-                Icon(
-                  Icons.wb_twilight_rounded,
-                  size: 18,
-                  color:
-                      Colors.blueGrey.shade700,
-                ),
-
+              if (afternoon.isNotEmpty) ...[
                 const SizedBox(
-                  width: 8,
+                  height: 20,
                 ),
 
-                const Text(
-                  'Afternoon Session',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight:
-                        FontWeight.bold,
-                    color:
-                        AppColors.textPrimary,
-                  ),
-                ),
-              ],
-            ),
+                Row(
+                  children: [
+                    Icon(
+                      Icons
+                          .wb_twilight_rounded,
+                      size: 17,
+                      color:
+                          Colors.blueGrey,
+                    ),
 
-            const SizedBox(
-              height: 10,
-            ),
+                    const SizedBox(
+                      width: 7,
+                    ),
 
-            GridView.builder(
-              shrinkWrap: true,
-              physics:
-                  const NeverScrollableScrollPhysics(),
-              itemCount:
-                  afternoonSlots.length,
-              gridDelegate:
-                  const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-                childAspectRatio: 2.2,
-              ),
-              itemBuilder:
-                  (context, index) {
-                return _buildSlotCard(
-                  afternoonSlots[index],
-                );
-              },
-            ),
+                    const Text(
+                      'Afternoon Session',
 
-            const SizedBox(
-              height: 30,
-            ),
-
-            // ==================================================
-            // CONFIRM RESCHEDULE
-            // ==================================================
-
-            SizedBox(
-              width: double.infinity,
-
-              child: ElevatedButton(
-                style:
-                    ElevatedButton.styleFrom(
-                  backgroundColor:
-                      AppColors.primary,
-                  padding:
-                      const EdgeInsets.symmetric(
-                    vertical: 15,
-                  ),
-                  shape:
-                      RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(12),
-                  ),
-                ),
-
-                onPressed: isSaving
-                    ? null
-                    : _confirmReschedule,
-
-                child: isSaving
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child:
-                            CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color:
-                              Colors.white,
-                        ),
-                      )
-                    : const Text(
-                        'Confirm Reschedule',
-                        style: TextStyle(
-                          color:
-                              Colors.white,
-                          fontWeight:
-                              FontWeight.bold,
-                        ),
+                      style:
+                          TextStyle(
+                        fontSize: 13,
+                        fontWeight:
+                            FontWeight.bold,
+                        color:
+                            AppColors.textPrimary,
                       ),
-              ),
-            ),
-
-            const SizedBox(
-              height: 12,
-            ),
-
-            // ==================================================
-            // KEEP CURRENT APPOINTMENT
-            // ==================================================
-
-            SizedBox(
-              width: double.infinity,
-
-              child: OutlinedButton(
-                style:
-                    OutlinedButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(
-                    vertical: 15,
-                  ),
-                  side:
-                      const BorderSide(
-                    color:
-                        AppColors.primary,
-                  ),
-                  shape:
-                      RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(12),
-                  ),
+                    ),
+                  ],
                 ),
 
-                onPressed: isSaving
-                    ? null
-                    : () {
-                        Navigator.pop(
-                          context,
-                        );
-                      },
+                const SizedBox(
+                  height: 9,
+                ),
 
-                child: const Text(
-                  'Keep Current Appointment',
-                  style: TextStyle(
-                    color:
+                GridView.builder(
+                  shrinkWrap: true,
+
+                  physics:
+                      const NeverScrollableScrollPhysics(),
+
+                  itemCount:
+                      afternoon.length,
+
+                  gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 9,
+                    mainAxisSpacing: 9,
+                    childAspectRatio: 1.75,
+                  ),
+
+                  itemBuilder:
+                      (context, index) {
+                    return _slotCard(
+                      afternoon[index],
+                    );
+                  },
+                ),
+              ],
+
+              const SizedBox(
+                height: 22,
+              ),
+
+              // =================================================
+              // CONFIRM
+              // =================================================
+
+              SizedBox(
+                width: double.infinity,
+
+                child:
+                    ElevatedButton(
+                  style:
+                      ElevatedButton.styleFrom(
+                    backgroundColor:
                         AppColors.primary,
-                    fontWeight:
-                        FontWeight.bold,
+
+                    disabledBackgroundColor:
+                        Colors.grey.shade300,
+
+                    padding:
+                        const EdgeInsets.symmetric(
+                      vertical: 14,
+                    ),
+
+                    shape:
+                        RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(
+                        11,
+                      ),
+                    ),
+                  ),
+
+                  onPressed:
+                      isSaving ||
+                              selectedTime.isEmpty
+                          ? null
+                          : _confirmReschedule,
+
+                  child: isSaving
+                      ? const SizedBox(
+                          height: 19,
+                          width: 19,
+
+                          child:
+                              CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color:
+                                Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'Confirm Reschedule',
+
+                          style:
+                              TextStyle(
+                            color:
+                                Colors.white,
+                            fontWeight:
+                                FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                ),
+              ),
+
+              const SizedBox(
+                height: 10,
+              ),
+
+              // =================================================
+              // KEEP CURRENT
+              // =================================================
+
+              SizedBox(
+                width: double.infinity,
+
+                child:
+                    OutlinedButton(
+                  style:
+                      OutlinedButton.styleFrom(
+                    padding:
+                        const EdgeInsets.symmetric(
+                      vertical: 13,
+                    ),
+
+                    side:
+                        const BorderSide(
+                      color:
+                          AppColors.primary,
+                    ),
+
+                    shape:
+                        RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(
+                        11,
+                      ),
+                    ),
+                  ),
+
+                  onPressed: isSaving
+                      ? null
+                      : () {
+                          Navigator.pop(
+                            context,
+                          );
+                        },
+
+                  child: const Text(
+                    'Keep Current Appointment',
+
+                    style:
+                        TextStyle(
+                      color:
+                          AppColors.primary,
+                      fontWeight:
+                          FontWeight.bold,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               ),
-            ),
-
-            const SizedBox(
-              height: 20,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

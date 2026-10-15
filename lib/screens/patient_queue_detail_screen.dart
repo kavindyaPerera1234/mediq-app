@@ -36,8 +36,8 @@ class _PatientQueueDetailScreenState extends State<PatientQueueDetailScreen> {
     });
 
     final staffId = widget.authService.currentUserModel?.uid ?? 'staff-uid';
-    final result = await _queueService.callNextPatient(
-      queueSessionId: entry.queueSessionId,
+    final result = await _queueService.callSpecificPatient(
+      queueEntryId: entry.queueEntryId,
       staffUserId: staffId,
     );
 

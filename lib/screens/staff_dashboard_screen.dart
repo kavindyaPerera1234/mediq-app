@@ -48,7 +48,7 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
   bool _isSeeding = false;
   DateTime _selectedDate = DateTime.now();
   String? _selectedHospitalId;
-  String? _selectedDepartmentId;
+  String? _selectedDepartmentId = 'all';
 
   @override
   void initState() {
@@ -56,7 +56,6 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
     final profile = widget.authService.currentStaffProfile;
     if (profile != null) {
       if (profile.hospitalId.isNotEmpty) _selectedHospitalId = profile.hospitalId;
-      if (profile.departmentId.isNotEmpty) _selectedDepartmentId = profile.departmentId;
     }
   }
 
@@ -233,10 +232,10 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
     final staffUser = widget.authService.currentUserModel;
     final staffProfile = widget.authService.currentStaffProfile;
 
-    final hId = _selectedHospitalId ?? staffProfile?.hospitalId ?? 'nhsl';
-    final dId = _selectedDepartmentId ?? staffProfile?.departmentId ?? 'gen_med';
+    final hId = _selectedHospitalId ?? 'all';
+    final dId = _selectedDepartmentId ?? 'all';
     final dateStr = "${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}";
-    final sessionId = '${hId.isNotEmpty ? hId : 'nhsl'}_${dId.isNotEmpty ? dId : 'gen_med'}_$dateStr';
+    final sessionId = '${hId.isNotEmpty ? hId : 'all'}_${dId.isNotEmpty ? dId : 'all'}_$dateStr';
 
     final staffName = (staffUser?.fullName != null && staffUser!.fullName.isNotEmpty)
         ? staffUser.fullName
@@ -389,13 +388,15 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
                                 Expanded(
                                   child: DropdownButtonHideUnderline(
                                     child: DropdownButton<String>(
-                                      value: ['nhsl', 'hosp_kandy', 'hosp_karapitiya'].contains(hId) ? hId : 'nhsl',
+                                      value: ['all', 'nhsl', 'hosp_kandy', 'hosp_karapitiya'].contains(hId) ? hId : 'all',
                                       isDense: true,
+                                      isExpanded: true,
                                       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
                                       items: const [
-                                        DropdownMenuItem(value: 'nhsl', child: Text('National Hospital of Sri Lanka (NHSL)')),
-                                        DropdownMenuItem(value: 'hosp_kandy', child: Text('Kandy General Hospital')),
-                                        DropdownMenuItem(value: 'hosp_karapitiya', child: Text('Karapitiya Teaching Hospital')),
+                                        DropdownMenuItem(value: 'all', child: Text('All Government Hospitals', overflow: TextOverflow.ellipsis)),
+                                        DropdownMenuItem(value: 'nhsl', child: Text('National Hospital of Sri Lanka (NHSL)', overflow: TextOverflow.ellipsis)),
+                                        DropdownMenuItem(value: 'hosp_kandy', child: Text('Kandy General Hospital', overflow: TextOverflow.ellipsis)),
+                                        DropdownMenuItem(value: 'hosp_karapitiya', child: Text('Karapitiya Teaching Hospital', overflow: TextOverflow.ellipsis)),
                                       ],
                                       onChanged: (val) {
                                         if (val != null) {
@@ -419,14 +420,17 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
                                 Expanded(
                                   child: DropdownButtonHideUnderline(
                                     child: DropdownButton<String>(
-                                      value: ['gen_med', 'dept_pediatrics', 'dept_cardiology', 'dept_ent'].contains(dId) ? dId : 'gen_med',
+                                      value: ['all', 'gen_med', 'ortho', 'ent', 'derma', 'pedia', 'dept_pediatrics', 'dept_cardiology', 'dept_ent'].contains(dId) ? dId : 'gen_med',
                                       isDense: true,
+                                      isExpanded: true,
                                       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
                                       items: const [
-                                        DropdownMenuItem(value: 'gen_med', child: Text('General Medicine OPD')),
-                                        DropdownMenuItem(value: 'dept_pediatrics', child: Text('Pediatrics OPD')),
-                                        DropdownMenuItem(value: 'dept_cardiology', child: Text('Cardiology OPD')),
-                                        DropdownMenuItem(value: 'dept_ent', child: Text('ENT Clinic')),
+                                        DropdownMenuItem(value: 'gen_med', child: Text('General Medicine OPD', overflow: TextOverflow.ellipsis)),
+                                        DropdownMenuItem(value: 'ortho', child: Text('Orthopedics (Bone)', overflow: TextOverflow.ellipsis)),
+                                        DropdownMenuItem(value: 'ent', child: Text('ENT Clinic', overflow: TextOverflow.ellipsis)),
+                                        DropdownMenuItem(value: 'derma', child: Text('Dermatology (Skin)', overflow: TextOverflow.ellipsis)),
+                                        DropdownMenuItem(value: 'pedia', child: Text('Pediatrics (Children)', overflow: TextOverflow.ellipsis)),
+                                        DropdownMenuItem(value: 'all', child: Text('All OPD Clinics', overflow: TextOverflow.ellipsis)),
                                       ],
                                       onChanged: (val) {
                                         if (val != null) {
@@ -457,23 +461,43 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Row(
+                              Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    "Today's OPD Summary",
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.textPrimary,
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          _selectedDate.day == DateTime.now().day &&
+                                                  _selectedDate.month == DateTime.now().month &&
+                                                  _selectedDate.year == DateTime.now().year
+                                              ? "Today's OPD Summary"
+                                              : "OPD Summary for $dateStr",
+                                          style: const TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.textPrimary,
+                                          ),
+                                        ),
+                                        Text(
+                                          'Session: $sessionId',
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: AppColors.textSecondary,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  Text(
-                                    'General Medicine OPD',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.primary,
+                                  TextButton.icon(
+                                    onPressed: _pickDashboardDate,
+                                    icon: const Icon(Icons.edit_calendar_rounded, size: 14, color: AppColors.primary),
+                                    label: Text(dateStr, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      backgroundColor: AppColors.primaryLight,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                     ),
                                   ),
                                 ],

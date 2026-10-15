@@ -101,8 +101,8 @@ class _CalledPatientStateScreenState extends State<CalledPatientStateScreen> {
     }
   }
 
-  void _handleSkip(QueueEntry entry) {
-    showDialog(
+  Future<void> _handleSkip(QueueEntry entry) async {
+    final skipped = await showDialog<bool>(
       context: context,
       builder: (context) => SkipPatientConfirmationScreen(
         authService: widget.authService,
@@ -111,6 +111,9 @@ class _CalledPatientStateScreenState extends State<CalledPatientStateScreen> {
         patientName: entry.patientName ?? 'Patient ${entry.tokenNumber}',
       ),
     );
+    if (skipped == true && mounted) {
+      Navigator.pop(context);
+    }
   }
 
   @override
