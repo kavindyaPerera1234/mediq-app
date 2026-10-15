@@ -267,7 +267,7 @@ class AdminDashboardScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => AdminLiveQueueConsoleScreen(authService: authService),
+                    builder: (_) => const AdminLiveQueueConsoleScreen(),
                   ),
                 );
               },
@@ -283,7 +283,9 @@ class AdminDashboardScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => DoctorConsultationAdminDashboard(authService: authService),
+                    builder: (_) => DoctorConsultationAdminDashboard(
+                      authService: authService is m4_auth.AuthService ? authService as m4_auth.AuthService : null,
+                    ),
                   ),
                 );
               },
